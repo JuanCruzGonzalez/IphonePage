@@ -471,11 +471,11 @@
     <script>
         // Datos de ejemplo
         let ventas = [
-            { id: 1, fecha: '2026-01-31', producto: 'Laptop Dell', cantidad: 1, total: 1200, estado: 'Completada' },
-            { id: 2, fecha: '2026-01-31', producto: 'Mouse Logitech', cantidad: 3, total: 90, estado: 'Completada' },
-            { id: 3, fecha: '2026-01-30', producto: 'Teclado Mecánico', cantidad: 2, total: 280, estado: 'Pendiente' },
-            { id: 4, fecha: '2026-01-30', producto: 'Monitor Samsung', cantidad: 1, total: 450, estado: 'Completada' },
-            { id: 5, fecha: '2026-01-29', producto: 'Webcam HD', cantidad: 1, total: 120, estado: 'Completada' }
+            { id: 1, fecha: '2026-01-31', producto: 'Avena', cantidad: 1, total: 1200, estado: 'Completada' },
+            { id: 2, fecha: '2026-01-31', producto: 'Almendra', cantidad: 3, total: 90, estado: 'Completada' },
+            { id: 3, fecha: '2026-01-30', producto: 'Pistacho', cantidad: 2, total: 280, estado: 'Pendiente' },
+            { id: 4, fecha: '2026-01-30', producto: 'Avellana', cantidad: 1, total: 450, estado: 'Completada' },
+            { id: 5, fecha: '2026-01-29', producto: 'Nuez', cantidad: 1, total: 120, estado: 'Completada' }
         ];
 
         let productos = [
@@ -626,7 +626,7 @@
             const tbody = document.getElementById('ventasBody');
             
             // Ordenar ventas por total de manera descendente
-            const ventasOrdenadas = [...ventas].sort((a, b) => b.total - a.total);
+            const ventasOrdenadas = [...ventas].sort((a, b) => b.id - a.id);
             
             tbody.innerHTML = ventasOrdenadas.map(venta => `
                 <tr>
