@@ -356,7 +356,6 @@
                         <tr>
                             <th>ID</th>
                             <th>Fecha</th>
-                            <th>Cliente</th>
                             <th>Producto</th>
                             <th>Cantidad</th>
                             <th>Total</th>
@@ -380,10 +379,6 @@
             </div>
             <div class="modal-body">
                 <form id="ventaForm">
-                    <div class="form-group">
-                        <label>Cliente</label>
-                        <input type="text" id="cliente" required placeholder="Nombre del cliente">
-                    </div>
                     <div class="form-group">
                         <label>Producto</label>
                         <select id="productoVenta" required>
@@ -476,19 +471,19 @@
     <script>
         // Datos de ejemplo
         let ventas = [
-            { id: 1, fecha: '2026-01-31', cliente: 'Juan Pérez', producto: 'Laptop Dell', cantidad: 1, total: 1200, estado: 'Completada' },
-            { id: 2, fecha: '2026-01-31', cliente: 'María García', producto: 'Mouse Logitech', cantidad: 3, total: 90, estado: 'Completada' },
-            { id: 3, fecha: '2026-01-30', cliente: 'Carlos López', producto: 'Teclado Mecánico', cantidad: 2, total: 280, estado: 'Pendiente' },
-            { id: 4, fecha: '2026-01-30', cliente: 'Ana Martínez', producto: 'Monitor Samsung', cantidad: 1, total: 450, estado: 'Completada' },
-            { id: 5, fecha: '2026-01-29', cliente: 'Pedro Sánchez', producto: 'Webcam HD', cantidad: 1, total: 120, estado: 'Completada' }
+            { id: 1, fecha: '2026-01-31', producto: 'Laptop Dell', cantidad: 1, total: 1200, estado: 'Completada' },
+            { id: 2, fecha: '2026-01-31', producto: 'Mouse Logitech', cantidad: 3, total: 90, estado: 'Completada' },
+            { id: 3, fecha: '2026-01-30', producto: 'Teclado Mecánico', cantidad: 2, total: 280, estado: 'Pendiente' },
+            { id: 4, fecha: '2026-01-30', producto: 'Monitor Samsung', cantidad: 1, total: 450, estado: 'Completada' },
+            { id: 5, fecha: '2026-01-29', producto: 'Webcam HD', cantidad: 1, total: 120, estado: 'Completada' }
         ];
 
         let productos = [
-            { id: 1, nombre: 'Laptop Dell', descripcion: 'Laptop i7 16GB RAM', precio: 1200, stock: 15 },
-            { id: 2, nombre: 'Mouse Logitech', descripcion: 'Mouse inalámbrico', precio: 30, stock: 50 },
-            { id: 3, nombre: 'Teclado Mecánico', descripcion: 'Teclado RGB', precio: 140, stock: 25 },
-            { id: 4, nombre: 'Monitor Samsung', descripcion: 'Monitor 27 pulgadas', precio: 450, stock: 10 },
-            { id: 5, nombre: 'Webcam HD', descripcion: 'Webcam 1080p', precio: 120, stock: 30 }
+            { id: 1, nombre: 'Avena', descripcion: '', precio: 1200, stock: 15 },
+            { id: 2, nombre: 'Almendra', descripcion: '', precio: 30, stock: 50 },
+            { id: 3, nombre: 'Pistacho', descripcion: '', precio: 140, stock: 25 },
+            { id: 4, nombre: 'Avellana', descripcion: '', precio: 450, stock: 10 },
+            { id: 5, nombre: 'Nuez', descripcion: '', precio: 120, stock: 30 }
         ];
 
         // Funciones de Modal
@@ -542,12 +537,11 @@
 
         // Agregar venta
         function agregarVenta() {
-            const cliente = document.getElementById('cliente').value;
             const productoId = parseInt(document.getElementById('productoVenta').value);
             const cantidad = parseInt(document.getElementById('cantidad').value);
             const precioUnitario = parseFloat(document.getElementById('precioUnitario').value);
 
-            if (!cliente || !productoId || !cantidad || !precioUnitario) {
+            if (!productoId || !cantidad || !precioUnitario) {
                 alert('Por favor complete todos los campos');
                 return;
             }
@@ -567,7 +561,6 @@
             const nuevaVenta = {
                 id: ventas.length + 1,
                 fecha: new Date().toISOString().split('T')[0],
-                cliente: cliente,
                 producto: producto.nombre,
                 cantidad: cantidad,
                 total: cantidad * precioUnitario,
@@ -639,7 +632,6 @@
                 <tr>
                     <td>#${venta.id}</td>
                     <td>${venta.fecha}</td>
-                    <td>${venta.cliente}</td>
                     <td>${venta.producto}</td>
                     <td>${venta.cantidad}</td>
                     <td>$${venta.total.toFixed(2)}</td>
