@@ -1,6 +1,6 @@
 // api/ventasService.ts
 import { supabase } from '../supabaseClient';
-import { Producto, Venta, DetalleVenta, VentaConDetalles } from '../types';
+import { Producto, DetalleVenta, VentaConDetalles } from '../types';
 
 // ============= TEST DE CONEXIÓN =============
 export async function testConnection() {
@@ -154,6 +154,7 @@ export async function createVenta(
 
   if (detallesError) {
     console.error('Error al crear detalles de venta:', detallesError);
+    console.log('Detalles que se intentaron crear:', detallesCreados);
     throw detallesError;
   }
   return venta;
