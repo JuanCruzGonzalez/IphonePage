@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Producto } from '../types';
+import { Producto, UnidadMedida } from '../types';
 
 // Modal para Nueva Venta
 interface ModalNuevaVentaProps {
@@ -7,9 +7,20 @@ interface ModalNuevaVentaProps {
   onClose: () => void;
   productos: Producto[];
   onSubmit: (items: { id_producto: number; cantidad: number }[]) => void;
+  showToast?: (message: string) => void;
+  showError?: (message: string) => void;
+  showWarning?: (message: string) => void;
+  showConfirm?: (title: string, message: string, onConfirm: () => void, type?: 'danger' | 'warning' | 'info') => void;
 }
 
-export const ModalNuevaVenta: React.FC<ModalNuevaVentaProps> = ({ isOpen, onClose, productos, onSubmit }) => {
+export const ModalNuevaVenta: React.FC<ModalNuevaVentaProps> = ({ 
+  isOpen, 
+  onClose, 
+  productos, 
+  onSubmit,
+  showError,
+  showWarning,
+}) => {
   const [items, setItems] = useState<{ id_producto: number; cantidad: number; nombre: string }[]>([]);
   const [productoSeleccionado, setProductoSeleccionado] = useState('');
   const [cantidad, setCantidad] = useState('');
@@ -21,7 +32,7 @@ export const ModalNuevaVenta: React.FC<ModalNuevaVentaProps> = ({ isOpen, onClos
     const cant = parseInt(cantidad);
 
     if (!productoId || !cant || cant <= 0) {
-      alert('Seleccione un producto y cantidad válida');
+      showWarning?.('Seleccione un producto y cantidad válida');
       return;
     }
 
@@ -29,12 +40,12 @@ export const ModalNuevaVenta: React.FC<ModalNuevaVentaProps> = ({ isOpen, onClos
     if (!producto) return;
 
     if (producto.stock < cant) {
-      alert(`Stock insuficiente. Disponible: ${producto.stock}`);
+      showError?.(`Stock insuficiente. Disponible: ${producto.stock}`);
       return;
     }
 
     if (items.find(i => i.id_producto === productoId)) {
-      alert('Este producto ya está agregado');
+      showWarning?.('Este producto ya está agregado');
       return;
     }
 
@@ -45,7 +56,7 @@ export const ModalNuevaVenta: React.FC<ModalNuevaVentaProps> = ({ isOpen, onClos
 
   const handleSubmit = () => {
     if (items.length === 0) {
-      alert('Agregue al menos un producto');
+      showWarning?.('Agregue al menos un producto');
       return;
     }
 
@@ -118,21 +129,31 @@ export const ModalNuevaVenta: React.FC<ModalNuevaVentaProps> = ({ isOpen, onClos
 interface ModalNuevoProductoProps {
   isOpen: boolean;
   onClose: () => void;
-  onSubmit: (producto: { nombre: string; descripcion: string; stock: number; costo: number; precioventa: number; }) => void;
+  unidadesMedida: UnidadMedida[];
+  onSubmit: (producto: { nombre: string; descripcion: string; stock: number; costo: number; precioventa: number; unidadMedida: number}) => void;
+  showError?: (message: string) => void;
+  showWarning?: (message: string) => void;
 }
 
-export const ModalNuevoProducto: React.FC<ModalNuevoProductoProps> = ({ isOpen, onClose, onSubmit }) => {
+export const ModalNuevoProducto: React.FC<ModalNuevoProductoProps> = ({ 
+  isOpen, 
+  onClose, 
+  unidadesMedida, 
+  onSubmit,
+  showWarning,
+}) => {
   const [nombre, setNombre] = useState('');
   const [descripcion, setDescripcion] = useState('');
   const [stock, setStock] = useState('');
   const [costo, setCosto] = useState('');
   const [precioventa, setPrecioventa] = useState('');
+  const [unidadMedida, setUnidadMedida] = useState('');
 
   if (!isOpen) return null;
 
   const handleSubmit = () => {
     if (!nombre.trim() || !stock) {
-      alert('Complete los campos requeridos');
+      showWarning?.('Complete los campos requeridos');
       return;
     }
 
@@ -142,6 +163,7 @@ export const ModalNuevoProducto: React.FC<ModalNuevoProductoProps> = ({ isOpen, 
       stock: parseInt(stock),
       costo: parseInt(costo),
       precioventa: parseInt(precioventa),
+      unidadMedida: parseInt(unidadMedida),
     });
 
     setNombre('');
@@ -149,6 +171,7 @@ export const ModalNuevoProducto: React.FC<ModalNuevoProductoProps> = ({ isOpen, 
     setStock('');
     setCosto('');
     setPrecioventa('');
+    setUnidadMedida('');
   };
 
   return (
@@ -207,6 +230,17 @@ export const ModalNuevoProducto: React.FC<ModalNuevoProductoProps> = ({ isOpen, 
               placeholder="0"
             />
           </div>
+          <div className="form-group">
+            <label>Unidad de Medida</label>
+            <select value={unidadMedida} onChange={(e) => setUnidadMedida(e.target.value)}>
+              <option value="">Seleccionar Unidad de Medida</option>
+              {unidadesMedida.map(p => (
+                <option key={p.id_unidad_medida} value={p.id_unidad_medida}>
+                  {p.nombre}
+                </option>
+              ))}
+            </select>
+          </div>
         </div>
         <div className="modal-minimal-footer">
           <button className="btn-secondary" onClick={onClose}>Cancelar</button>
@@ -223,9 +257,17 @@ interface ModalActualizarStockProps {
   onClose: () => void;
   productos: Producto[];
   onSubmit: (productoId: number, cantidad: number) => void;
+  showError?: (message: string) => void;
+  showWarning?: (message: string) => void;
 }
 
-export const ModalActualizarStock: React.FC<ModalActualizarStockProps> = ({ isOpen, onClose, productos, onSubmit }) => {
+export const ModalActualizarStock: React.FC<ModalActualizarStockProps> = ({ 
+  isOpen, 
+  onClose, 
+  productos, 
+  onSubmit,
+  showWarning,
+}) => {
   const [productoId, setProductoId] = useState('');
   const [cantidad, setCantidad] = useState('');
 
@@ -235,7 +277,7 @@ export const ModalActualizarStock: React.FC<ModalActualizarStockProps> = ({ isOp
 
   const handleSubmit = () => {
     if (!productoId || !cantidad) {
-      alert('Complete todos los campos');
+      showWarning?.('Complete todos los campos');
       return;
     }
 

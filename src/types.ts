@@ -6,6 +6,14 @@ export interface Producto {
   stock: number;
   costo: number;
   precioventa: number;
+  id_unidad_medida: number;
+  unidad_medida?: UnidadMedida;
+}
+
+export interface UnidadMedida {
+  id_unidad_medida: number;
+  nombre: string;
+  abreviacion: string;
 }
 
 export interface Venta {

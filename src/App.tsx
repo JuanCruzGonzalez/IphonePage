@@ -1,24 +1,27 @@
 import { useState, useEffect } from 'react';
 import './App.css';
-import { Producto, VentaConDetalles } from './types';
+import { Producto, VentaConDetalles, UnidadMedida } from './types';
 import {
-  testConnection,
   getProductos,
   createProducto,
   updateStockProducto,
   getVentas,
   createVenta,
+  getUnidadesMedidas,
 } from './api/ventaService';
 import { Sidebar } from './components/Sidebar';
 import { VentasPage } from './pages/VentasPage';
 import { ProductosPage } from './pages/ProductosPage';
 import { StockPage } from './pages/StockPage';
 import { ModalNuevaVenta, ModalNuevoProducto, ModalActualizarStock } from './components/Modals';
+import { Toast, ConfirmModal } from './components/ToastModal';
+import { useToast, useConfirm } from './hooks/useToast';
 
 function App() {
   const [activeSection, setActiveSection] = useState<'ventas' | 'productos' | 'stock'>('ventas');
   const [ventas, setVentas] = useState<VentaConDetalles[]>([]);
   const [productos, setProductos] = useState<Producto[]>([]);
+  const [unidadesMedida, setUnidadesMedida] = useState<UnidadMedida[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -26,6 +29,10 @@ function App() {
   const [modalNuevaVenta, setModalNuevaVenta] = useState(false);
   const [modalNuevoProducto, setModalNuevoProducto] = useState(false);
   const [modalActualizarStock, setModalActualizarStock] = useState(false);
+
+  // Hooks para toast y confirmación
+  const { toast, showSuccess, showError, showWarning, hideToast } = useToast();
+  const { confirm, showConfirm, hideConfirm } = useConfirm();
 
   useEffect(() => {
     cargarDatos();
@@ -35,27 +42,14 @@ function App() {
     try {
       setLoading(true);
       
-      console.log('🔌 Verificando conexión a Supabase...');
-      const conexionOk = await testConnection();
-      
-      if (!conexionOk) {
-        setError('No se pudo conectar a Supabase. Verifica tus credenciales.');
-        setLoading(false);
-        return;
-      }
-
-      console.log('📥 Cargando datos...');
-      const [productosData, ventasData] = await Promise.all([
+      const [productosData, ventasData, unidadesData] = await Promise.all([
         getProductos(),
-        getVentas()
+        getVentas(),
+        getUnidadesMedidas(),
       ]);
       
-      console.log('✅ Datos cargados:', {
-        productos: productosData.length,
-        ventas: ventasData.length
-      });
-      
       setProductos(productosData);
+      setUnidadesMedida(unidadesData || []);
       setVentas(ventasData);
       setError(null);
     } catch (err) {
@@ -73,15 +67,15 @@ function App() {
       await createVenta(fecha, items);
       await cargarDatos();
       setModalNuevaVenta(false);
-      alert('✓ Venta registrada exitosamente');
+      showSuccess('Venta registrada exitosamente');
     } catch (err) {
-      alert('Error al registrar la venta');
+      showError('Error al registrar la venta');
       console.error(err);
     }
   };
 
   // Handlers para crear producto
-  const handleNuevoProducto = async (producto: { nombre: string; descripcion: string; stock: number; costo: number; precioventa: number; }) => {
+  const handleNuevoProducto = async (producto: { nombre: string; descripcion: string; stock: number; costo: number; precioventa: number; unidadMedida: number}) => {
     try {
       await createProducto({
         nombre: producto.nombre,
@@ -89,12 +83,13 @@ function App() {
         stock: producto.stock,
         costo: producto.costo,
         precioventa: producto.precioventa,
+        id_unidad_medida: producto.unidadMedida,
       });
       await cargarDatos();
       setModalNuevoProducto(false);
-      alert('✓ Producto agregado exitosamente');
+      showSuccess('Producto agregado exitosamente');
     } catch (err) {
-      alert('Error al agregar el producto');
+      showError('Error al agregar el producto');
       console.error(err);
     }
   };
@@ -108,9 +103,9 @@ function App() {
       await updateStockProducto(productoId, producto.stock + cantidad);
       await cargarDatos();
       setModalActualizarStock(false);
-      alert(`✓ Stock actualizado: ${producto.nombre} ahora tiene ${producto.stock + cantidad} unidades`);
+      showSuccess(`Stock actualizado: ${producto.nombre} ahora tiene ${producto.stock + cantidad} unidades`);
     } catch (err) {
-      alert('Error al actualizar el stock');
+      showError('Error al actualizar el stock');
       console.error(err);
     }
   };
@@ -171,12 +166,20 @@ function App() {
         onClose={() => setModalNuevaVenta(false)}
         productos={productos}
         onSubmit={handleNuevaVenta}
+        // Pasa las funciones de toast y confirm a los modales
+        showToast={showSuccess}
+        showError={showError}
+        showWarning={showWarning}
+        showConfirm={showConfirm}
       />
 
       <ModalNuevoProducto
         isOpen={modalNuevoProducto}
+        unidadesMedida={unidadesMedida}
         onClose={() => setModalNuevoProducto(false)}
         onSubmit={handleNuevoProducto}
+        showError={showError}
+        showWarning={showWarning}
       />
 
       <ModalActualizarStock
@@ -184,6 +187,26 @@ function App() {
         onClose={() => setModalActualizarStock(false)}
         productos={productos}
         onSubmit={handleActualizarStock}
+        showError={showError}
+        showWarning={showWarning}
+      />
+
+      {/* Toast Notification */}
+      <Toast
+        isOpen={toast.isOpen}
+        message={toast.message}
+        type={toast.type}
+        onClose={hideToast}
+      />
+
+      {/* Confirm Modal */}
+      <ConfirmModal
+        isOpen={confirm.isOpen}
+        onClose={hideConfirm}
+        onConfirm={confirm.onConfirm}
+        title={confirm.title}
+        message={confirm.message}
+        type={confirm.type}
       />
     </div>
   );
