@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import './App.css';
+import './ToastStyles.css';
 import { Producto, VentaConDetalles, UnidadMedida } from './types';
 import {
   getProductos,
@@ -7,6 +8,9 @@ import {
   updateStockProducto,
   getVentas,
   createVenta,
+  updateVentaEstado,
+  updateProducto,
+  updateProductoEstado,
   getUnidadesMedidas,
 } from './api/ventaService';
 import { Sidebar } from './components/Sidebar';
@@ -28,6 +32,7 @@ function App() {
   // Estados para modales
   const [modalNuevaVenta, setModalNuevaVenta] = useState(false);
   const [modalNuevoProducto, setModalNuevoProducto] = useState(false);
+  const [productToEdit, setProductToEdit] = useState<null | any>(null);
   const [modalActualizarStock, setModalActualizarStock] = useState(false);
 
   // Hooks para toast y confirmación
@@ -61,10 +66,10 @@ function App() {
   };
 
   // Handlers para crear venta
-  const handleNuevaVenta = async (items: { id_producto: number; cantidad: number }[]) => {
+  const handleNuevaVenta = async (items: { id_producto: number; cantidad: number; precioUnitario: number; }[], pagada: boolean) => {
     try {
       const fecha = new Date().toISOString().split('T')[0];
-      await createVenta(fecha, items);
+      await createVenta(fecha, items, pagada);
       await cargarDatos();
       setModalNuevaVenta(false);
       showSuccess('Venta registrada exitosamente');
@@ -74,8 +79,34 @@ function App() {
     }
   };
 
+  // Handler para marcar una venta como pagada/pendiente, con confirmación y manejo de errores
+  const handleMarcarPagada = (id_venta: number, currentEstado: boolean) => {
+    showConfirm(
+      currentEstado ? 'Marcar como pendiente' : 'Marcar como pagada',
+      `¿Seguro que quieres marcar la venta #${id_venta} como ${currentEstado ? 'pendiente' : 'pagada'}?`,
+      async () => {
+        try {
+          const updated = await updateVentaEstado(id_venta, !currentEstado);
+          if (!updated) {
+            showError(`No se encontró la venta #${id_venta}`);
+            return;
+          }
+          await cargarDatos();
+          showSuccess(`Venta #${id_venta} actualizada correctamente`);
+        } catch (err) {
+          // Mejor logging del error y mensaje útil al usuario
+          console.error('Error al actualizar estado de venta:', err);
+          const e: any = err;
+          const message = e?.message || e?.error || (typeof e === 'string' ? e : JSON.stringify(e));
+          showError(message || 'No se pudo actualizar el estado de la venta');
+        }
+      },
+      'warning'
+    );
+  };
+
   // Handlers para crear producto
-  const handleNuevoProducto = async (producto: { nombre: string; descripcion: string; stock: number; costo: number; precioventa: number; unidadMedida: number}) => {
+  const handleNuevoProducto = async (producto: { nombre: string; descripcion: string; stock: number; costo: number; precioventa: number; unidadMedida: number; estado: boolean}) => {
     try {
       await createProducto({
         nombre: producto.nombre,
@@ -84,6 +115,7 @@ function App() {
         costo: producto.costo,
         precioventa: producto.precioventa,
         id_unidad_medida: producto.unidadMedida,
+        estado: producto.estado,
       });
       await cargarDatos();
       setModalNuevoProducto(false);
@@ -94,21 +126,78 @@ function App() {
     }
   };
 
-  // Handlers para actualizar stock
-  const handleActualizarStock = async (productoId: number, cantidad: number) => {
+  // Handler para editar un producto existente
+  const handleEditarProducto = async (producto: { nombre: string; descripcion: string; stock: number; costo: number; precioventa: number; unidadMedida: number; estado: boolean}) => {
+    if (!productToEdit) return;
     try {
-      const producto = productos.find(p => p.id_producto === productoId);
-      if (!producto) return;
-
-      await updateStockProducto(productoId, producto.stock + cantidad);
+      await updateProducto(productToEdit.id_producto, {
+        nombre: producto.nombre,
+        descripcion: producto.descripcion || null,
+        stock: producto.stock,
+        costo: producto.costo,
+        precioventa: producto.precioventa,
+        id_unidad_medida: producto.unidadMedida,
+        estado: producto.estado,
+      });
       await cargarDatos();
-      setModalActualizarStock(false);
-      showSuccess(`Stock actualizado: ${producto.nombre} ahora tiene ${producto.stock + cantidad} unidades`);
+      setModalNuevoProducto(false);
+      setProductToEdit(null);
+      showSuccess('Producto actualizado exitosamente');
     } catch (err) {
-      showError('Error al actualizar el stock');
+      showError('Error al actualizar el producto');
       console.error(err);
     }
   };
+
+  const openEditarProducto = (producto: any) => {
+    setProductToEdit(producto);
+    setModalNuevoProducto(true);
+  };
+
+  // Handler para activar/desactivar producto con confirmación
+  const handleToggleProductoEstado = (id_producto: number, currentEstado: boolean, nombre?: string) => {
+    showConfirm(
+      currentEstado ? 'Dar de baja producto' : 'Dar de alta producto',
+      `¿Seguro que quieres ${currentEstado ? 'dar de baja' : 'dar de alta'} el producto ${nombre ?? '#'+id_producto}?`,
+      async () => {
+        try {
+          const updated = await updateProductoEstado(id_producto, !currentEstado);
+          if (!updated) {
+            showError(`No se encontró el producto #${id_producto}`);
+            return;
+          }
+          await cargarDatos();
+          showSuccess(`Producto ${updated.nombre} actualizado correctamente`);
+        } catch (err) {
+          console.error('Error al actualizar estado de producto:', err);
+          const e: any = err;
+          const message = e?.message || e?.error || (typeof e === 'string' ? e : JSON.stringify(e));
+          showError(message || 'No se pudo actualizar el estado del producto');
+        }
+      },
+      'warning'
+    );
+  };
+
+  // Handlers para actualizar stock
+const handleActualizarStock = async (productoId: number, cantidad: number) => {
+  try {
+    const producto = productos.find(p => p.id_producto === productoId);
+    if (!producto) return;
+
+    const nuevoStock = producto.stock + cantidad;
+    
+    await updateStockProducto(productoId, nuevoStock);
+    setModalActualizarStock(false);  // ✅ Cerrar modal ANTES de recargar
+    
+    await cargarDatos();  // ✅ Recargar datos
+    
+    showSuccess(`Stock actualizado: ${producto.nombre} ahora tiene ${nuevoStock} unidades`);
+  } catch (err) {
+    showError('Error al actualizar el stock');
+    console.error(err);
+  }
+};
 
   if (loading) {
     return (
@@ -142,6 +231,7 @@ function App() {
           <VentasPage 
             ventas={ventas} 
             onNuevaVenta={() => setModalNuevaVenta(true)}
+            onTogglePago={handleMarcarPagada}
           />
         )}
         
@@ -149,6 +239,8 @@ function App() {
           <ProductosPage 
             productos={productos} 
             onNuevoProducto={() => setModalNuevoProducto(true)}
+            onEditarProducto={openEditarProducto}
+            onToggleProductoEstado={(id, estado, nombre) => handleToggleProductoEstado(id, estado, nombre)}
           />
         )}
         
@@ -176,8 +268,9 @@ function App() {
       <ModalNuevoProducto
         isOpen={modalNuevoProducto}
         unidadesMedida={unidadesMedida}
-        onClose={() => setModalNuevoProducto(false)}
-        onSubmit={handleNuevoProducto}
+        onClose={() => { setModalNuevoProducto(false); setProductToEdit(null); }}
+        onSubmit={productToEdit ? handleEditarProducto : handleNuevoProducto}
+        initialProduct={productToEdit}
         showError={showError}
         showWarning={showWarning}
       />

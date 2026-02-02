@@ -6,7 +6,8 @@ interface ModalNuevaVentaProps {
   isOpen: boolean;
   onClose: () => void;
   productos: Producto[];
-  onSubmit: (items: { id_producto: number; cantidad: number }[]) => void;
+  // nuevos argumentos: items y si la venta está pagada
+  onSubmit: (items: { id_producto: number; cantidad: number; precioUnitario: number }[], pagada: boolean) => void;
   showToast?: (message: string) => void;
   showError?: (message: string) => void;
   showWarning?: (message: string) => void;
@@ -21,9 +22,10 @@ export const ModalNuevaVenta: React.FC<ModalNuevaVentaProps> = ({
   showError,
   showWarning,
 }) => {
-  const [items, setItems] = useState<{ id_producto: number; cantidad: number; nombre: string }[]>([]);
+  const [items, setItems] = useState<{ id_producto: number; cantidad: number; nombre: string; precioventa: number }[]>([]);
   const [productoSeleccionado, setProductoSeleccionado] = useState('');
   const [cantidad, setCantidad] = useState('');
+  const [pagada, setPagada] = useState(true);
 
   if (!isOpen) return null;
 
@@ -49,9 +51,18 @@ export const ModalNuevaVenta: React.FC<ModalNuevaVentaProps> = ({
       return;
     }
 
-    setItems([...items, { id_producto: productoId, cantidad: cant, nombre: producto.nombre }]);
+    setItems([...items, { 
+      id_producto: productoId, 
+      cantidad: cant, 
+      nombre: producto.nombre,
+      precioventa: producto.precioventa 
+    }]);
     setProductoSeleccionado('');
     setCantidad('');
+  };
+
+  const calcularTotal = () => {
+    return items.reduce((total, item) => total + (item.cantidad * item.precioventa), 0);
   };
 
   const handleSubmit = () => {
@@ -60,7 +71,8 @@ export const ModalNuevaVenta: React.FC<ModalNuevaVentaProps> = ({
       return;
     }
 
-    onSubmit(items.map(i => ({ id_producto: i.id_producto, cantidad: i.cantidad })));
+    // Pasamos también el flag `pagada` al handler
+    onSubmit(items.map(i => ({ id_producto: i.id_producto, cantidad: i.cantidad, precioUnitario: i.precioventa })), pagada);
     setItems([]);
     setProductoSeleccionado('');
     setCantidad('');
@@ -80,7 +92,7 @@ export const ModalNuevaVenta: React.FC<ModalNuevaVentaProps> = ({
               <option value="">Seleccionar producto</option>
               {productos.map(p => (
                 <option key={p.id_producto} value={p.id_producto}>
-                  {p.nombre} (Stock: {p.stock})
+                  {p.nombre} (Stock: {p.stock}) - ${p.precioventa}
                 </option>
               ))}
             </select>
@@ -95,6 +107,12 @@ export const ModalNuevaVenta: React.FC<ModalNuevaVentaProps> = ({
               placeholder="0"
             />
           </div>
+          <div className="form-group" style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+            <label style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <input type="checkbox" checked={pagada} onChange={(e) => setPagada(e.target.checked)} />
+              <span>Pagada</span>
+            </label>
+          </div>
           <button className="btn-secondary" onClick={agregarItem} style={{ width: '100%' }}>
             + Agregar Producto
           </button>
@@ -104,15 +122,37 @@ export const ModalNuevaVenta: React.FC<ModalNuevaVentaProps> = ({
               <h3>Productos agregados:</h3>
               {items.map(item => (
                 <div key={item.id_producto} className="item-row">
-                  <span>{item.nombre} × {item.cantidad}</span>
-                  <button
-                    className="btn-remove"
-                    onClick={() => setItems(items.filter(i => i.id_producto !== item.id_producto))}
-                  >
-                    Eliminar
-                  </button>
+                  <div>
+                    <span>{item.nombre} × {item.cantidad}</span>
+                    <span style={{ marginLeft: '10px', color: '#666' }}>
+                      ${item.precioventa} c/u
+                    </span>
+                  </div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
+                    <span style={{ fontWeight: 'bold' }}>
+                      ${item.cantidad * item.precioventa}
+                    </span>
+                    <button
+                      className="btn-remove"
+                      onClick={() => setItems(items.filter(i => i.id_producto !== item.id_producto))}
+                    >
+                      Eliminar
+                    </button>
+                  </div>
                 </div>
               ))}
+              <div style={{ 
+                marginTop: '15px', 
+                paddingTop: '15px', 
+                borderTop: '2px solid #ddd',
+                display: 'flex',
+                justifyContent: 'space-between',
+                fontSize: '18px',
+                fontWeight: 'bold'
+              }}>
+                <span>Total:</span>
+                <span>${calcularTotal()}</span>
+              </div>
             </div>
           )}
         </div>
@@ -130,7 +170,19 @@ interface ModalNuevoProductoProps {
   isOpen: boolean;
   onClose: () => void;
   unidadesMedida: UnidadMedida[];
-  onSubmit: (producto: { nombre: string; descripcion: string; stock: number; costo: number; precioventa: number; unidadMedida: number}) => void;
+  // onSubmit will be supplied by the parent; it can be a create or update handler.
+  onSubmit: (producto: { nombre: string; descripcion: string; stock: number; costo: number; precioventa: number; unidadMedida: number; estado: boolean}) => void;
+  // optional product to edit. If provided modal will prefill fields for editing.
+  initialProduct?: {
+    id_producto: number;
+    nombre: string;
+    descripcion: string | null;
+    stock: number;
+    costo: number;
+    precioventa: number;
+    id_unidad_medida: number;
+    estado: boolean;
+  } | null;
   showError?: (message: string) => void;
   showWarning?: (message: string) => void;
 }
@@ -141,13 +193,37 @@ export const ModalNuevoProducto: React.FC<ModalNuevoProductoProps> = ({
   unidadesMedida, 
   onSubmit,
   showWarning,
+  initialProduct = null,
 }) => {
-  const [nombre, setNombre] = useState('');
-  const [descripcion, setDescripcion] = useState('');
-  const [stock, setStock] = useState('');
-  const [costo, setCosto] = useState('');
-  const [precioventa, setPrecioventa] = useState('');
-  const [unidadMedida, setUnidadMedida] = useState('');
+  const [nombre, setNombre] = useState(initialProduct?.nombre ?? '');
+  const [descripcion, setDescripcion] = useState(initialProduct?.descripcion ?? '');
+  const [stock, setStock] = useState(initialProduct ? String(initialProduct.stock) : '');
+  const [costo, setCosto] = useState(initialProduct ? String(initialProduct.costo) : '');
+  const [precioventa, setPrecioventa] = useState(initialProduct ? String(initialProduct.precioventa) : '');
+  const [unidadMedida, setUnidadMedida] = useState(initialProduct ? String(initialProduct.id_unidad_medida) : '');
+  const [estadoProducto, setEstadoProducto] = useState<string>(initialProduct ? (initialProduct.estado ? '1' : '2') : '1');
+
+  React.useEffect(() => {
+    // When initialProduct changes (open modal for edit), populate fields
+    if (initialProduct) {
+      setNombre(initialProduct.nombre ?? '');
+      setDescripcion(initialProduct.descripcion ?? '');
+      setStock(String(initialProduct.stock ?? ''));
+      setCosto(String(initialProduct.costo ?? ''));
+      setPrecioventa(String(initialProduct.precioventa ?? ''));
+      setUnidadMedida(String(initialProduct.id_unidad_medida ?? ''));
+      setEstadoProducto((initialProduct.estado ?? true) ? '1' : '2');
+    } else {
+      // reset when no initial product
+      setNombre('');
+      setDescripcion('');
+      setStock('');
+      setCosto('');
+      setPrecioventa('');
+      setUnidadMedida('');
+      setEstadoProducto('1');
+    }
+  }, [initialProduct, isOpen]);
 
   if (!isOpen) return null;
 
@@ -164,6 +240,7 @@ export const ModalNuevoProducto: React.FC<ModalNuevoProductoProps> = ({
       costo: parseInt(costo),
       precioventa: parseInt(precioventa),
       unidadMedida: parseInt(unidadMedida),
+      estado: estadoProducto === '1',
     });
 
     setNombre('');
@@ -178,7 +255,7 @@ export const ModalNuevoProducto: React.FC<ModalNuevoProductoProps> = ({
     <div className="modal-overlay" onClick={onClose}>
       <div className="modal-minimal" onClick={(e) => e.stopPropagation()}>
         <div className="modal-minimal-header">
-          <h2>Nuevo Producto</h2>
+          <h2>{initialProduct ? 'Actualizar Producto' : 'Nuevo Producto'}</h2>
           <button className="btn-close" onClick={onClose}>×</button>
         </div>
         <div className="modal-minimal-body">
@@ -241,10 +318,19 @@ export const ModalNuevoProducto: React.FC<ModalNuevoProductoProps> = ({
               ))}
             </select>
           </div>
+          <div className="form-group">
+            <label>Estado</label>
+            <select value={estadoProducto} onChange={(e) => setEstadoProducto(e.target.value)}>
+              <option value="1">Activo</option>
+              <option value="2">Inavilitado</option>
+            </select>
+          </div>
         </div>
         <div className="modal-minimal-footer">
           <button className="btn-secondary" onClick={onClose}>Cancelar</button>
-          <button className="btn-primary" onClick={handleSubmit}>Crear Producto</button>
+          <button className="btn-primary" onClick={handleSubmit}>
+            {initialProduct ? 'Actualizar Producto' : 'Crear Producto'}
+          </button>
         </div>
       </div>
     </div>

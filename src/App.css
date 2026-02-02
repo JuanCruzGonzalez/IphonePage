@@ -39,6 +39,7 @@ body {
 .app-container {
   display: flex;
   min-height: 100vh;
+  max-width: 100vw;
 }
 
 /* ============================================

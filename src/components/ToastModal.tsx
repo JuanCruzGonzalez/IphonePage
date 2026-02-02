@@ -1,4 +1,5 @@
 import React from 'react';
+import '../ToastStyles.css'
 
 export type ToastType = 'success' | 'error' | 'warning' | 'info';
 
@@ -10,12 +11,12 @@ interface ToastProps {
   duration?: number;
 }
 
-export const Toast: React.FC<ToastProps> = ({ 
-  message, 
-  type, 
-  isOpen, 
+export const Toast: React.FC<ToastProps> = ({
+  message,
+  type,
+  isOpen,
   onClose,
-  duration = 3000 
+  duration = 3000
 }) => {
   React.useEffect(() => {
     if (isOpen && duration > 0) {
@@ -36,11 +37,14 @@ export const Toast: React.FC<ToastProps> = ({
   };
 
   return (
-    <div className={`toast toast-${type}`}>
-      <span className="toast-icon">{icons[type]}</span>
-      <span className="toast-message">{message}</span>
-      <button className="toast-close" onClick={onClose}>×</button>
-    </div>
+    <>
+      <div className="toast-overlay" onClick={onClose}></div>
+      <div className={`toast toast-${type}`}>
+        <span className="toast-icon">{icons[type]}</span>
+        <span className="toast-message">{message}</span>
+        <button className="toast-close" onClick={onClose}>×</button>
+      </div>
+    </>
   );
 };
 
@@ -86,8 +90,8 @@ export const ConfirmModal: React.FC<ConfirmModalProps> = ({
           <button className="btn-secondary" onClick={onClose}>
             {cancelText}
           </button>
-          <button 
-            className={type === 'danger' ? 'btn-danger' : 'btn-primary'} 
+          <button
+            className={type === 'danger' ? 'btn-danger' : 'btn-primary'}
             onClick={handleConfirm}
           >
             {confirmText}

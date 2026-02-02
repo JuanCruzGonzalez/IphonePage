@@ -8,6 +8,7 @@ export interface Producto {
   precioventa: number;
   id_unidad_medida: number;
   unidad_medida?: UnidadMedida;
+  estado: boolean;
 }
 
 export interface UnidadMedida {
@@ -27,7 +28,8 @@ export interface DetalleVenta {
   id_producto: number;
   id_venta: number;
   cantidad: number;
-  producto?: Producto; // Para cuando hacemos JOIN
+  precio_unitario: number; // ✅ NUEVO
+  producto?: Producto;
 }
 
 export interface VentaConDetalles extends Venta {

@@ -18,10 +18,11 @@ export async function getProductos() {
       id_unidad_medida,
       nombre,
       abreviacion
-    )
+    ),
+    estado
   `)
     .order('nombre', { ascending: true });
-
+      
   if (error) {
     console.error('Error al obtener productos:', error);
     throw error;
@@ -41,6 +42,7 @@ export async function getProductos() {
     unidad_medida: Array.isArray(p.unidad_medida)
       ? (p.unidad_medida[0] ?? null)
       : (p.unidad_medida ?? null),
+    estado: p.estado,
   })) as Producto[];
 
   return productos;
@@ -89,7 +91,7 @@ export async function getVentas() {
         producto (*)
       )
     `)
-    .order('fecha', { ascending: false });
+    .order('id_venta', { ascending: false });
 
 
   if (error) {
@@ -131,12 +133,14 @@ export async function getVentas() {
 
 export async function createVenta(
   fecha: string,
-  detalles: { id_producto: number; cantidad: number }[]
+  detalles: { id_producto: number; cantidad: number; precioUnitario: number; }[],
+  // estado = si la venta está pagada (true) o pendiente (false)
+  estado: boolean
 ) {
   // 1. Crear la venta
   const { data: venta, error: ventaError } = await supabase
     .from('venta')
-    .insert([{ fecha, estado: true }])
+    .insert([{ fecha, estado }])
     .select()
     .single();
 
@@ -149,7 +153,8 @@ export async function createVenta(
   const detallesConVenta = detalles.map(detalle => ({
     id_venta: venta.id_venta,
     id_producto: detalle.id_producto,
-    cantidad: detalle.cantidad
+    cantidad: detalle.cantidad,
+    precio_unitario: detalle.precioUnitario
   }));
 
   const { data: detallesCreados, error: detallesError } = await supabase
@@ -225,4 +230,118 @@ export async function getUnidadesMedidas() {
   }
 
   return data as UnidadMedida[];
+}
+
+// ============= MUTACIONES ADICIONALES =============
+
+/**
+ * Actualiza el estado (pagada/pendiente) de una venta
+ * @param id_venta id de la venta a actualizar
+ * @param pagada nuevo estado (true = pagada, false = pendiente)
+ * @returns Venta actualizada
+ */
+export async function updateVentaEstado(id_venta: number, pagada: boolean) {
+  console.log(`Actualizando estado de venta #${id_venta} a ${pagada}`);
+  const { data, error } = await supabase
+    .from('venta')
+    .update({ estado: pagada })
+    .eq('id_venta', id_venta)
+    .select()
+    .single();
+
+  if (error) {
+    console.error('Error al actualizar estado de venta:', error);
+    throw error;
+  }
+
+  return data as { id_venta: number; fecha: string; estado: boolean };
+}
+
+/**
+ * Actualiza campos de un producto. Solo los campos presentes en `changes` se actualizan.
+ * @param id_producto id del producto a actualizar
+ * @param changes objeto con campos a actualizar
+ * @returns Producto actualizado (normaliza unidad_medida a objeto)
+ */
+export async function updateProducto(
+  id_producto: number,
+  changes: Partial<{
+    nombre: string;
+    descripcion: string | null;
+    stock: number;
+    costo: number;
+    precioventa: number;
+    id_unidad_medida: number;
+    estado: boolean;
+  }>
+) {
+  const { data, error } = await supabase
+    .from('producto')
+    .update(changes)
+    .eq('id_producto', id_producto)
+    .select(
+      `id_producto,nombre,descripcion,stock,costo,precioventa,id_unidad_medida,estado,unidad_medida(id_unidad_medida,nombre,abreviacion)`
+    )
+    .single();
+
+  if (error) {
+    console.error('Error al actualizar producto:', error);
+    throw error;
+  }
+
+  if (!data) return null;
+
+  // Normalizar unidad_medida (puede venir como array)
+  const p: any = data;
+  const producto = {
+    id_producto: p.id_producto,
+    nombre: p.nombre,
+    descripcion: p.descripcion,
+    stock: p.stock,
+    costo: p.costo,
+    precioventa: p.precioventa,
+    id_unidad_medida: p.id_unidad_medida,
+    estado: p.estado,
+    unidad_medida: Array.isArray(p.unidad_medida) ? (p.unidad_medida[0] ?? null) : (p.unidad_medida ?? null),
+  } as Producto;
+
+  return producto;
+}
+
+/**
+ * Actualiza únicamente el estado (activo/inactivo) de un producto.
+ * @param id_producto id del producto
+ * @param activo nuevo estado (true = activo, false = inactivo)
+ */
+export async function updateProductoEstado(id_producto: number, activo: boolean) {
+  const { data, error } = await supabase
+    .from('producto')
+    .update({ estado: activo })
+    .eq('id_producto', id_producto)
+    .select(
+      `id_producto,nombre,descripcion,stock,costo,precioventa,id_unidad_medida,estado,unidad_medida(id_unidad_medida,nombre,abreviacion)`
+    )
+    .maybeSingle();
+
+  if (error) {
+    console.error('Error al actualizar estado de producto:', error);
+    throw error;
+  }
+
+  if (!data) return null;
+
+  const p: any = data;
+  const producto = {
+    id_producto: p.id_producto,
+    nombre: p.nombre,
+    descripcion: p.descripcion,
+    stock: p.stock,
+    costo: p.costo,
+    precioventa: p.precioventa,
+    id_unidad_medida: p.id_unidad_medida,
+    estado: p.estado,
+    unidad_medida: Array.isArray(p.unidad_medida) ? (p.unidad_medida[0] ?? null) : (p.unidad_medida ?? null),
+  } as Producto;
+
+  return producto;
 }
