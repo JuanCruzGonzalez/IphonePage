@@ -22,7 +22,7 @@ export const ModalNuevaVenta: React.FC<ModalNuevaVentaProps> = ({
   showError,
   showWarning,
 }) => {
-  const [items, setItems] = useState<{ id_producto: number; cantidad: number; nombre: string; precioventa: number }[]>([]);
+  const [items, setItems] = useState<{ id_producto: number; cantidad: number; nombre: string; precioventa: number; unidadMedidaId: number}[]>([]);
   const [productoSeleccionado, setProductoSeleccionado] = useState('');
   const [cantidad, setCantidad] = useState('');
   const [pagada, setPagada] = useState(true);
@@ -55,7 +55,8 @@ export const ModalNuevaVenta: React.FC<ModalNuevaVentaProps> = ({
       id_producto: productoId, 
       cantidad: cant, 
       nombre: producto.nombre,
-      precioventa: producto.precioventa 
+      precioventa: producto.precioventa,
+      unidadMedidaId: producto.id_unidad_medida
     }]);
     setProductoSeleccionado('');
     setCantidad('');
@@ -92,7 +93,7 @@ export const ModalNuevaVenta: React.FC<ModalNuevaVentaProps> = ({
               <option value="">Seleccionar producto</option>
               {productos.map(p => (
                 <option key={p.id_producto} value={p.id_producto}>
-                  {p.nombre} (Stock: {p.stock}) - ${p.precioventa}
+                  {p.nombre} (Stock: {p.stock}) - ${p.id_unidad_medida === 1 ? p.precioventa * 100 : p.precioventa}
                 </option>
               ))}
             </select>
@@ -125,7 +126,7 @@ export const ModalNuevaVenta: React.FC<ModalNuevaVentaProps> = ({
                   <div>
                     <span>{item.nombre} × {item.cantidad}</span>
                     <span style={{ marginLeft: '10px', color: '#666' }}>
-                      ${item.precioventa} c/u
+                      ${item.unidadMedidaId === 1 ? item.precioventa * 100 : item.precioventa} {item.unidadMedidaId === 1 ? 'x100gr' : ''}
                     </span>
                   </div>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
@@ -209,8 +210,18 @@ export const ModalNuevoProducto: React.FC<ModalNuevoProductoProps> = ({
       setNombre(initialProduct.nombre ?? '');
       setDescripcion(initialProduct.descripcion ?? '');
       setStock(String(initialProduct.stock ?? ''));
-      setCosto(String(initialProduct.costo ?? ''));
-      setPrecioventa(String(initialProduct.precioventa ?? ''));
+      if (initialProduct.id_unidad_medida === 1) {
+        // If unidad de medida is 1 (por 100 gramos) multiply costo by 100, guardando cuando costo sea null/undefined
+        setCosto(initialProduct.costo != null ? String(initialProduct.costo * 100) : '');
+      } else {
+        setCosto(String(initialProduct.costo ?? ''));
+      }
+      if (initialProduct.id_unidad_medida === 1) {
+        // If unidad de medida is 1 (por 100 gramos) multiply costo by 100, guardando cuando precio de venta sea null/undefined
+        setPrecioventa(initialProduct.precioventa != null ? String(initialProduct.precioventa * 100) : '');
+      } else {
+        setPrecioventa(String(initialProduct.precioventa ?? ''));
+      }
       setUnidadMedida(String(initialProduct.id_unidad_medida ?? ''));
       setEstadoProducto((initialProduct.estado ?? true) ? '1' : '2');
     } else {
@@ -237,8 +248,8 @@ export const ModalNuevoProducto: React.FC<ModalNuevoProductoProps> = ({
       nombre: nombre.trim(),
       descripcion: descripcion.trim(),
       stock: parseInt(stock),
-      costo: parseInt(costo),
-      precioventa: parseInt(precioventa),
+      costo: unidadMedida === '1' ? parseInt(costo)/100 : parseInt(costo),
+      precioventa: unidadMedida === '1' ? parseInt(precioventa)/100 : parseInt(precioventa),
       unidadMedida: parseInt(unidadMedida),
       estado: estadoProducto === '1',
     });
@@ -250,7 +261,7 @@ export const ModalNuevoProducto: React.FC<ModalNuevoProductoProps> = ({
     setPrecioventa('');
     setUnidadMedida('');
   };
-
+  const textoGramos = unidadMedida === '1' ? '(por 100 gramos)' : '';
   return (
     <div className="modal-overlay" onClick={onClose}>
       <div className="modal-minimal" onClick={(e) => e.stopPropagation()}>
@@ -278,6 +289,17 @@ export const ModalNuevoProducto: React.FC<ModalNuevoProductoProps> = ({
             />
           </div>
           <div className="form-group">
+            <label>Unidad de Medida</label>
+            <select value={unidadMedida} onChange={(e) => setUnidadMedida(e.target.value)}>
+              <option value="">Seleccionar Unidad de Medida</option>
+              {unidadesMedida.map(p => (
+                <option key={p.id_unidad_medida} value={p.id_unidad_medida}>
+                  {p.nombre}
+                </option>
+              ))}
+            </select>
+          </div>
+          <div className="form-group">
             <label>Stock inicial *</label>
             <input
               type="number"
@@ -288,7 +310,7 @@ export const ModalNuevoProducto: React.FC<ModalNuevoProductoProps> = ({
             />
           </div>
           <div className="form-group">
-            <label>Precio de Costo</label>
+            <label>Precio de Costo {textoGramos}</label>
             <input
               type="number"
               value={costo}
@@ -298,7 +320,7 @@ export const ModalNuevoProducto: React.FC<ModalNuevoProductoProps> = ({
             />
           </div>
           <div className="form-group">
-            <label>Precio de Venta</label>
+            <label>Precio de Venta {textoGramos}</label>
             <input
               type="number"
               value={precioventa}
@@ -306,17 +328,6 @@ export const ModalNuevoProducto: React.FC<ModalNuevoProductoProps> = ({
               min="0"
               placeholder="0"
             />
-          </div>
-          <div className="form-group">
-            <label>Unidad de Medida</label>
-            <select value={unidadMedida} onChange={(e) => setUnidadMedida(e.target.value)}>
-              <option value="">Seleccionar Unidad de Medida</option>
-              {unidadesMedida.map(p => (
-                <option key={p.id_unidad_medida} value={p.id_unidad_medida}>
-                  {p.nombre}
-                </option>
-              ))}
-            </select>
           </div>
           <div className="form-group">
             <label>Estado</label>

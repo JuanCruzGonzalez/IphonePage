@@ -48,6 +48,56 @@ export async function getProductos() {
   return productos;
 }
 
+/**
+ * Buscar productos por texto (nombre o descripción). Si q está vacío devuelve todos.
+ */
+export async function buscarProductos(q: string) {
+  const qTrim = (q || '').trim();
+  if (!qTrim) return getProductos();
+
+  const { data, error } = await supabase
+    .from('producto')
+    .select(`
+    id_producto,
+    nombre,
+    descripcion,
+    stock,
+    costo,
+    precioventa,
+    id_unidad_medida,
+    estado,
+    unidad_medida (
+      id_unidad_medida,
+      nombre,
+      abreviacion
+    )
+  `)
+    // buscar por nombre o descripcion (case-insensitive)
+    .or(`nombre.ilike.%${qTrim}%,descripcion.ilike.%${qTrim}%`)
+    .order('nombre', { ascending: true });
+
+  if (error) {
+    console.error('Error al buscar productos:', error);
+    throw error;
+  }
+
+  if (!data) return [];
+
+  const productos = (data as any[]).map((p) => ({
+    id_producto: p.id_producto,
+    nombre: p.nombre,
+    descripcion: p.descripcion,
+    stock: p.stock,
+    costo: p.costo,
+    precioventa: p.precioventa,
+    id_unidad_medida: p.id_unidad_medida,
+    estado: p.estado,
+    unidad_medida: Array.isArray(p.unidad_medida) ? (p.unidad_medida[0] ?? null) : (p.unidad_medida ?? null),
+  })) as Producto[];
+
+  return productos;
+}
+
 export async function createProducto(producto: Omit<Producto, 'id_producto'>) {
   const { data, error } = await supabase
     .from('producto')
@@ -91,6 +141,7 @@ export async function getVentas() {
         producto (*)
       )
     `)
+    .eq('baja', false)
     .order('id_venta', { ascending: false });
 
 
@@ -109,6 +160,71 @@ export async function getVentas() {
     console.warn('⚠️ No se obtuvieron datos');
     return [];
   }
+
+  // Normalize nested producto.unidad_medida in each detalle_venta
+  const ventas = (data as any[]).map((v) => ({
+    ...v,
+    detalle_venta: Array.isArray(v.detalle_venta)
+      ? v.detalle_venta.map((d: any) => ({
+          ...d,
+          producto: d.producto
+            ? {
+                ...d.producto,
+                unidad_medida: Array.isArray(d.producto.unidad_medida)
+                  ? (d.producto.unidad_medida[0] ?? null)
+                  : (d.producto.unidad_medida ?? null),
+              }
+            : d.producto,
+        }))
+      : v.detalle_venta,
+  })) as VentaConDetalles[];
+
+  return ventas;
+}
+
+/**
+ * Busca ventas con filtros opcionales: fecha desde, fecha hasta y estado.
+ * fechas deben ser strings en formato YYYY-MM-DD
+ */
+export async function buscarVentas(options?: { desde?: string; hasta?: string; estado?: boolean }) {
+  const { desde, hasta, estado } = options || {};
+
+  let query = supabase
+    .from('venta')
+    .select(`
+      *,
+      detalle_venta (
+        *,
+        producto (*)
+      )
+    `)
+    .order('fecha', { ascending: false });
+
+  if (desde) query = query.gte('fecha', desde);
+  // Hacemos que `hasta` sea inclusivo: convertimos al día siguiente y usamos < nextDay
+  if (hasta) {
+    try {
+      const d = new Date(hasta);
+      d.setDate(d.getDate() + 1);
+      const nextDay = d.toISOString().split('T')[0];
+      console.log('Filtrando hasta (inclusivo):', hasta, '=> usando <', nextDay);
+      query = query.lt('fecha', nextDay);
+    } catch (e) {
+      // si hay un error parseando la fecha, caemos en el filtro lte tradicional
+      query = query.lte('fecha', hasta);
+      console.log('Error al parsear fecha "hasta", usando lte tradicional:', e);
+    }
+  }
+  if (typeof estado === 'boolean') query = query.eq('estado', estado);
+
+  const { data, error } = await query;
+
+  if (error) {
+    console.error('❌ Error al buscar ventas:', error);
+    throw error;
+  }
+
+  if (!data) return [];
 
   // Normalize nested producto.unidad_medida in each detalle_venta
   const ventas = (data as any[]).map((v) => ({
@@ -242,19 +358,48 @@ export async function getUnidadesMedidas() {
  */
 export async function updateVentaEstado(id_venta: number, pagada: boolean) {
   console.log(`Actualizando estado de venta #${id_venta} a ${pagada}`);
-  const { data, error } = await supabase
-    .from('venta')
-    .update({ estado: pagada })
-    .eq('id_venta', id_venta)
-    .select()
-    .single();
+  const updated = await updateVentaFlag(id_venta, 'estado', pagada);
+  if (!updated) return null;
+  // asegurar tipo mínimo esperado por el caller
+  return { id_venta: updated.id_venta, fecha: updated.fecha, estado: updated.estado } as { id_venta: number; fecha: string; estado: boolean };
+}
 
-  if (error) {
-    console.error('Error al actualizar estado de venta:', error);
-    throw error;
+/**
+ * Actualiza el flag `baja` de una venta (dar de baja / dar de alta)
+ * Devuelve la venta actualizada o null si no existe.
+ */
+export async function updateVentaBaja(id_venta: number, baja: boolean) {
+  const updated = await updateVentaFlag(id_venta, 'baja', baja);
+  if (!updated) return null;
+  return updated as { id_venta: number; fecha: string; estado: boolean; baja: boolean };
+}
+
+/**
+ * Actualiza un flag booleano de la entidad `venta`. Campo puede ser 'estado' o 'baja'.
+ * Centraliza la lógica de supabase para evitar duplicación.
+ */
+export async function updateVentaFlag(id_venta: number, field: 'estado' | 'baja', value: boolean) {
+  try {
+    const changes: any = {};
+    changes[field] = value;
+    const { data, error } = await supabase
+      .from('venta')
+      .update(changes)
+      .eq('id_venta', id_venta)
+      .select('id_venta,fecha,estado,baja')
+      .maybeSingle();
+
+    if (error) {
+      console.error(`Error al actualizar ${field} de venta:`, error);
+      throw error;
+    }
+
+    if (!data) return null;
+    return data;
+  } catch (err) {
+    // Propagar error hacia el caller
+    throw err;
   }
-
-  return data as { id_venta: number; fecha: string; estado: boolean };
 }
 
 /**

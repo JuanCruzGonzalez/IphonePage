@@ -8,9 +8,11 @@ import {
   updateStockProducto,
   getVentas,
   createVenta,
-  updateVentaEstado,
+  buscarVentas,
+  updateVentaFlag,
   updateProducto,
   updateProductoEstado,
+  buscarProductos,
   getUnidadesMedidas,
 } from './api/ventaService';
 import { Sidebar } from './components/Sidebar';
@@ -20,6 +22,7 @@ import { StockPage } from './pages/StockPage';
 import { ModalNuevaVenta, ModalNuevoProducto, ModalActualizarStock } from './components/Modals';
 import { Toast, ConfirmModal } from './components/ToastModal';
 import { useToast, useConfirm } from './hooks/useToast';
+import { useDisableWheelOnNumberInputs } from './hooks/useDisableWheelOnNumberInputs';
 
 function App() {
   const [activeSection, setActiveSection] = useState<'ventas' | 'productos' | 'stock'>('ventas');
@@ -38,6 +41,9 @@ function App() {
   // Hooks para toast y confirmación
   const { toast, showSuccess, showError, showWarning, hideToast } = useToast();
   const { confirm, showConfirm, hideConfirm } = useConfirm();
+
+  // Deshabilitar comportamiento de la rueda sobre inputs number (global)
+  useDisableWheelOnNumberInputs();
 
   useEffect(() => {
     cargarDatos();
@@ -65,6 +71,34 @@ function App() {
     }
   };
 
+  // Handler genérico para togglear flags booleanos de venta ('estado' o 'baja')
+  const handleToggleVentaFlag = (id_venta: number, field: 'estado' | 'baja', currentValue: boolean, label?: string) => {
+    const title = field === 'estado' ? (currentValue ? 'Marcar como pendiente' : 'Marcar como pagada') : (currentValue ? 'Dar de alta venta' : 'Dar de baja venta');
+    const actionText = field === 'estado' ? (currentValue ? 'pendiente' : 'pagada') : (currentValue ? 'dar de alta' : 'dar de baja');
+
+    showConfirm(
+      title,
+      `¿Seguro que quieres ${actionText} ${label ?? ('#' + id_venta)}?`,
+      async () => {
+        try {
+          const updated = await updateVentaFlag(id_venta, field, !currentValue);
+          if (!updated) {
+            showError(`No se encontró la venta #${id_venta}`);
+            return;
+          }
+          await cargarDatos();
+          showSuccess(`Venta ${updated.id_venta} actualizada correctamente`);
+        } catch (err) {
+          console.error(`Error al actualizar ${field} de venta:`, err);
+          const e: any = err;
+          const message = e?.message || e?.error || (typeof e === 'string' ? e : JSON.stringify(e));
+          showError(message || `No se pudo actualizar el campo ${field} de la venta`);
+        }
+      },
+      'warning'
+    );
+  };
+
   // Handlers para crear venta
   const handleNuevaVenta = async (items: { id_producto: number; cantidad: number; precioUnitario: number; }[], pagada: boolean) => {
     try {
@@ -79,30 +113,22 @@ function App() {
     }
   };
 
-  // Handler para marcar una venta como pagada/pendiente, con confirmación y manejo de errores
-  const handleMarcarPagada = (id_venta: number, currentEstado: boolean) => {
-    showConfirm(
-      currentEstado ? 'Marcar como pendiente' : 'Marcar como pagada',
-      `¿Seguro que quieres marcar la venta #${id_venta} como ${currentEstado ? 'pendiente' : 'pagada'}?`,
-      async () => {
-        try {
-          const updated = await updateVentaEstado(id_venta, !currentEstado);
-          if (!updated) {
-            showError(`No se encontró la venta #${id_venta}`);
-            return;
-          }
-          await cargarDatos();
-          showSuccess(`Venta #${id_venta} actualizada correctamente`);
-        } catch (err) {
-          // Mejor logging del error y mensaje útil al usuario
-          console.error('Error al actualizar estado de venta:', err);
-          const e: any = err;
-          const message = e?.message || e?.error || (typeof e === 'string' ? e : JSON.stringify(e));
-          showError(message || 'No se pudo actualizar el estado de la venta');
-        }
-      },
-      'warning'
-    );
+  // NOTE: use handleToggleVentaFlag for toggling 'estado' as needed
+
+  // Buscar ventas con filtros (fechas y estado)
+  const handleBuscarVentas = async (opts?: { desde?: string; hasta?: string; estado?: boolean }) => {
+    try {
+      setLoading(true);
+      const results = await buscarVentas(opts);
+      setVentas(results);
+    } catch (err) {
+      console.error('Error al buscar ventas:', err);
+      const e: any = err;
+      const message = e?.message || e?.error || (typeof e === 'string' ? e : JSON.stringify(e));
+      showError(message || 'Error buscando ventas');
+    } finally {
+      setLoading(false);
+    }
   };
 
   // Handlers para crear producto
@@ -123,6 +149,20 @@ function App() {
     } catch (err) {
       showError('Error al agregar el producto');
       console.error(err);
+    }
+  };
+
+  // Buscar productos a partir de texto (desde ProductosPage)
+  const handleBuscarProductos = async (texto: string) => {
+    try {
+      // opcional: podrías mostrar un loader local si quieres
+      const results = await buscarProductos(texto);
+      setProductos(results);
+    } catch (err) {
+      console.error('Error al buscar productos:', err);
+      const e: any = err;
+      const message = e?.message || e?.error || (typeof e === 'string' ? e : JSON.stringify(e));
+      showError(message || 'Error buscando productos');
     }
   };
 
@@ -231,7 +271,8 @@ const handleActualizarStock = async (productoId: number, cantidad: number) => {
           <VentasPage 
             ventas={ventas} 
             onNuevaVenta={() => setModalNuevaVenta(true)}
-            onTogglePago={handleMarcarPagada}
+            onToggleVentaFlag={handleToggleVentaFlag}
+            onSearch={handleBuscarVentas}
           />
         )}
         
@@ -241,6 +282,7 @@ const handleActualizarStock = async (productoId: number, cantidad: number) => {
             onNuevoProducto={() => setModalNuevoProducto(true)}
             onEditarProducto={openEditarProducto}
             onToggleProductoEstado={(id, estado, nombre) => handleToggleProductoEstado(id, estado, nombre)}
+            onSearch={handleBuscarProductos}
           />
         )}
         

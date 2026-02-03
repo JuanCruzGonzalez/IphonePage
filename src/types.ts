@@ -21,6 +21,7 @@ export interface Venta {
   id_venta: number;
   fecha: string;
   estado: boolean;
+  baja: boolean;
 }
 
 export interface DetalleVenta {
