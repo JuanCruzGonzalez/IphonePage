@@ -126,7 +126,30 @@ export const ModalNuevaVenta: React.FC<ModalNuevaVentaProps> = ({
                   <div>
                     <span>{item.nombre} × {item.cantidad}</span>
                     <span style={{ marginLeft: '10px', color: '#666' }}>
-                      ${item.unidadMedidaId === 1 ? item.precioventa * 100 : item.precioventa} {item.unidadMedidaId === 1 ? 'x100gr' : ''}
+                      <input
+                      style={{
+                        width: '70px',
+                        backgroundColor: 'transparent',
+                        color: '#000',
+                        border: '1px solid #ccc',
+                        borderRadius: 4,
+                        padding: '2px 6px',
+                      }}
+                      type="number"
+                      value={item.unidadMedidaId === 1 ? String(item.precioventa * 100) : String(item.precioventa)}
+                      onChange={(e) => {
+                        const val = e.target.value === '' ? 0 : parseFloat(e.target.value);
+                        setItems(prev =>
+                        prev.map(it =>
+                          it.id_producto === item.id_producto
+                          ? { ...it, precioventa: item.unidadMedidaId === 1 ? val / 100 : val }
+                          : it
+                        )
+                        );
+                      }}
+                      min="0"
+                      />
+                      {item.unidadMedidaId === 1 ? ' x100gr' : ''}
                     </span>
                   </div>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>

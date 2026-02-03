@@ -5,30 +5,33 @@ interface VentasPageProps {
   ventas: VentaConDetalles[];
   onNuevaVenta: () => void;
   onToggleVentaFlag?: (id_venta: number, field: 'estado' | 'baja', currentValue: boolean, label?: string) => void;
-  onSearch?: (opts?: { desde?: string; hasta?: string; estado?: boolean }) => void;
+  onSearch?: (opts?: { desde?: string; hasta?: string; estado?: boolean; baja?: boolean }) => void;
 }
 
 export const VentasPage: React.FC<VentasPageProps> = ({ ventas, onNuevaVenta, onToggleVentaFlag, onSearch }) => {
 
   const [desde, setDesde] = useState<string>('');
   const [hasta, setHasta] = useState<string>('');
-  const [estadoFilter, setEstadoFilter] = useState<'all' | 'pagada' | 'pendiente'>('all');
+  const [estadoFilter, setEstadoFilter] = useState<'all' | 'pagada' | 'pendiente' | 'baja'>('all');
 
   const doSearch = () => {
     if (!onSearch) return;
-    const opts: { desde?: string; hasta?: string; estado?: boolean } = {};
+    const opts: { desde?: string; hasta?: string; estado?: boolean; baja?: boolean } = {};
     if (desde) opts.desde = desde;
     if (hasta) opts.hasta = hasta;
     if (estadoFilter === 'pagada') opts.estado = true;
     if (estadoFilter === 'pendiente') opts.estado = false;
+    // si el filtro selecciona las ventas dadas de baja, enviamos baja=true
+    if (estadoFilter === 'baja') opts.baja = true;
     onSearch(opts);
   };
 
   const resetFilters = () => {
     setDesde('');
     setHasta('');
+    // Al limpiar queremos traer solamente ventas activas (baja == false)
     setEstadoFilter('all');
-    if (onSearch) onSearch();
+    if (onSearch) onSearch({ baja: false });
   };
 
 
@@ -59,10 +62,43 @@ export const VentasPage: React.FC<VentasPageProps> = ({ ventas, onNuevaVenta, on
     return local.toLocaleDateString('es-ES');
   };
 
-  const totalVentas = ventas.length;
+  // const totalVentas = ventas.length; // no longer displayed directly; kept for compatibility if needed
   const hoy = new Date().toISOString().split('T')[0];
   const ventasHoy = ventas.filter(v => fechaToYMD(v.fecha) === hoy).length;
-  const totalRecaudado = ventas.reduce((total, venta) => total + calcularTotalVenta(venta), 0);
+
+  const formatCurrency = (n: number) => {
+    try { return new Intl.NumberFormat('es-AR', { style: 'currency', currency: 'ARS' }).format(n); } catch { return `$${n.toFixed(2)}`; }
+  };
+
+  const computeMetrics = (list: VentaConDetalles[]) => {
+    let revenue = 0;
+    let cost = 0;
+    for (const venta of list) {
+      for (const d of venta.detalle_venta) {
+        const qty = d.cantidad || 0;
+        const price = d.precio_unitario || 0;
+        const prodCost = d.producto?.costo ?? 0;
+        revenue += qty * price;
+        cost += qty * prodCost;
+      }
+    }
+    const profit = revenue - cost;
+    return { revenue, cost, profit };
+  };
+
+  // ventas del mes actual
+  const ventasMesActual = (() => {
+    const now = new Date();
+    const firstOfThisMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+    const lastDay = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
+    const firstYMD = `${firstOfThisMonth.getFullYear()}-${String(firstOfThisMonth.getMonth() + 1).padStart(2, '0')}-01`;
+    const lastYMD = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(lastDay).padStart(2, '0')}`;
+    return ventas.filter(v => {
+      const ymd = fechaToYMD(v.fecha);
+      return ymd >= firstYMD && ymd <= lastYMD;
+    });
+  })();
+  const metricsMesActual = computeMetrics(ventasMesActual);
 
   return (
     <div className="page">
@@ -78,16 +114,20 @@ export const VentasPage: React.FC<VentasPageProps> = ({ ventas, onNuevaVenta, on
 
       <div className="stats-grid">
         <div className="stat-card-minimal">
-          <div className="stat-label">Total Ventas</div>
-          <div className="stat-value">{totalVentas}</div>
+          <div className="stat-label">Ingreso (mes actual)</div>
+          <div className="stat-value">{formatCurrency(metricsMesActual.revenue)}</div>
+        </div>
+        <div className="stat-card-minimal">
+          <div className="stat-label">Costo (mes actual)</div>
+          <div className="stat-value">{formatCurrency(metricsMesActual.cost)}</div>
+        </div>
+        <div className="stat-card-minimal">
+          <div className="stat-label">Ganancia (mes actual)</div>
+          <div className="stat-value">{formatCurrency(metricsMesActual.profit)}</div>
         </div>
         <div className="stat-card-minimal">
           <div className="stat-label">Ventas Hoy</div>
           <div className="stat-value">{ventasHoy}</div>
-        </div>
-        <div className="stat-card-minimal">
-          <div className="stat-label">Total Recaudado</div>
-          <div className="stat-value">${totalRecaudado}</div>
         </div>
       </div>
       <div className="stats-grid ventas-filters">
@@ -106,6 +146,7 @@ export const VentasPage: React.FC<VentasPageProps> = ({ ventas, onNuevaVenta, on
               <option value="all">Todos</option>
               <option value="pagada">Pagadas</option>
               <option value="pendiente">Pendientes</option>
+              <option value="baja">Dadas de baja</option>
             </select>
           </div>
 
@@ -170,7 +211,7 @@ export const VentasPage: React.FC<VentasPageProps> = ({ ventas, onNuevaVenta, on
                             aria-label="Marcar pagada"
                             title="Marcar pagada"
                             onClick={() => onToggleVentaFlag(venta.id_venta, 'estado', venta.estado, `Venta #${venta.id_venta}`)}
-                            style={{ width: '40px', display: 'flex', justifyContent: 'center', height: '40px'}}
+                            style={{ width: '40px', display: 'flex', justifyContent: 'center', height: '40px' }}
                           >
                             {/* Check icon */}
                             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden>
@@ -188,7 +229,7 @@ export const VentasPage: React.FC<VentasPageProps> = ({ ventas, onNuevaVenta, on
                             aria-label="Dar de alta"
                             title="Dar de alta"
                             onClick={() => onToggleVentaFlag(venta.id_venta, 'baja', venta.baja, `Venta #${venta.id_venta}`)}
-                            style={{ width: '40px', display: 'flex', justifyContent: 'center', height: '40px'}}
+                            style={{ width: '40px', display: 'flex', justifyContent: 'center', height: '40px' }}
                           >
                             {/* Arrow up icon */}
                             <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none">
@@ -264,7 +305,6 @@ export const VentasPage: React.FC<VentasPageProps> = ({ ventas, onNuevaVenta, on
                       <span className="text-muted"> ×{detalle.cantidad}</span>
                       <span style={{ marginLeft: '10px', color: '#666' }}>
                         ${detalle.producto.id_unidad_medida === 1 ? detalle.precio_unitario * 100 : detalle.precio_unitario} {detalle.producto.id_unidad_medida === 1 ? 'x100gr' : ''}
-
                       </span>
                     </div>
                     <span style={{ fontWeight: 'bold' }}>

@@ -115,8 +115,8 @@ function App() {
 
   // NOTE: use handleToggleVentaFlag for toggling 'estado' as needed
 
-  // Buscar ventas con filtros (fechas y estado)
-  const handleBuscarVentas = async (opts?: { desde?: string; hasta?: string; estado?: boolean }) => {
+  // Buscar ventas con filtros (fechas, estado y baja)
+  const handleBuscarVentas = async (opts?: { desde?: string; hasta?: string; estado?: boolean; baja?: boolean }) => {
     try {
       setLoading(true);
       const results = await buscarVentas(opts);

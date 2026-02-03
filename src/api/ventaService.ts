@@ -186,8 +186,8 @@ export async function getVentas() {
  * Busca ventas con filtros opcionales: fecha desde, fecha hasta y estado.
  * fechas deben ser strings en formato YYYY-MM-DD
  */
-export async function buscarVentas(options?: { desde?: string; hasta?: string; estado?: boolean }) {
-  const { desde, hasta, estado } = options || {};
+export async function buscarVentas(options?: { desde?: string; hasta?: string; estado?: boolean; baja?: boolean }) {
+  const { desde, hasta, estado, baja } = options || {};
 
   let query = supabase
     .from('venta')
@@ -216,6 +216,8 @@ export async function buscarVentas(options?: { desde?: string; hasta?: string; e
     }
   }
   if (typeof estado === 'boolean') query = query.eq('estado', estado);
+  // Filtrar por ventas dadas de baja/altas si se especifica
+  if (typeof baja === 'boolean') query = query.eq('baja', baja);
 
   const { data, error } = await query;
 
