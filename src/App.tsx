@@ -3,40 +3,45 @@ import './App.css';
 import './ToastStyles.css';
 import { Producto, VentaConDetalles, UnidadMedida } from './types';
 import {
-  getProductos,
-  createProducto,
-  updateStockProducto,
   getVentas,
   createVenta,
   buscarVentas,
   updateVentaFlag,
-  updateProducto,
-  updateProductoEstado,
+} from './api/ventaService';
+import {
+  getProductos,
+  createProducto,
+  updateStockProducto,
   buscarProductos,
   getUnidadesMedidas,
-} from './api/ventaService';
+  updateProducto,
+  updateProductoEstado,
+} from './api/productoService';
 import { Sidebar } from './components/Sidebar';
 import { VentasPage } from './pages/VentasPage';
 import { ProductosPage } from './pages/ProductosPage';
 import { StockPage } from './pages/StockPage';
-import { ModalNuevaVenta, ModalNuevoProducto, ModalActualizarStock } from './components/Modals';
+import { ModalNuevaVenta } from './components/ModalNuevaVenta';
+import { ModalNuevoProducto } from './components/ModalNuevoProducto';
+import { ModalActualizarStock } from './components/ModalActualizarStock';
 import { Toast, ConfirmModal } from './components/ToastModal';
 import { useToast, useConfirm } from './hooks/useToast';
 import { useDisableWheelOnNumberInputs } from './hooks/useDisableWheelOnNumberInputs';
+import { useModal } from './hooks/useModal';
+import { useAsync } from './hooks/useAsync';
 
 function App() {
   const [activeSection, setActiveSection] = useState<'ventas' | 'productos' | 'stock'>('ventas');
   const [ventas, setVentas] = useState<VentaConDetalles[]>([]);
   const [productos, setProductos] = useState<Producto[]>([]);
   const [unidadesMedida, setUnidadesMedida] = useState<UnidadMedida[]>([]);
-  const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   // Estados para modales
-  const [modalNuevaVenta, setModalNuevaVenta] = useState(false);
-  const [modalNuevoProducto, setModalNuevoProducto] = useState(false);
+  const modalNuevaVenta = useModal(false);
+  const modalNuevoProducto = useModal(false);
   const [productToEdit, setProductToEdit] = useState<null | any>(null);
-  const [modalActualizarStock, setModalActualizarStock] = useState(false);
+  const modalActualizarStock = useModal(false);
 
   // Hooks para toast y confirmación
   const { toast, showSuccess, showError, showWarning, hideToast } = useToast();
@@ -49,25 +54,44 @@ function App() {
     cargarDatos();
   }, []);
 
+  const initAsync = useAsync<void>();
+  const buscarVentasAsync = useAsync<any[]>();
+  const buscarProductosAsync = useAsync<any[]>();
+  const crearProductoAsync = useAsync<any>();
+  const editarProductoAsync = useAsync<any>();
+  const actualizarStockAsync = useAsync<any>();
+  const crearVentaAsync = useAsync<any>();
+
   const cargarDatos = async () => {
     try {
-      setLoading(true);
-      
-      const [productosData, ventasData, unidadesData] = await Promise.all([
-        getProductos(),
-        getVentas(),
-        getUnidadesMedidas(),
-      ]);
-      
-      setProductos(productosData);
-      setUnidadesMedida(unidadesData || []);
-      setVentas(ventasData);
-      setError(null);
+      // start a watchdog timer in case the initial load hangs
+      let timer: any | null = null;
+      timer = setTimeout(() => {
+        if (initAsync.loading) {
+          console.error('Carga inicial tardó demasiado — forzando reset de estado de carga');
+          initAsync.reset();
+          setError('La carga tardó demasiado. Intenta recargar la página.');
+        }
+      }, 15000);
+
+      await initAsync.execute(async () => {
+        const [productosData, ventasData, unidadesData] = await Promise.all([
+          getProductos(),
+          getVentas(),
+          getUnidadesMedidas(),
+        ]);
+        setProductos(productosData);
+        setUnidadesMedida(unidadesData || []);
+        setVentas(ventasData);
+        setError(null);
+      });
+      if (timer) {
+        clearTimeout(timer);
+        timer = null;
+      }
     } catch (err) {
       console.error('❌ Error al cargar los datos:', err);
       setError('Error al cargar los datos: ' + (err as Error).message);
-    } finally {
-      setLoading(false);
     }
   };
 
@@ -103,9 +127,9 @@ function App() {
   const handleNuevaVenta = async (items: { id_producto: number; cantidad: number; precioUnitario: number; }[], pagada: boolean) => {
     try {
       const fecha = new Date().toISOString().split('T')[0];
-      await createVenta(fecha, items, pagada);
-      await cargarDatos();
-      setModalNuevaVenta(false);
+      await crearVentaAsync.execute(() => createVenta(fecha, items, pagada));
+  await cargarDatos();
+  modalNuevaVenta.close();
       showSuccess('Venta registrada exitosamente');
     } catch (err) {
       showError('Error al registrar la venta');
@@ -118,23 +142,21 @@ function App() {
   // Buscar ventas con filtros (fechas, estado y baja)
   const handleBuscarVentas = async (opts?: { desde?: string; hasta?: string; estado?: boolean; baja?: boolean }) => {
     try {
-      setLoading(true);
-      const results = await buscarVentas(opts);
-      setVentas(results);
+      const results = await buscarVentasAsync.execute(() => buscarVentas(opts));
+      setVentas(results || []);
     } catch (err) {
       console.error('Error al buscar ventas:', err);
       const e: any = err;
       const message = e?.message || e?.error || (typeof e === 'string' ? e : JSON.stringify(e));
       showError(message || 'Error buscando ventas');
     } finally {
-      setLoading(false);
     }
   };
 
   // Handlers para crear producto
   const handleNuevoProducto = async (producto: { nombre: string; descripcion: string; stock: number; costo: number; precioventa: number; unidadMedida: number; estado: boolean}) => {
     try {
-      await createProducto({
+      await crearProductoAsync.execute(() => createProducto({
         nombre: producto.nombre,
         descripcion: producto.descripcion || null,
         stock: producto.stock,
@@ -142,9 +164,9 @@ function App() {
         precioventa: producto.precioventa,
         id_unidad_medida: producto.unidadMedida,
         estado: producto.estado,
-      });
-      await cargarDatos();
-      setModalNuevoProducto(false);
+      }));
+  await cargarDatos();
+  modalNuevoProducto.close();
       showSuccess('Producto agregado exitosamente');
     } catch (err) {
       showError('Error al agregar el producto');
@@ -156,8 +178,8 @@ function App() {
   const handleBuscarProductos = async (texto: string) => {
     try {
       // opcional: podrías mostrar un loader local si quieres
-      const results = await buscarProductos(texto);
-      setProductos(results);
+      const results = await buscarProductosAsync.execute(() => buscarProductos(texto));
+      setProductos(results || []);
     } catch (err) {
       console.error('Error al buscar productos:', err);
       const e: any = err;
@@ -170,7 +192,7 @@ function App() {
   const handleEditarProducto = async (producto: { nombre: string; descripcion: string; stock: number; costo: number; precioventa: number; unidadMedida: number; estado: boolean}) => {
     if (!productToEdit) return;
     try {
-      await updateProducto(productToEdit.id_producto, {
+      const updated = await editarProductoAsync.execute(() => updateProducto(productToEdit.id_producto, {
         nombre: producto.nombre,
         descripcion: producto.descripcion || null,
         stock: producto.stock,
@@ -178,10 +200,14 @@ function App() {
         precioventa: producto.precioventa,
         id_unidad_medida: producto.unidadMedida,
         estado: producto.estado,
-      });
-      await cargarDatos();
-      setModalNuevoProducto(false);
-      setProductToEdit(null);
+      }));
+      if (!updated) {
+        showError('No se pudo actualizar el producto');
+        return;
+      }
+  await cargarDatos();
+  modalNuevoProducto.close();
+  setProductToEdit(null);
       showSuccess('Producto actualizado exitosamente');
     } catch (err) {
       showError('Error al actualizar el producto');
@@ -191,7 +217,7 @@ function App() {
 
   const openEditarProducto = (producto: any) => {
     setProductToEdit(producto);
-    setModalNuevoProducto(true);
+    modalNuevoProducto.open();
   };
 
   // Handler para activar/desactivar producto con confirmación
@@ -227,9 +253,8 @@ const handleActualizarStock = async (productoId: number, cantidad: number) => {
 
     const nuevoStock = producto.stock + cantidad;
     
-    await updateStockProducto(productoId, nuevoStock);
-    setModalActualizarStock(false);  // ✅ Cerrar modal ANTES de recargar
-    
+    await actualizarStockAsync.execute(() => updateStockProducto(productoId, nuevoStock));
+    modalActualizarStock.close();  // ✅ Cerrar modal ANTES de recargar
     await cargarDatos();  // ✅ Recargar datos
     
     showSuccess(`Stock actualizado: ${producto.nombre} ahora tiene ${nuevoStock} unidades`);
@@ -239,7 +264,7 @@ const handleActualizarStock = async (productoId: number, cantidad: number) => {
   }
 };
 
-  if (loading) {
+  if (initAsync.loading) {
     return (
       <div className="loading-screen">
         <div className="loading-spinner"></div>
@@ -270,7 +295,7 @@ const handleActualizarStock = async (productoId: number, cantidad: number) => {
         {activeSection === 'ventas' && (
           <VentasPage 
             ventas={ventas} 
-            onNuevaVenta={() => setModalNuevaVenta(true)}
+            onNuevaVenta={modalNuevaVenta.open}
             onToggleVentaFlag={handleToggleVentaFlag}
             onSearch={handleBuscarVentas}
           />
@@ -279,25 +304,26 @@ const handleActualizarStock = async (productoId: number, cantidad: number) => {
         {activeSection === 'productos' && (
           <ProductosPage 
             productos={productos} 
-            onNuevoProducto={() => setModalNuevoProducto(true)}
+            onNuevoProducto={modalNuevoProducto.open}
             onEditarProducto={openEditarProducto}
             onToggleProductoEstado={(id, estado, nombre) => handleToggleProductoEstado(id, estado, nombre)}
             onSearch={handleBuscarProductos}
+            searchLoading={buscarProductosAsync.loading}
           />
         )}
         
         {activeSection === 'stock' && (
           <StockPage 
             productos={productos} 
-            onActualizarStock={() => setModalActualizarStock(true)}
+            onActualizarStock={modalActualizarStock.open}
           />
         )}
       </main>
 
       {/* Modales */}
       <ModalNuevaVenta
-        isOpen={modalNuevaVenta}
-        onClose={() => setModalNuevaVenta(false)}
+        isOpen={modalNuevaVenta.isOpen}
+        onClose={modalNuevaVenta.close}
         productos={productos}
         onSubmit={handleNuevaVenta}
         // Pasa las funciones de toast y confirm a los modales
@@ -305,25 +331,28 @@ const handleActualizarStock = async (productoId: number, cantidad: number) => {
         showError={showError}
         showWarning={showWarning}
         showConfirm={showConfirm}
+        loading={crearVentaAsync.loading}
       />
 
       <ModalNuevoProducto
-        isOpen={modalNuevoProducto}
+        isOpen={modalNuevoProducto.isOpen}
         unidadesMedida={unidadesMedida}
-        onClose={() => { setModalNuevoProducto(false); setProductToEdit(null); }}
+        onClose={() => { modalNuevoProducto.close(); setProductToEdit(null); }}
         onSubmit={productToEdit ? handleEditarProducto : handleNuevoProducto}
         initialProduct={productToEdit}
         showError={showError}
         showWarning={showWarning}
+        loading={productToEdit ? editarProductoAsync.loading : crearProductoAsync.loading}
       />
 
       <ModalActualizarStock
-        isOpen={modalActualizarStock}
-        onClose={() => setModalActualizarStock(false)}
+        isOpen={modalActualizarStock.isOpen}
+        onClose={modalActualizarStock.close}
         productos={productos}
         onSubmit={handleActualizarStock}
         showError={showError}
         showWarning={showWarning}
+        loading={actualizarStockAsync.loading}
       />
 
       {/* Toast Notification */}

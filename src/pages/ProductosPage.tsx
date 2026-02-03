@@ -1,4 +1,5 @@
 import React from 'react';
+import { useDebounce } from '../hooks/useDebounce';
 import { Producto } from '../types';
 
 interface ProductosPageProps {
@@ -7,18 +8,17 @@ interface ProductosPageProps {
   onEditarProducto?: (producto: Producto) => void;
   onToggleProductoEstado?: (id_producto: number, currentEstado: boolean, nombre?: string) => void;
   onSearch?: (texto: string) => void;
+  searchLoading?: boolean;
 }
 
-export const ProductosPage: React.FC<ProductosPageProps> = ({ productos, onNuevoProducto, onEditarProducto, onToggleProductoEstado, onSearch }) => {
+export const ProductosPage: React.FC<ProductosPageProps> = ({ productos, onNuevoProducto, onEditarProducto, onToggleProductoEstado, onSearch, searchLoading = false }) => {
   const [searchTerm, setSearchTerm] = React.useState('');
   const [statusFilter, setStatusFilter] = React.useState<'all' | 'active' | 'inactive'>('all');
 
+  const debounced = useDebounce(searchTerm, 300);
   React.useEffect(() => {
-    const t = setTimeout(() => {
-      onSearch?.(searchTerm);
-    }, 300);
-    return () => clearTimeout(t);
-  }, [searchTerm, onSearch]);
+    onSearch?.(debounced);
+  }, [debounced, onSearch]);
   const totalProductos = productos.length;
   const stockTotal = productos.reduce((sum, p) => sum + p.stock, 0);
   const stockBajo = productos.filter(p => p.stock < 10).length;
@@ -59,15 +59,23 @@ export const ProductosPage: React.FC<ProductosPageProps> = ({ productos, onNuevo
       </div>
 
       <div className="stats-grid" style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
-        <input
-          type="text"
-          name="buscador"
-          id="buscador"
-          placeholder="Buscar productos por nombre o descripción..."
-          value={searchTerm}
-          onChange={(e) => setSearchTerm(e.target.value)}
-          style={{ padding: '12px', flex: 1, backgroundColor: '#f9f9f9', border: '1px solid #ddd', borderRadius: '4px', color: '#333' }}
-        />
+        <div style={{ position: 'relative', flex: 1 }}>
+          <input
+            type="text"
+            name="buscador"
+            id="buscador"
+            placeholder="Buscar productos por nombre o descripción..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            style={{ padding: '12px', width: '100%', backgroundColor: '#f9f9f9', border: '1px solid #ddd', borderRadius: '4px', color: '#333' }}
+            disabled={searchLoading}
+          />
+          {searchLoading && (
+            <div style={{ position: 'absolute', right: 12, top: '50%', transform: 'translateY(-50%)', fontSize: 12, color: '#666' }}>
+              Buscando...
+            </div>
+          )}
+        </div>
         <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value as any)} style={{ padding: '10px', backgroundColor: '#f9f9f9', border: '1px solid #ddd', borderRadius: '4px', color: '#333' }}>
           <option value="all">Todos</option>
           <option value="active">Activos</option>
