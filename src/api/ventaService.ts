@@ -136,7 +136,7 @@ export async function createVenta(
     precio_unitario: detalle.precioUnitario
   }));
 
-  const { data: detallesCreados, error: detallesError } = await supabase
+  const {  error: detallesError } = await supabase
     .from('detalle_venta')
     .insert(detallesConVenta)
     .select();
