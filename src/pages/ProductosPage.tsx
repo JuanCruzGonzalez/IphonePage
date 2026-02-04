@@ -28,7 +28,6 @@ export const ProductosPage: React.FC<ProductosPageProps> = ({ productos, total =
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [debounced]);
   const totalProductos = total ?? productos.length;
-  const stockTotal = productos.reduce((sum, p) => sum + p.stock, 0);
   const stockBajo = productos.filter(p => p.stock < 10).length;
 
   const displayedProducts = React.useMemo(() => {
@@ -61,8 +60,6 @@ export const ProductosPage: React.FC<ProductosPageProps> = ({ productos, total =
           <div className="stat-value">{totalProductos}</div>
         </div>
         <div className="stat-card-minimal">
-          <div className="stat-label">Stock Total</div>
-          <div className="stat-value">{stockTotal}</div>
         </div>
         <div className="stat-card-minimal">
           <div className="stat-label">Stock Bajo</div>
