@@ -60,8 +60,6 @@ export const ProductosPage: React.FC<ProductosPageProps> = ({ productos, total =
           <div className="stat-value">{totalProductos}</div>
         </div>
         <div className="stat-card-minimal">
-        </div>
-        <div className="stat-card-minimal">
           <div className="stat-label">Stock Bajo</div>
           <div className="stat-value stat-warning">{stockBajo}</div>
         </div>
