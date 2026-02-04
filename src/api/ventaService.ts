@@ -257,11 +257,18 @@ export async function updateVentaBaja(id_venta: number, baja: boolean) {
     .from('venta')
     .update({ baja: true })
     .eq('id_venta', id_venta)
-    .select()
-    .single();
+    .select();
 
-  if (error) throw error;
-  return data;
+  if (error) {
+    console.error('Error en update venta baja:', error);
+    throw error;
+  }
+
+  if (!data || data.length === 0) {
+    throw new Error('No se pudo actualizar la venta. Verifica que la venta existe y que tienes permisos.');
+  }
+
+  return data[0];
 }
 
 export async function reactivarVenta(id_venta: number) {

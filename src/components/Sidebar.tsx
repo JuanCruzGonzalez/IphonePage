@@ -1,4 +1,6 @@
 import React from 'react';
+import { useAuth } from '../auth/AuthContext';
+import { useNavigate } from 'react-router-dom';
 
 interface SidebarProps {
   activeSection: 'ventas' | 'productos' | 'stock' | 'promociones';
@@ -6,12 +8,20 @@ interface SidebarProps {
 }
 
 export const Sidebar: React.FC<SidebarProps> = ({ activeSection, onSectionChange }) => {
+  const { signOut } = useAuth();
+  const navigate = useNavigate();
+
   const menuItems = [
     { id: 'ventas' as const, label: 'Ventas', icon: '📊' },
     { id: 'productos' as const, label: 'Productos', icon: '📦' },
     { id: 'stock' as const, label: 'Stock', icon: '📈' },
     { id: 'promociones' as const, label: 'Promociones', icon: '🎁' },
   ];
+
+  const handleLogout = async () => {
+    await signOut();
+    navigate('/login');
+  };
 
   return (
     <aside className="sidebar">
@@ -31,6 +41,13 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeSection, onSectionChange
           </button>
         ))}
       </nav>
+
+      <div className="sidebar-footer">
+        <button className="nav-item logout-btn" onClick={handleLogout}>
+          <span className="nav-icon">🚪</span>
+          <span className="nav-label">Cerrar Sesión</span>
+        </button>
+      </div>
     </aside>
   );
 };

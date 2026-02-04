@@ -117,6 +117,20 @@ input {
   text-align: left;
 }
 
+.sidebar-footer {
+  padding: 16px 0;
+  border-top: 1px solid var(--color-border);
+}
+
+.logout-btn {
+  color: #dc2626;
+}
+
+.logout-btn:hover {
+  background: #fef2f2;
+  color: #dc2626;
+}
+
 /* ============================================
    CONTENIDO PRINCIPAL
    ============================================ */
