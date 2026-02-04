@@ -33,6 +33,14 @@ body {
   color: var(--color-text);
 }
 
+input {
+  background-color: #fff !important;
+  color: #000;
+  border: 1px solid #ccc;
+  padding: 2px 6px;
+  border-radius: 5px;
+}
+
 /* ============================================
    LAYOUT PRINCIPAL
    ============================================ */
@@ -234,14 +242,18 @@ body {
   border: none;
 }
 
-.btn-sm svg { display: block; }
+.btn-sm svg {
+  display: block;
+}
 
 .btn-danger {
   background: var(--color-danger);
   color: white;
 }
 
-.btn-danger:hover { background: #dc2626; }
+.btn-danger:hover {
+  background: #dc2626;
+}
 
 /* ============================================
    ESTADÍSTICAS
@@ -476,6 +488,7 @@ input[type="number"]::webkit-outer-spin-button {
   .ventas-filters-row {
     gap: 8px;
   }
+
   .filter-column {
     flex: 1 1 140px;
   }
@@ -498,13 +511,15 @@ input[type="number"]::webkit-outer-spin-button {
   padding: 20px;
 }
 
-input[type=number]::-webkit-inner-spin-button, 
-input[type=number]::-webkit-outer-spin-button { 
-  -webkit-appearance: none; 
-  margin: 0; 
+input[type=number]::-webkit-inner-spin-button,
+input[type=number]::-webkit-outer-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
 }
 
-input[type=number] { -moz-appearance:textfield; }
+input[type=number] {
+  -moz-appearance: textfield;
+}
 
 .modal-minimal {
   background: var(--color-bg-card);
@@ -658,6 +673,41 @@ input[type=number] { -moz-appearance:textfield; }
   border-bottom: none;
 }
 
+/* Minimal quantity controls used in sale modal */
+.qty-controls {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: transparent;
+  border-radius: 6px;
+}
+
+.qty-button {
+  width: 28px;
+  border-radius: 6px;
+  border: 1px solid var(--color-border);
+  background: var(--color-bg-card);
+  color: var(--color-text);
+  font-weight: 600;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  height: 21px;
+  line-height: inherit;
+}
+
+.qty-button:hover {
+  background: #f1f5f9;
+}
+
+.qty-value {
+  min-width: 28px;
+  text-align: center;
+  font-weight: 600;
+  color: var(--color-text);
+}
+
 /* ============================================
    ALERTAS
    ============================================ */
@@ -786,7 +836,7 @@ input[type=number] { -moz-appearance:textfield; }
   }
 }
 
-.inputFlilter{
+.inputFlilter {
   background-color: white;
   color: black;
   border-radius: 5px;

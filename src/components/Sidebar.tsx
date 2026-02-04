@@ -1,8 +1,8 @@
 import React from 'react';
 
 interface SidebarProps {
-  activeSection: 'ventas' | 'productos' | 'stock';
-  onSectionChange: (section: 'ventas' | 'productos' | 'stock') => void;
+  activeSection: 'ventas' | 'productos' | 'stock' | 'promociones';
+  onSectionChange: (section: 'ventas' | 'productos' | 'stock' | 'promociones') => void;
 }
 
 export const Sidebar: React.FC<SidebarProps> = ({ activeSection, onSectionChange }) => {
@@ -10,6 +10,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeSection, onSectionChange
     { id: 'ventas' as const, label: 'Ventas', icon: '📊' },
     { id: 'productos' as const, label: 'Productos', icon: '📦' },
     { id: 'stock' as const, label: 'Stock', icon: '📈' },
+    { id: 'promociones' as const, label: 'Promociones', icon: '🎁' },
   ];
 
   return (

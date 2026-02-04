@@ -3,12 +3,16 @@ import { VentaConDetalles } from '../types';
 
 interface VentasPageProps {
   ventas: VentaConDetalles[];
+  total?: number;
+  page?: number;
+  pageSize?: number;
+  onPageChange?: (page: number, opts?: { desde?: string; hasta?: string; estado?: boolean; baja?: boolean }) => void;
   onNuevaVenta: () => void;
   onToggleVentaFlag?: (id_venta: number, field: 'estado' | 'baja', currentValue: boolean, label?: string) => void;
   onSearch?: (opts?: { desde?: string; hasta?: string; estado?: boolean; baja?: boolean }) => void;
 }
 
-export const VentasPage: React.FC<VentasPageProps> = ({ ventas, onNuevaVenta, onToggleVentaFlag, onSearch }) => {
+export const VentasPage: React.FC<VentasPageProps> = ({ ventas, total = 0, page = 1, pageSize = 10, onPageChange, onNuevaVenta, onToggleVentaFlag, onSearch }) => {
 
   const [desde, setDesde] = useState<string>('');
   const [hasta, setHasta] = useState<string>('');
@@ -22,7 +26,10 @@ export const VentasPage: React.FC<VentasPageProps> = ({ ventas, onNuevaVenta, on
     if (estadoFilter === 'pagada') opts.estado = true;
     if (estadoFilter === 'pendiente') opts.estado = false;
     // si el filtro selecciona las ventas dadas de baja, enviamos baja=true
+    // Mostrar ventas dadas de baja SOLO si el filtro es 'baja'.
+    // En cualquier otro caso (all/pagada/pendiente) solicitamos baja=false.
     if (estadoFilter === 'baja') opts.baja = true;
+    else opts.baja = false;
     onSearch(opts);
   };
 
@@ -189,6 +196,19 @@ export const VentasPage: React.FC<VentasPageProps> = ({ ventas, onNuevaVenta, on
                       </span>
                     </td>
                     <td style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                      <button
+                        className="btn-link"
+                        onClick={() => setVentaSeleccionada(venta)}
+                        aria-label={`Ver detalle venta ${venta.id_venta}`}
+                        title="Ver detalle"
+                        style={{ padding: 6, width: '40px', display: 'flex', justifyContent: 'center', height: '40px', alignItems: 'center', border: '1px solid #ddd' }}
+                      >
+                        {/* Eye / ver detalle icon */}
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden>
+                          <path d="M1.5 12S5.5 5 12 5s10.5 7 10.5 7-4 7-10.5 7S1.5 12 1.5 12z" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+                          <path d="M12 9a3 3 0 100 6 3 3 0 000-6z" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+                        </svg>
+                      </button>
                       {onToggleVentaFlag && (
                         // Pago toggle (estado)
                         venta.estado ? (
@@ -254,25 +274,31 @@ export const VentasPage: React.FC<VentasPageProps> = ({ ventas, onNuevaVenta, on
                           </button>
                         )
                       )}
-                      <button
-                        className="btn-link"
-                        onClick={() => setVentaSeleccionada(venta)}
-                        aria-label={`Ver detalle venta ${venta.id_venta}`}
-                        title="Ver detalle"
-                        style={{ padding: 6, width: '40px', display: 'flex', justifyContent: 'center', height: '40px', alignItems: 'center', border: '1px solid #ddd' }}
-                      >
-                        {/* Eye / ver detalle icon */}
-                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden>
-                          <path d="M1.5 12S5.5 5 12 5s10.5 7 10.5 7-4 7-10.5 7S1.5 12 1.5 12z" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
-                          <path d="M12 9a3 3 0 100 6 3 3 0 000-6z" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
-                        </svg>
-                      </button>
                     </td>
                   </tr>
                 ))
               )}
             </tbody>
           </table>
+        </div>
+      </div>
+
+      {/* Pager */}
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 12 }}>
+        <div>
+          Mostrando {total === 0 ? 0 : Math.min((page - 1) * pageSize + 1, total)} - {total === 0 ? 0 : Math.min(page * pageSize, total)} de {total}
+        </div>
+        <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+          {(() => {
+            const totalPages = Math.max(1, Math.ceil((total || 0) / pageSize));
+            return (
+              <>
+                <button className="btn-sm" onClick={() => onPageChange?.(Math.max(1, page - 1), { desde: desde || undefined, hasta: hasta || undefined, estado: estadoFilter === 'pagada' ? true : estadoFilter === 'pendiente' ? false : undefined, baja: estadoFilter === 'baja' ? true : false })} disabled={page <= 1}>◀︎</button>
+                <div style={{ padding: '6px 10px' }}>{page} / {totalPages}</div>
+                <button className="btn-sm" onClick={() => onPageChange?.(Math.min(totalPages, page + 1), { desde: desde || undefined, hasta: hasta || undefined, estado: estadoFilter === 'pagada' ? true : estadoFilter === 'pendiente' ? false : undefined, baja: estadoFilter === 'baja' ? true : false })} disabled={page >= totalPages}>▶︎</button>
+              </>
+            );
+          })()}
         </div>
       </div>
 
@@ -296,16 +322,30 @@ export const VentasPage: React.FC<VentasPageProps> = ({ ventas, onNuevaVenta, on
                 </span>
               </div>
 
-              <h3 className="detail-section-title">Productos</h3>
+              <h3 className="detail-section-title">Productos / Promociones</h3>
               <div className="detail-list">
                 {ventaSeleccionada.detalle_venta.map((detalle) => (
                   <div key={detalle.id_detalle_venta} className="detail-item">
                     <div>
-                      <span>{detalle.producto.nombre}</span>
-                      <span className="text-muted"> ×{detalle.cantidad}</span>
-                      <span style={{ marginLeft: '10px', color: '#666' }}>
-                        ${detalle.producto.id_unidad_medida === 1 ? detalle.precio_unitario * 100 : detalle.precio_unitario} {detalle.producto.id_unidad_medida === 1 ? 'x100gr' : ''}
-                      </span>
+                      {detalle.promocion ? (
+                        <>
+                          <span>{detalle.promocion.name} (Promoción)</span>
+                          <span className="text-muted"> ×{detalle.cantidad}</span>
+                          <span style={{ marginLeft: '10px', color: '#666' }}>
+                            ${detalle.precio_unitario}
+                          </span>
+                        </>
+                      ) : detalle.producto ? (
+                        <>
+                          <span>{detalle.producto.nombre}</span>
+                          <span className="text-muted"> ×{detalle.cantidad}</span>
+                          <span style={{ marginLeft: '10px', color: '#666' }}>
+                            ${detalle.producto.id_unidad_medida === 1 ? detalle.precio_unitario * 100 : detalle.precio_unitario} {detalle.producto.id_unidad_medida === 1 ? 'x100gr' : ''}
+                          </span>
+                        </>
+                      ) : (
+                        <span>Ítem desconocido</span>
+                      )}
                     </div>
                     <span style={{ fontWeight: 'bold' }}>
                       ${detalle.cantidad * detalle.precio_unitario}

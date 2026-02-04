@@ -10,7 +10,8 @@ export async function getVentas() {
       *,
       detalle_venta (
         *,
-        producto (*)
+        producto (*),
+        promocion (*)
       )
     `)
     .eq('baja', false)
@@ -36,16 +37,16 @@ export async function getVentas() {
     ...v,
     detalle_venta: Array.isArray(v.detalle_venta)
       ? v.detalle_venta.map((d: any) => ({
-          ...d,
-          producto: d.producto
-            ? {
-                ...d.producto,
-                unidad_medida: Array.isArray(d.producto.unidad_medida)
-                  ? (d.producto.unidad_medida[0] ?? null)
-                  : (d.producto.unidad_medida ?? null),
-              }
-            : d.producto,
-        }))
+        ...d,
+        producto: d.producto
+          ? {
+            ...d.producto,
+            unidad_medida: Array.isArray(d.producto.unidad_medida)
+              ? (d.producto.unidad_medida[0] ?? null)
+              : (d.producto.unidad_medida ?? null),
+          }
+          : d.producto,
+      }))
       : v.detalle_venta,
   })) as VentaConDetalles[];
 
@@ -65,10 +66,11 @@ export async function buscarVentas(options?: { desde?: string; hasta?: string; e
       *,
       detalle_venta (
         *,
-        producto (*)
+        producto (*),
+        promocion (*)
       )
     `)
-    .order('fecha', { ascending: false });
+    .order('id_venta', { ascending: false });
 
   if (desde) query = query.gte('fecha', desde);
   if (hasta) {
@@ -97,56 +99,109 @@ export async function buscarVentas(options?: { desde?: string; hasta?: string; e
     ...v,
     detalle_venta: Array.isArray(v.detalle_venta)
       ? v.detalle_venta.map((d: any) => ({
-          ...d,
-          producto: d.producto
-            ? {
-                ...d.producto,
-                unidad_medida: Array.isArray(d.producto.unidad_medida)
-                  ? (d.producto.unidad_medida[0] ?? null)
-                  : (d.producto.unidad_medida ?? null),
-              }
-            : d.producto,
-        }))
+        ...d,
+        producto: d.producto
+          ? {
+            ...d.producto,
+            unidad_medida: Array.isArray(d.producto.unidad_medida)
+              ? (d.producto.unidad_medida[0] ?? null)
+              : (d.producto.unidad_medida ?? null),
+          }
+          : d.producto,
+      }))
       : v.detalle_venta,
   })) as VentaConDetalles[];
 
   return ventas;
 }
 
+/**
+ * Devuelve una página de ventas con contador total (server-side paging).
+ * Opcionalmente acepta los mismos filtros que buscarVentas.
+ */
+export async function getVentasPage(
+  page = 1,
+  pageSize = 10,
+  options?: { desde?: string; hasta?: string; estado?: boolean; baja?: boolean }
+) {
+  const { desde, hasta, estado, baja } = options || {};
+  const from = (page - 1) * pageSize;
+  const to = page * pageSize - 1;
+
+  let query = supabase
+    .from('venta')
+    .select(`
+      *,
+      detalle_venta (
+        *,
+        producto (*),
+        promocion (*)
+      )
+    `, { count: 'exact' })
+    .order('id_venta', { ascending: false });
+
+  if (desde) query = query.gte('fecha', desde);
+  if (hasta) {
+    try {
+      const d = new Date(hasta);
+      d.setDate(d.getDate() + 1);
+      const nextDay = d.toISOString().split('T')[0];
+      query = query.lt('fecha', nextDay);
+    } catch (e) {
+      query = query.lte('fecha', hasta);
+    }
+  }
+  if (typeof estado === 'boolean') query = query.eq('estado', estado);
+  if (typeof baja === 'boolean') query = query.eq('baja', baja);
+
+  const { data, error, count } = await query.range(from, to) as any;
+
+  if (error) {
+    console.error('❌ Error al obtener página de ventas:', error);
+    throw error;
+  }
+
+  if (!data) return { ventas: [], total: count || 0 };
+
+  const ventas = (data as any[]).map((v) => ({
+    ...v,
+    detalle_venta: Array.isArray(v.detalle_venta)
+      ? v.detalle_venta.map((d: any) => ({
+        ...d,
+        producto: d.producto
+          ? {
+            ...d.producto,
+            unidad_medida: Array.isArray(d.producto.unidad_medida)
+              ? (d.producto.unidad_medida[0] ?? null)
+              : (d.producto.unidad_medida ?? null),
+          }
+          : d.producto,
+      }))
+      : v.detalle_venta,
+  })) as VentaConDetalles[];
+
+  return { ventas, total: count || 0 };
+}
+
+
 export async function createVenta(
   fecha: string,
-  detalles: { id_producto: number; cantidad: number; precioUnitario: number; }[],
+  detalles: any[],
   estado: boolean
 ) {
-  const { data: venta, error: ventaError } = await supabase
-    .from('venta')
-    .insert([{ fecha, estado }])
-    .select()
-    .single();
+  const { data, error } = await supabase.rpc('create_venta_transaction', {
+    p_venta: { fecha, estado },
+    p_detalles: detalles,
+  });
 
-  if (ventaError) {
-    console.error('Error al crear venta:', ventaError);
-    throw ventaError;
+  if (error) {
+    console.error('Error al crear venta via RPC:', error);
+    throw error;
   }
 
-  const detallesConVenta = detalles.map(detalle => ({
-    id_venta: venta.id_venta,
-    id_producto: detalle.id_producto,
-    cantidad: detalle.cantidad,
-    precio_unitario: detalle.precioUnitario
-  }));
-
-  const {  error: detallesError } = await supabase
-    .from('detalle_venta')
-    .insert(detallesConVenta)
-    .select();
-
-  if (detallesError) {
-    console.error('Error al crear detalles de venta:', detallesError);
-    throw detallesError;
-  }
-  return venta;
+  return data;
 }
+
 
 // ============= DETALLES DE VENTA =============
 export async function getDetallesVenta(id_venta: number) {
@@ -154,7 +209,8 @@ export async function getDetallesVenta(id_venta: number) {
     .from('detalle_venta')
     .select(`
       *,
-      producto (*)
+      producto (*),
+      promocion (*)
     `)
     .eq('id_venta', id_venta);
 
@@ -169,11 +225,11 @@ export async function getDetallesVenta(id_venta: number) {
     ...d,
     producto: d.producto
       ? {
-          ...d.producto,
-          unidad_medida: Array.isArray(d.producto.unidad_medida)
-            ? (d.producto.unidad_medida[0] ?? null)
-            : (d.producto.unidad_medida ?? null),
-        }
+        ...d.producto,
+        unidad_medida: Array.isArray(d.producto.unidad_medida)
+          ? (d.producto.unidad_medida[0] ?? null)
+          : (d.producto.unidad_medida ?? null),
+      }
       : d.producto,
   })) as (DetalleVenta & { producto: any })[];
 
@@ -188,30 +244,70 @@ export async function updateVentaEstado(id_venta: number, pagada: boolean) {
 }
 
 export async function updateVentaBaja(id_venta: number, baja: boolean) {
-  const updated = await updateVentaFlag(id_venta, 'baja', baja);
-  if (!updated) return null;
-  return updated as { id_venta: number; fecha: string; estado: boolean; baja: boolean };
+  if (baja === false) {
+    const { data, error } = await supabase.rpc('reactivar_venta_transaction', {
+      p_id_venta: id_venta,
+    });
+    if (error) throw error;
+    return data;
+  }
+
+  // Baja de venta (solo restaurar stock)
+  const { data, error } = await supabase
+    .from('venta')
+    .update({ baja: true })
+    .eq('id_venta', id_venta)
+    .select()
+    .single();
+
+  if (error) throw error;
+  return data;
 }
 
-export async function updateVentaFlag(id_venta: number, field: 'estado' | 'baja', value: boolean) {
-  try {
-    const changes: any = {};
-    changes[field] = value;
-    const { data, error } = await supabase
-      .from('venta')
-      .update(changes)
-      .eq('id_venta', id_venta)
-      .select('id_venta,fecha,estado,baja')
-      .maybeSingle();
+export async function reactivarVenta(id_venta: number) {
+  const { data, error } = await supabase.rpc(
+    'reactivar_venta_transaction',
+    { p_id_venta: id_venta }
+  );
+
+  if (error) {
+    console.error('Error al reactivar venta:', error);
+    throw error;
+  }
+
+  return data;
+}
+
+
+export async function updateVentaFlag(
+  id_venta: number,
+  field: 'estado' | 'baja',
+  value: boolean
+) {
+  if (field === 'baja') {
+    const { data, error } = await supabase.rpc('toggle_venta_baja', {
+      p_id_venta: id_venta,
+      p_baja: value,
+    });
 
     if (error) {
-      console.error(`Error al actualizar ${field} de venta:`, error);
+      console.error('Error al ejecutar RPC toggle_venta_baja:', error);
       throw error;
     }
 
-    if (!data) return null;
     return data;
-  } catch (err) {
-    throw err;
   }
+
+  // estado no afecta stock → update normal
+  const changes: any = {};
+  changes[field] = value;
+  const { data, error } = await supabase
+    .from('venta')
+    .update(changes)
+    .eq('id_venta', id_venta)
+    .select()
+    .maybeSingle();
+
+  if (error) throw error;
+  return data;
 }

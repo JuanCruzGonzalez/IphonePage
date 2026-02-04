@@ -1,40 +1,57 @@
 import { useState, useEffect } from 'react';
 import './App.css';
 import './ToastStyles.css';
-import { Producto, VentaConDetalles, UnidadMedida } from './types';
+import { Producto, VentaConDetalles, UnidadMedida, Promocion, DetalleVentaInput, PromocionConDetalles } from './types';
 import {
-  getVentas,
   createVenta,
-  buscarVentas,
-  updateVentaFlag,
+  reactivarVenta,
+  updateVentaBaja,
+  getVentasPage,
 } from './api/ventaService';
 import {
-  getProductos,
+  
+  getProductosActivos,
+  getProductosPage,
   createProducto,
   updateStockProducto,
-  buscarProductos,
   getUnidadesMedidas,
   updateProducto,
   updateProductoEstado,
 } from './api/productoService';
+import { getPromocionesActivas, getPromociones,updatePromocion, deletePromocion, getDetallePromocion } from './api/promocionService';
+import ModalVerPromocion from './components/ModalVerPromocion';
 import { Sidebar } from './components/Sidebar';
 import { VentasPage } from './pages/VentasPage';
 import { ProductosPage } from './pages/ProductosPage';
 import { StockPage } from './pages/StockPage';
+import { PromocionesPage } from './pages/PromocionesPage';
 import { ModalNuevaVenta } from './components/ModalNuevaVenta';
 import { ModalNuevoProducto } from './components/ModalNuevoProducto';
 import { ModalActualizarStock } from './components/ModalActualizarStock';
+import { ModalCrearPromocion } from './components/ModalCrearPromocion';
 import { Toast, ConfirmModal } from './components/ToastModal';
 import { useToast, useConfirm } from './hooks/useToast';
 import { useDisableWheelOnNumberInputs } from './hooks/useDisableWheelOnNumberInputs';
 import { useModal } from './hooks/useModal';
 import { useAsync } from './hooks/useAsync';
+import { createPromocion } from './api/promocionService';
 
 function App() {
-  const [activeSection, setActiveSection] = useState<'ventas' | 'productos' | 'stock'>('ventas');
+  const [activeSection, setActiveSection] = useState<'ventas' | 'productos' | 'stock' | 'promociones'>('ventas');
   const [ventas, setVentas] = useState<VentaConDetalles[]>([]);
+  const [ventasPageNum, setVentasPageNum] = useState(1);
+  const [ventasTotal, setVentasTotal] = useState(0);
   const [productos, setProductos] = useState<Producto[]>([]);
+  const [productosPageNum, setProductosPageNum] = useState(1);
+  const [productosTotal, setProductosTotal] = useState(0);
+  const PAGE_SIZE = 8;
+  const VENTAS_PAGE_SIZE = 8;
+  const [productosActivos, setProductosActivos] = useState<Producto[]>([]);
+  const [promocionesActivas, setPromocionesActivas] = useState<Promocion[]>([]);
+  const [promociones, setPromociones] = useState<Promocion[]>([]);
+  const [promocionToEdit, setPromocionToEdit] = useState<PromocionConDetalles | null>(null);
   const [unidadesMedida, setUnidadesMedida] = useState<UnidadMedida[]>([]);
+  const modalCrearPromocion = useModal(false);
   const [error, setError] = useState<string | null>(null);
 
   // Estados para modales
@@ -55,12 +72,18 @@ function App() {
   }, []);
 
   const initAsync = useAsync<void>();
-  const buscarVentasAsync = useAsync<any[]>();
   const buscarProductosAsync = useAsync<any[]>();
   const crearProductoAsync = useAsync<any>();
   const editarProductoAsync = useAsync<any>();
   const actualizarStockAsync = useAsync<any>();
   const crearVentaAsync = useAsync<any>();
+  const crearPromocionAsync = useAsync<any>();
+  const editarPromocionAsync = useAsync<any>();
+  const eliminarPromocionAsync = useAsync<any>();
+  const verPromocionAsync = useAsync<any>();
+  const modalVerPromocion = useModal(false);
+  const [promocionVista, setPromocionVista] = useState<Promocion | null>(null);
+  const [promocionVistaDetalles, setPromocionVistaDetalles] = useState<any[]>([]);
 
   const cargarDatos = async () => {
     try {
@@ -75,14 +98,32 @@ function App() {
       }, 15000);
 
       await initAsync.execute(async () => {
-        const [productosData, ventasData, unidadesData] = await Promise.all([
-          getProductos(),
-          getVentas(),
+        // Load first page of productos (with total) and first page of ventas, plus other data in parallel
+        const productosPagePromise = getProductosPage(1, PAGE_SIZE, '');
+  const ventasPagePromise = getVentasPage(1, VENTAS_PAGE_SIZE, { baja: false });
+        const othersPromise = Promise.all([
+          getProductosActivos(),
           getUnidadesMedidas(),
+          getPromocionesActivas(),
+          getPromociones(),
         ]);
-        setProductos(productosData);
+
+        const [productosPageResult, ventasPageResult, [productosActivosData, unidadesData, promocionesActivasData, promocionesData]] = await Promise.all([
+          productosPagePromise,
+          ventasPagePromise,
+          othersPromise,
+        ]);
+
+        setProductos(productosPageResult.productos);
+        setProductosTotal(productosPageResult.total);
+        setProductosPageNum(1);
+        setProductosActivos(productosActivosData);
         setUnidadesMedida(unidadesData || []);
-        setVentas(ventasData);
+        setVentas(ventasPageResult.ventas || []);
+        setVentasTotal(ventasPageResult.total || 0);
+        setVentasPageNum(1);
+        setPromocionesActivas(promocionesActivasData || []);
+        setPromociones(promocionesData || []);
         setError(null);
       });
       if (timer) {
@@ -95,27 +136,74 @@ function App() {
     }
   };
 
-  // Handler genérico para togglear flags booleanos de venta ('estado' o 'baja')
-  const handleToggleVentaFlag = (id_venta: number, field: 'estado' | 'baja', currentValue: boolean, label?: string) => {
-    const title = field === 'estado' ? (currentValue ? 'Marcar como pendiente' : 'Marcar como pagada') : (currentValue ? 'Dar de alta venta' : 'Dar de baja venta');
-    const actionText = field === 'estado' ? (currentValue ? 'pendiente' : 'pagada') : (currentValue ? 'dar de alta' : 'dar de baja');
+  // Load a specific page of productos (with optional search filter q)
+  const loadProductosPage = async (page = 1, q = '') => {
+    try {
+      const { productos: pageRows, total } = await getProductosPage(page, PAGE_SIZE, q);
+      console.debug('[loadProductosPage] page=', page, 'pageSize=', PAGE_SIZE, 'returned=', (pageRows || []).length, 'total=', total);
+      setProductos(pageRows || []);
+      setProductosTotal(total || 0);
+      setProductosPageNum(page);
+    } catch (err) {
+      console.error('Error cargando página de productos:', err);
+      showError('Error cargando productos');
+    }
+  };
+
+  const handleToggleVentaFlag = (
+    id_venta: number,
+    field: 'estado' | 'baja',
+    currentValue: boolean,
+    label?: string
+  ) => {
+    const title =
+      field === 'estado'
+        ? currentValue
+          ? 'Marcar como pendiente'
+          : 'Marcar como pagada'
+        : currentValue
+          ? 'Dar de alta venta'
+          : 'Dar de baja venta';
+
+    const actionText =
+      field === 'estado'
+        ? currentValue
+          ? 'pendiente'
+          : 'pagada'
+        : currentValue
+          ? 'dar de alta'
+          : 'dar de baja';
 
     showConfirm(
       title,
-      `¿Seguro que quieres ${actionText} ${label ?? ('#' + id_venta)}?`,
+      `¿Seguro que quieres ${actionText} ${label ?? '#' + id_venta}?`,
       async () => {
         try {
-          const updated = await updateVentaFlag(id_venta, field, !currentValue);
+          let updated;
+          
+          if (field === 'baja' && currentValue === true) {
+            updated = await reactivarVenta(id_venta);
+          }
+
+          if (field === 'baja' && !currentValue === true) {
+            console.log('⏺️ Marcando venta como pendiente mediante updateVentaBaja');
+            updated = await updateVentaBaja(id_venta, !currentValue);
+          }
+
           if (!updated) {
             showError(`No se encontró la venta #${id_venta}`);
             return;
           }
+
           await cargarDatos();
           showSuccess(`Venta ${updated.id_venta} actualizada correctamente`);
         } catch (err) {
           console.error(`Error al actualizar ${field} de venta:`, err);
           const e: any = err;
-          const message = e?.message || e?.error || (typeof e === 'string' ? e : JSON.stringify(e));
+          const message =
+            e?.message ||
+            e?.error ||
+            (typeof e === 'string' ? e : JSON.stringify(e));
           showError(message || `No se pudo actualizar el campo ${field} de la venta`);
         }
       },
@@ -123,17 +211,79 @@ function App() {
     );
   };
 
+
   // Handlers para crear venta
-  const handleNuevaVenta = async (items: { id_producto: number; cantidad: number; precioUnitario: number; }[], pagada: boolean) => {
+  const handleNuevaVenta = async (items: DetalleVentaInput[], pagada: boolean) => {
     try {
       const fecha = new Date().toISOString().split('T')[0];
       await crearVentaAsync.execute(() => createVenta(fecha, items, pagada));
-  await cargarDatos();
-  modalNuevaVenta.close();
+      await cargarDatos();
+      modalNuevaVenta.close();
       showSuccess('Venta registrada exitosamente');
     } catch (err) {
       showError('Error al registrar la venta');
       console.error(err);
+    }
+  };
+
+  const handleCrearPromocion = async (payload: { name: string; precio: number | null; productos: { id_producto: number; cantidad: number }[]; estado: boolean }) => {
+    try {
+      if (promocionToEdit) {
+        // Edit flow
+        await editarPromocionAsync.execute(() => updatePromocion(promocionToEdit.id_promocion, payload.name, payload.precio, payload.productos, payload.estado));
+        setPromocionToEdit(null);
+        showSuccess('Promoción actualizada correctamente');
+      } else {
+        await crearPromocionAsync.execute(() => createPromocion(payload.name, payload.precio, payload.productos, payload.estado));
+        showSuccess('Promoción creada correctamente');
+      }
+      await cargarDatos();
+      modalCrearPromocion.close();
+    } catch (err) {
+      console.error('Error creando/actualizando promocion:', err);
+      showError('Error al crear o actualizar la promoción');
+    }
+  };
+
+  const handleEditarPromocion = async (promocion: Promocion) => {
+    try {
+      const detalles = await getDetallePromocion(promocion.id_promocion);
+      const productosConCantidad = (detalles || []).map((d: any) => ({ id_producto: d.id_producto, cantidad: d.cantidad }));
+      setPromocionToEdit({ ...promocion, productos: productosConCantidad });
+      modalCrearPromocion.open();
+    } catch (err) {
+      console.error('Error cargando detalle promocion para editar:', err);
+      showError('No se pudo cargar los detalles de la promoción');
+    }
+  };
+
+  const handleChangePromocion = async (id_promocion: number, estado: boolean) => {
+    showConfirm(
+      estado ? 'Dar de alta promoción' : 'Dar de baja promoción',
+      `¿Seguro que quieres ${estado ? 'dar de alta' : 'dar de baja'} la promoción #${id_promocion}?`,
+      async () => {
+        try {
+          await eliminarPromocionAsync.execute(() => deletePromocion(id_promocion, estado));
+          await cargarDatos();
+          showSuccess(`Promoción ${estado ? 'dada de alta' : 'dada de baja'} correctamente`);
+        } catch (err) {
+          console.error('Error eliminando promocion:', err);
+          showError('No se pudo eliminar la promoción');
+        }
+      },
+      estado ? 'info' : 'danger'
+    );
+  };
+
+  const handleVerPromocion = async (promocion: Promocion) => {
+    try {
+      const detalles = await verPromocionAsync.execute(() => getDetallePromocion(promocion.id_promocion));
+      setPromocionVista(promocion);
+      setPromocionVistaDetalles(detalles || []);
+      modalVerPromocion.open();
+    } catch (err) {
+      console.error('Error al cargar detalles de promocion:', err);
+      showError('No se pudieron cargar los detalles de la promoción');
     }
   };
 
@@ -142,8 +292,13 @@ function App() {
   // Buscar ventas con filtros (fechas, estado y baja)
   const handleBuscarVentas = async (opts?: { desde?: string; hasta?: string; estado?: boolean; baja?: boolean }) => {
     try {
-      const results = await buscarVentasAsync.execute(() => buscarVentas(opts));
-      setVentas(results || []);
+      // Ensure default is baja=false unless explicitly requested
+      const safeOpts = { ...(opts || {}), baja: typeof opts?.baja === 'boolean' ? opts!.baja : false };
+      // Use paginated API for search results (reset to page 1)
+      const { ventas: pageRows, total } = await getVentasPage(1, VENTAS_PAGE_SIZE, safeOpts);
+      setVentas(pageRows || []);
+      setVentasTotal(total || 0);
+      setVentasPageNum(1);
     } catch (err) {
       console.error('Error al buscar ventas:', err);
       const e: any = err;
@@ -153,8 +308,23 @@ function App() {
     }
   };
 
+  // Load a specific page of ventas (with optional filters)
+  const loadVentasPage = async (page = 1, opts?: { desde?: string; hasta?: string; estado?: boolean; baja?: boolean }) => {
+    try {
+      const safeOpts = { ...(opts || {}), baja: typeof opts?.baja === 'boolean' ? opts!.baja : false };
+      const { ventas: pageRows, total } = await getVentasPage(page, VENTAS_PAGE_SIZE, safeOpts);
+      console.debug('[loadVentasPage] page=', page, 'pageSize=', VENTAS_PAGE_SIZE, 'returned=', (pageRows || []).length, 'total=', total);
+      setVentas(pageRows || []);
+      setVentasTotal(total || 0);
+      setVentasPageNum(page);
+    } catch (err) {
+      console.error('Error cargando página de ventas:', err);
+      showError('Error cargando ventas');
+    }
+  };
+
   // Handlers para crear producto
-  const handleNuevoProducto = async (producto: { nombre: string; descripcion: string; stock: number; costo: number; precioventa: number; unidadMedida: number; estado: boolean}) => {
+  const handleNuevoProducto = async (producto: { nombre: string; descripcion: string; stock: number; costo: number; precioventa: number; unidadMedida: number; estado: boolean }) => {
     try {
       await crearProductoAsync.execute(() => createProducto({
         nombre: producto.nombre,
@@ -165,8 +335,8 @@ function App() {
         id_unidad_medida: producto.unidadMedida,
         estado: producto.estado,
       }));
-  await cargarDatos();
-  modalNuevoProducto.close();
+      await cargarDatos();
+      modalNuevoProducto.close();
       showSuccess('Producto agregado exitosamente');
     } catch (err) {
       showError('Error al agregar el producto');
@@ -177,9 +347,11 @@ function App() {
   // Buscar productos a partir de texto (desde ProductosPage)
   const handleBuscarProductos = async (texto: string) => {
     try {
-      // opcional: podrías mostrar un loader local si quieres
-      const results = await buscarProductosAsync.execute(() => buscarProductos(texto));
-      setProductos(results || []);
+      // Use paginated API for searches as well (reset to page 1)
+      const { productos: pageRows, total } = await getProductosPage(1, PAGE_SIZE, texto);
+      setProductos(pageRows || []);
+      setProductosTotal(total || 0);
+      setProductosPageNum(1);
     } catch (err) {
       console.error('Error al buscar productos:', err);
       const e: any = err;
@@ -189,7 +361,7 @@ function App() {
   };
 
   // Handler para editar un producto existente
-  const handleEditarProducto = async (producto: { nombre: string; descripcion: string; stock: number; costo: number; precioventa: number; unidadMedida: number; estado: boolean}) => {
+  const handleEditarProducto = async (producto: { nombre: string; descripcion: string; stock: number; costo: number; precioventa: number; unidadMedida: number; estado: boolean }) => {
     if (!productToEdit) return;
     try {
       const updated = await editarProductoAsync.execute(() => updateProducto(productToEdit.id_producto, {
@@ -205,9 +377,9 @@ function App() {
         showError('No se pudo actualizar el producto');
         return;
       }
-  await cargarDatos();
-  modalNuevoProducto.close();
-  setProductToEdit(null);
+      await cargarDatos();
+      modalNuevoProducto.close();
+      setProductToEdit(null);
       showSuccess('Producto actualizado exitosamente');
     } catch (err) {
       showError('Error al actualizar el producto');
@@ -224,7 +396,7 @@ function App() {
   const handleToggleProductoEstado = (id_producto: number, currentEstado: boolean, nombre?: string) => {
     showConfirm(
       currentEstado ? 'Dar de baja producto' : 'Dar de alta producto',
-      `¿Seguro que quieres ${currentEstado ? 'dar de baja' : 'dar de alta'} el producto ${nombre ?? '#'+id_producto}?`,
+      `¿Seguro que quieres ${currentEstado ? 'dar de baja' : 'dar de alta'} el producto ${nombre ?? '#' + id_producto}?`,
       async () => {
         try {
           const updated = await updateProductoEstado(id_producto, !currentEstado);
@@ -246,23 +418,23 @@ function App() {
   };
 
   // Handlers para actualizar stock
-const handleActualizarStock = async (productoId: number, cantidad: number) => {
-  try {
-    const producto = productos.find(p => p.id_producto === productoId);
-    if (!producto) return;
+  const handleActualizarStock = async (productoId: number, cantidad: number) => {
+    try {
+      const producto = productos.find(p => p.id_producto === productoId);
+      if (!producto) return;
 
-    const nuevoStock = producto.stock + cantidad;
-    
-    await actualizarStockAsync.execute(() => updateStockProducto(productoId, nuevoStock));
-    modalActualizarStock.close();  // ✅ Cerrar modal ANTES de recargar
-    await cargarDatos();  // ✅ Recargar datos
-    
-    showSuccess(`Stock actualizado: ${producto.nombre} ahora tiene ${nuevoStock} unidades`);
-  } catch (err) {
-    showError('Error al actualizar el stock');
-    console.error(err);
-  }
-};
+      const nuevoStock = producto.stock + cantidad;
+
+      await actualizarStockAsync.execute(() => updateStockProducto(productoId, nuevoStock));
+      modalActualizarStock.close();  // ✅ Cerrar modal ANTES de recargar
+      await cargarDatos();  // ✅ Recargar datos
+
+      showSuccess(`Stock actualizado: ${producto.nombre} ahora tiene ${nuevoStock} unidades`);
+    } catch (err) {
+      showError('Error al actualizar el stock');
+      console.error(err);
+    }
+  };
 
   if (initAsync.loading) {
     return (
@@ -290,20 +462,28 @@ const handleActualizarStock = async (productoId: number, cantidad: number) => {
   return (
     <div className="app-container">
       <Sidebar activeSection={activeSection} onSectionChange={setActiveSection} />
-      
+
       <main className="main-content">
         {activeSection === 'ventas' && (
-          <VentasPage 
-            ventas={ventas} 
+          <VentasPage
+            ventas={ventas}
+            total={ventasTotal}
+            page={ventasPageNum}
+            pageSize={VENTAS_PAGE_SIZE}
+            onPageChange={(p, opts) => loadVentasPage(p, opts)}
             onNuevaVenta={modalNuevaVenta.open}
             onToggleVentaFlag={handleToggleVentaFlag}
             onSearch={handleBuscarVentas}
           />
         )}
-        
+
         {activeSection === 'productos' && (
-          <ProductosPage 
-            productos={productos} 
+          <ProductosPage
+            productos={productos}
+            total={productosTotal}
+            page={productosPageNum}
+            pageSize={PAGE_SIZE}
+            onPageChange={(p) => loadProductosPage(p)}
             onNuevoProducto={modalNuevoProducto.open}
             onEditarProducto={openEditarProducto}
             onToggleProductoEstado={(id, estado, nombre) => handleToggleProductoEstado(id, estado, nombre)}
@@ -311,11 +491,20 @@ const handleActualizarStock = async (productoId: number, cantidad: number) => {
             searchLoading={buscarProductosAsync.loading}
           />
         )}
-        
+
         {activeSection === 'stock' && (
-          <StockPage 
-            productos={productos} 
+          <StockPage
+            productos={productos}
             onActualizarStock={modalActualizarStock.open}
+          />
+        )}
+        {activeSection === 'promociones' && (
+          <PromocionesPage
+            promociones={promociones}
+            onNuevoPromocion={modalCrearPromocion.open}
+            onEditPromocion={handleEditarPromocion}
+            onChangePromocion={handleChangePromocion}
+            onViewPromocion={handleVerPromocion}
           />
         )}
       </main>
@@ -324,7 +513,8 @@ const handleActualizarStock = async (productoId: number, cantidad: number) => {
       <ModalNuevaVenta
         isOpen={modalNuevaVenta.isOpen}
         onClose={modalNuevaVenta.close}
-        productos={productos}
+        productos={productosActivos}
+        promociones={promocionesActivas}
         onSubmit={handleNuevaVenta}
         // Pasa las funciones de toast y confirm a los modales
         showToast={showSuccess}
@@ -332,6 +522,25 @@ const handleActualizarStock = async (productoId: number, cantidad: number) => {
         showWarning={showWarning}
         showConfirm={showConfirm}
         loading={crearVentaAsync.loading}
+      />
+
+      <ModalCrearPromocion
+        isOpen={modalCrearPromocion.isOpen}
+        onClose={modalCrearPromocion.close}
+        productos={productos}
+        initialPromotion={promocionToEdit ? { ...promocionToEdit, productos: promocionToEdit.productos ?? [] } : undefined}
+        onSubmit={handleCrearPromocion}
+        showError={showError}
+        showWarning={showWarning}
+        loading={crearPromocionAsync.loading}
+      />
+
+      <ModalVerPromocion
+        isOpen={modalVerPromocion.isOpen}
+        onClose={() => { modalVerPromocion.close(); setPromocionVista(null); setPromocionVistaDetalles([]); }}
+        promocion={promocionVista}
+        detalles={promocionVistaDetalles}
+        productosCatalogo={productos}
       />
 
       <ModalNuevoProducto

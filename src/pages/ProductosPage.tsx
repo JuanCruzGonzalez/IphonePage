@@ -4,6 +4,10 @@ import { Producto } from '../types';
 
 interface ProductosPageProps {
   productos: Producto[];
+  total?: number;
+  page?: number;
+  pageSize?: number;
+  onPageChange?: (page: number) => void;
   onNuevoProducto: () => void;
   onEditarProducto?: (producto: Producto) => void;
   onToggleProductoEstado?: (id_producto: number, currentEstado: boolean, nombre?: string) => void;
@@ -11,15 +15,19 @@ interface ProductosPageProps {
   searchLoading?: boolean;
 }
 
-export const ProductosPage: React.FC<ProductosPageProps> = ({ productos, onNuevoProducto, onEditarProducto, onToggleProductoEstado, onSearch, searchLoading = false }) => {
+export const ProductosPage: React.FC<ProductosPageProps> = ({ productos, total = 0, page = 1, pageSize = 5, onPageChange, onNuevoProducto, onEditarProducto, onToggleProductoEstado, onSearch, searchLoading = false }) => {
   const [searchTerm, setSearchTerm] = React.useState('');
   const [statusFilter, setStatusFilter] = React.useState<'all' | 'active' | 'inactive'>('all');
 
   const debounced = useDebounce(searchTerm, 300);
+  // Only trigger search when the debounced term changes. Avoid including
+  // `onSearch` in the deps because the parent's handler may be recreated every
+  // render and would cause an unnecessary reset to page 1.
   React.useEffect(() => {
     onSearch?.(debounced);
-  }, [debounced, onSearch]);
-  const totalProductos = productos.length;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [debounced]);
+  const totalProductos = total ?? productos.length;
   const stockTotal = productos.reduce((sum, p) => sum + p.stock, 0);
   const stockBajo = productos.filter(p => p.stock < 10).length;
 
@@ -30,6 +38,10 @@ export const ProductosPage: React.FC<ProductosPageProps> = ({ productos, onNuevo
       return true;
     });
   }, [productos, statusFilter]);
+
+  const totalPages = Math.max(1, Math.ceil((total || 0) / pageSize));
+  const showingFrom = Math.min(((page - 1) * pageSize) + 1, total || 0);
+  const showingTo = Math.min(page * pageSize, total || 0);
 
   return (
     <div className="page">
@@ -171,6 +183,16 @@ export const ProductosPage: React.FC<ProductosPageProps> = ({ productos, onNuevo
               )}
             </tbody>
           </table>
+        </div>
+      </div>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 12 }}>
+        <div>
+          Mostrando {total === 0 ? 0 : showingFrom} - {total === 0 ? 0 : showingTo} de {total}
+        </div>
+        <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+          <button className="btn-sm" onClick={() => onPageChange?.(Math.max(1, page - 1))} disabled={page <= 1}>◀︎</button>
+          <div style={{ padding: '6px 10px' }}>{page} / {totalPages}</div>
+          <button className="btn-sm" onClick={() => onPageChange?.(Math.min(totalPages, page + 1))} disabled={page >= totalPages}>▶︎</button>
         </div>
       </div>
     </div>
