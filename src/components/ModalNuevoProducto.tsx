@@ -1,11 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { UnidadMedida } from '../types';
+import { getProductImageUrl } from '../api/storageService';
 
 interface ModalNuevoProductoProps {
   isOpen: boolean;
   onClose: () => void;
   unidadesMedida: UnidadMedida[];
-  onSubmit: (producto: { nombre: string; descripcion: string; stock: number; costo: number; precioventa: number; unidadMedida: number; estado: boolean; vencimiento?: Date | null}) => void;
+  onSubmit: (producto: { nombre: string; descripcion: string; stock: number; costo: number; precioventa: number; unidadMedida: number; estado: boolean; vencimiento?: Date | null}, imageFile?: File | null) => void;
   initialProduct?: {
     id_producto: number;
     nombre: string;
@@ -16,6 +17,7 @@ interface ModalNuevoProductoProps {
     id_unidad_medida: number;
     estado: boolean;
     vencimiento?: Date | null;
+    imagen_path?: string | null;
   } | null;
   showError?: (message: string) => void;
   showWarning?: (message: string) => void;
@@ -43,6 +45,8 @@ export const ModalNuevoProducto: React.FC<ModalNuevoProductoProps> = ({
       ? new Date(initialProduct.vencimiento).toISOString().split('T')[0]
       : ''
   );
+  const [imageFile, setImageFile] = useState<File | null>(null);
+  const [imagePreview, setImagePreview] = useState<string | null>(null);
 
   useEffect(() => {
     if (initialProduct) {
@@ -66,6 +70,8 @@ export const ModalNuevoProducto: React.FC<ModalNuevoProductoProps> = ({
           ? new Date(initialProduct.vencimiento).toISOString().split('T')[0]
           : ''
       );
+      setImageFile(null);
+      setImagePreview(null);
     } else {
       setNombre('');
       setDescripcion('');
@@ -75,8 +81,38 @@ export const ModalNuevoProducto: React.FC<ModalNuevoProductoProps> = ({
       setUnidadMedida('');
       setEstadoProducto('1');
       setVencimiento('');
+      setImageFile(null);
+      setImagePreview(null);
     }
   }, [initialProduct, isOpen]);
+
+  const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      // Validar que sea una imagen
+      if (!file.type.startsWith('image/')) {
+        showWarning?.('Por favor selecciona un archivo de imagen válido');
+        return;
+      }
+      // Validar tamaño (max 5MB)
+      if (file.size > 5 * 1024 * 1024) {
+        showWarning?.('La imagen debe ser menor a 5MB');
+        return;
+      }
+      setImageFile(file);
+      // Crear preview
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setImagePreview(reader.result as string);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const handleRemoveImage = () => {
+    setImageFile(null);
+    setImagePreview(null);
+  };
 
   if (!isOpen) return null;
 
@@ -95,7 +131,7 @@ export const ModalNuevoProducto: React.FC<ModalNuevoProductoProps> = ({
       unidadMedida: parseInt(unidadMedida),
       estado: estadoProducto === '1',
       vencimiento: vencimiento ? new Date(vencimiento) : null,
-    });
+    }, imageFile);
 
     setNombre('');
     setDescripcion('');
@@ -104,6 +140,8 @@ export const ModalNuevoProducto: React.FC<ModalNuevoProductoProps> = ({
     setPrecioventa('');
     setUnidadMedida('');
     setVencimiento('');
+    setImageFile(null);
+    setImagePreview(null);
   };
   const textoGramos = unidadMedida === '1' ? '(por 100 gramos)' : '';
   return (
@@ -188,6 +226,55 @@ export const ModalNuevoProducto: React.FC<ModalNuevoProductoProps> = ({
               onChange={(e) => setVencimiento(e.target.value)}
               placeholder="Opcional"
             />
+          </div>
+          <div className="form-group">
+            <label>Imagen del Producto</label>
+            <input
+              type="file"
+              accept="image/*"
+              onChange={handleImageChange}
+              style={{ display: 'block', marginBottom: '0.5rem' }}
+            />
+            {imagePreview && (
+              <div style={{ marginTop: '0.5rem', position: 'relative', display: 'inline-block' }}>
+                <img 
+                  src={imagePreview} 
+                  alt="Preview" 
+                  style={{ maxWidth: '200px', maxHeight: '200px', borderRadius: '4px', border: '1px solid #ddd' }}
+                />
+                <button
+                  type="button"
+                  onClick={handleRemoveImage}
+                  style={{
+                    position: 'absolute',
+                    top: '5px',
+                    right: '5px',
+                    background: 'rgba(255, 0, 0, 0.8)',
+                    color: 'white',
+                    border: 'none',
+                    borderRadius: '50%',
+                    width: '24px',
+                    height: '24px',
+                    cursor: 'pointer',
+                    fontSize: '16px',
+                    lineHeight: '1',
+                    padding: '0'
+                  }}
+                >
+                  ×
+                </button>
+              </div>
+            )}
+            {!imagePreview && initialProduct?.imagen_path && (
+              <div style={{ marginTop: '0.5rem' }}>
+                <img 
+                  src={getProductImageUrl(initialProduct.imagen_path)} 
+                  alt="Imagen actual" 
+                  style={{ maxWidth: '200px', maxHeight: '200px', borderRadius: '4px', border: '1px solid #ddd' }}
+                />
+                <p style={{ fontSize: '0.85rem', color: '#666', marginTop: '0.25rem' }}>Imagen actual (sube una nueva para reemplazar)</p>
+              </div>
+            )}
           </div>
         </div>
         <div className="modal-minimal-footer">

@@ -18,6 +18,7 @@ import {
   updateProducto,
   updateProductoEstado,
 } from './api/productoService';
+import { uploadProductImage, updateProductImage, deleteProductImage } from './api/storageService';
 import { getPromocionesActivas, getPromociones,updatePromocion, deletePromocion, getDetallePromocion } from './api/promocionService';
 import { getGastos, createGasto, updateGasto, updateGastoEstado } from './api/gastoService';
 import ModalVerPromocion from './components/ModalVerPromocion';
@@ -332,9 +333,9 @@ function App() {
   };
 
   // Handlers para crear producto
-  const handleNuevoProducto = async (producto: { nombre: string; descripcion: string; stock: number; costo: number; precioventa: number; unidadMedida: number; estado: boolean; vencimiento?: Date | null }) => {
+  const handleNuevoProducto = async (producto: { nombre: string; descripcion: string; stock: number; costo: number; precioventa: number; unidadMedida: number; estado: boolean; vencimiento?: Date | null }, imageFile?: File | null) => {
     try {
-      await crearProductoAsync.execute(() => createProducto({
+      const createdProduct = await crearProductoAsync.execute(() => createProducto({
         nombre: producto.nombre,
         descripcion: producto.descripcion || null,
         stock: producto.stock,
@@ -344,6 +345,18 @@ function App() {
         estado: producto.estado,
         vencimiento: producto.vencimiento || undefined,
       }));
+      
+      // Si hay una imagen, subirla y actualizar el producto
+      if (imageFile && createdProduct) {
+        try {
+          const imagePath = await uploadProductImage(imageFile, createdProduct.id_producto);
+          await updateProducto(createdProduct.id_producto, { imagen_path: imagePath });
+        } catch (imgErr) {
+          console.error('Error al subir la imagen:', imgErr);
+          showWarning('Producto creado pero no se pudo subir la imagen');
+        }
+      }
+      
       await cargarDatos();
       modalNuevoProducto.close();
       showSuccess('Producto agregado exitosamente');
@@ -370,9 +383,20 @@ function App() {
   };
 
   // Handler para editar un producto existente
-  const handleEditarProducto = async (producto: { nombre: string; descripcion: string; stock: number; costo: number; precioventa: number; unidadMedida: number; estado: boolean; vencimiento?: Date | null }) => {
+  const handleEditarProducto = async (producto: { nombre: string; descripcion: string; stock: number; costo: number; precioventa: number; unidadMedida: number; estado: boolean; vencimiento?: Date | null }, imageFile?: File | null) => {
     if (!productToEdit) return;
     try {
+      // Si hay una nueva imagen, subirla (esto reemplazará la anterior automáticamente)
+      let imagenPath = productToEdit.imagen_path;
+      if (imageFile) {
+        try {
+          imagenPath = await updateProductImage(imageFile, productToEdit.id_producto, productToEdit.imagen_path || undefined);
+        } catch (imgErr) {
+          console.error('Error al actualizar la imagen:', imgErr);
+          showWarning('Se actualizará el producto sin cambiar la imagen');
+        }
+      }
+      
       const updated = await editarProductoAsync.execute(() => updateProducto(productToEdit.id_producto, {
         nombre: producto.nombre,
         descripcion: producto.descripcion || null,
@@ -382,6 +406,7 @@ function App() {
         id_unidad_medida: producto.unidadMedida,
         estado: producto.estado,
         vencimiento: producto.vencimiento || undefined,
+        imagen_path: imagenPath,
       }));
       if (!updated) {
         showError('No se pudo actualizar el producto');

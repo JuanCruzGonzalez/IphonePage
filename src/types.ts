@@ -10,6 +10,7 @@ export interface Producto {
   unidad_medida?: UnidadMedida;
   estado: boolean;
   vencimiento?: Date;
+  imagen_path?: string | null;
 }
 
 export interface UnidadMedida {

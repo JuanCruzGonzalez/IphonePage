@@ -25,7 +25,8 @@ export async function getProductos() {
       abreviacion
     ),
     estado,
-    vencimiento
+    vencimiento,
+    imagen_path
   `)
   .order('nombre', { ascending: true })
   // PostgREST/Supabase may apply a default limit (often 25). Use range to
@@ -51,6 +52,7 @@ export async function getProductos() {
       : (p.unidad_medida ?? null),
     estado: p.estado,
     vencimiento: parseDateLocal(p.vencimiento),
+    imagen_path: p.imagen_path,
   })) as Producto[];
 
   return productos;
@@ -72,7 +74,8 @@ export async function getProductosActivos() {
       abreviacion
     ),
     estado,
-    vencimiento
+    vencimiento,
+    imagen_path
   `).eq('estado', true)
   .order('nombre', { ascending: true })
   .range(0, 999);
@@ -97,6 +100,7 @@ export async function getProductosActivos() {
       : (p.unidad_medida ?? null),
     estado: p.estado,
     vencimiento: parseDateLocal(p.vencimiento),
+    imagen_path: p.imagen_path,
   })) as Producto[];
 
   return productos;
@@ -118,6 +122,7 @@ export async function buscarProductos(q: string) {
     id_unidad_medida,
     estado,
     vencimiento,
+    imagen_path,
     unidad_medida (
       id_unidad_medida,
       nombre,
@@ -145,6 +150,7 @@ export async function buscarProductos(q: string) {
     id_unidad_medida: p.id_unidad_medida,
     estado: p.estado,
     vencimiento: parseDateLocal(p.vencimiento),
+    imagen_path: p.imagen_path,
     unidad_medida: Array.isArray(p.unidad_medida) ? (p.unidad_medida[0] ?? null) : (p.unidad_medida ?? null),
   })) as Producto[];
 
@@ -166,6 +172,7 @@ export async function getProductosPage(page = 1, pageSize = 5, q = '') {
     id_unidad_medida,
     estado,
     vencimiento,
+    imagen_path,
     unidad_medida ( id_unidad_medida, nombre, abreviacion )
   `;
 
@@ -197,6 +204,7 @@ export async function getProductosPage(page = 1, pageSize = 5, q = '') {
     estado: p.estado,
     unidad_medida: Array.isArray(p.unidad_medida) ? (p.unidad_medida[0] ?? null) : (p.unidad_medida ?? null),
     vencimiento: parseDateLocal(p.vencimiento),
+    imagen_path: p.imagen_path,
   })) as Producto[];
   console.log(productos);
 
@@ -272,6 +280,7 @@ export async function updateProducto(
     id_unidad_medida: number;
     estado: boolean;
     vencimiento?: Date | null;
+    imagen_path?: string | null;
   }>
 ) {
   // Try RPC transaction first
@@ -288,6 +297,8 @@ export async function updateProducto(
         precioventa: p.precioventa,
         id_unidad_medida: p.id_unidad_medida,
         estado: p.estado,
+        vencimiento: parseDateLocal(p.vencimiento),
+        imagen_path: p.imagen_path,
         unidad_medida: Array.isArray(p.unidad_medida) ? (p.unidad_medida[0] ?? null) : (p.unidad_medida ?? null),
       } as Producto;
     }
@@ -300,7 +311,7 @@ export async function updateProducto(
     .update(changes)
     .eq('id_producto', id_producto)
     .select(
-      `id_producto,nombre,descripcion,stock,costo,precioventa,id_unidad_medida,estado,unidad_medida(id_unidad_medida,nombre,abreviacion)`
+      `id_producto,nombre,descripcion,stock,costo,precioventa,id_unidad_medida,estado,vencimiento,imagen_path,unidad_medida(id_unidad_medida,nombre,abreviacion)`
     )
     .single();
 
@@ -321,6 +332,8 @@ export async function updateProducto(
     precioventa: p.precioventa,
     id_unidad_medida: p.id_unidad_medida,
     estado: p.estado,
+    vencimiento: parseDateLocal(p.vencimiento),
+    imagen_path: p.imagen_path,
     unidad_medida: Array.isArray(p.unidad_medida) ? (p.unidad_medida[0] ?? null) : (p.unidad_medida ?? null),
   } as Producto;
 

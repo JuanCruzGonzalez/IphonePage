@@ -1,6 +1,7 @@
 import React from 'react';
 import { useDebounce } from '../hooks/useDebounce';
 import { Producto } from '../types';
+import { getProductImageUrl } from '../api/storageService';
 
 interface ProductosPageProps {
   productos: Producto[];
@@ -104,6 +105,7 @@ export const ProductosPage: React.FC<ProductosPageProps> = ({ productos, total =
           <table className="table">
             <thead>
               <tr>
+                <th>Imagen</th>
                 <th>Nombre</th>
                 <th>Precio de Costo</th>
                 <th>Precio de Venta</th>
@@ -115,13 +117,26 @@ export const ProductosPage: React.FC<ProductosPageProps> = ({ productos, total =
             <tbody>
               {displayedProducts.length === 0 ? (
                 <tr>
-                  <td colSpan={6} className="empty-state">
+                  <td colSpan={7} className="empty-state">
                     No hay productos registrados
                   </td>
                 </tr>
               ) : (
                 displayedProducts.map(producto => (
                   <tr key={producto.id_producto}>
+                    <td>
+                      {producto.imagen_path ? (
+                        <img 
+                          src={getProductImageUrl(producto.imagen_path)} 
+                          alt={producto.nombre}
+                          style={{ width: '50px', height: '50px', objectFit: 'cover', borderRadius: '4px' }}
+                        />
+                      ) : (
+                        <div style={{ width: '50px', height: '50px', backgroundColor: '#f0f0f0', borderRadius: '4px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '12px', color: '#999' }}>
+                          Sin imagen
+                        </div>
+                      )}
+                    </td>
                     <td className="font-medium">{producto.nombre}</td>
                     <td className="text-muted">{producto.unidad_medida?.id_unidad_medida === 1 ? producto.costo * 100 : producto.costo}</td>
                     <td className="text-muted">{producto.unidad_medida?.id_unidad_medida === 1 ? producto.precioventa * 100 : producto.precioventa}</td>
