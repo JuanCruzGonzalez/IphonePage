@@ -268,7 +268,7 @@ export const ModalNuevoProducto: React.FC<ModalNuevoProductoProps> = ({
             {!imagePreview && initialProduct?.imagen_path && (
               <div style={{ marginTop: '0.5rem' }}>
                 <img 
-                  src={getProductImageUrl(initialProduct.imagen_path)} 
+                  src={getProductImageUrl(initialProduct.imagen_path) || undefined} 
                   alt="Imagen actual" 
                   style={{ maxWidth: '200px', maxHeight: '200px', borderRadius: '4px', border: '1px solid #ddd' }}
                 />

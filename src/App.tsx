@@ -18,7 +18,7 @@ import {
   updateProducto,
   updateProductoEstado,
 } from './api/productoService';
-import { uploadProductImage, updateProductImage, deleteProductImage } from './api/storageService';
+import { uploadProductImage, updateProductImage } from './api/storageService';
 import { getPromocionesActivas, getPromociones,updatePromocion, deletePromocion, getDetallePromocion } from './api/promocionService';
 import { getGastos, createGasto, updateGasto, updateGastoEstado } from './api/gastoService';
 import ModalVerPromocion from './components/ModalVerPromocion';

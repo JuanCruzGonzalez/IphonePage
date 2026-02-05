@@ -127,7 +127,7 @@ export const ProductosPage: React.FC<ProductosPageProps> = ({ productos, total =
                     <td>
                       {producto.imagen_path ? (
                         <img 
-                          src={getProductImageUrl(producto.imagen_path)} 
+                          src={getProductImageUrl(producto.imagen_path) || undefined} 
                           alt={producto.nombre}
                           style={{ width: '50px', height: '50px', objectFit: 'cover', borderRadius: '4px' }}
                         />

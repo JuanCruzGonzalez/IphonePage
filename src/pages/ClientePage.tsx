@@ -191,7 +191,7 @@ export const ClientePage: React.FC = () => {
               <div className="cliente-product-image-container">
                 {producto.imagen_path ? (
                   <img
-                    src={getProductImageUrl(producto.imagen_path)}
+                    src={getProductImageUrl(producto.imagen_path) || undefined}
                     alt={producto.nombre}
                     className="cliente-product-image"
                   />

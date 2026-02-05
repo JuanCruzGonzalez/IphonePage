@@ -12,7 +12,7 @@ export async function uploadProductImage(file: File, productId: number): Promise
   const filePath = `${fileName}`;
 
   // Subir archivo
-  const { data, error } = await supabase.storage
+  const { error } = await supabase.storage
     .from(BUCKET_NAME)
     .upload(filePath, file, {
       cacheControl: '3600',
