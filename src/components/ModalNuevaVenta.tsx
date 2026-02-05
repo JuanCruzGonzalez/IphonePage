@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Producto, Promocion, DetalleVentaInput } from '../types';
 import { updateProducto } from '../api/productoService';
 
@@ -32,7 +32,7 @@ const ProductRow: React.FC<{
                         />
                         <button type="button" className="qty-button" onClick={() => onChangeCantidad(item.id_producto, item.cantidad + 1)}>+</button>
                     </div>
-                    <span style={{ marginLeft: 8, color: '#666' }}>
+                    <span style={{ marginLeft: 8, color: '#666', display: 'flex', alignItems: 'center', gap: 4 }}>
                         <input
                             style={{
                                 width: '70px',
@@ -50,11 +50,18 @@ const ProductRow: React.FC<{
                             }}
                             min="0"
                         />
-                        {item.unidadMedidaId === 1 ? ' x100gr' : ''}
+                        {item.unidadMedidaId === 1 ? 'x100gr' : ''}
                     </span>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
-                        <span style={{ fontWeight: 'bold', width: '70px' }}>${item.cantidad * item.precioventa}</span>
-                        <button className="btn-remove" onClick={() => onRemove(item.id_producto)}>Eliminar</button>
+                        <span style={{ fontWeight: 'bold', width: 'fit-content' }}>${item.cantidad * item.precioventa}</span>
+                        <button className="btn-remove" onClick={() => onRemove(item.id_producto)}>
+                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                              <polyline points="3 6 5 6 21 6"></polyline>
+                              <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"></path>
+                              <path d="M10 11v6"></path>
+                              <path d="M14 11v6"></path>
+                            </svg>
+                        </button>
                     </div>
                 </div>
             </div>
@@ -141,13 +148,57 @@ export const ModalNuevaVenta: React.FC<ModalNuevaVentaProps> = ({
 }) => {
     const [items, setItems] = useState<{ id_producto: number; cantidad: number; nombre: string; precioventa: number; unidadMedidaId: number }[]>([]);
     const [productoSeleccionado, setProductoSeleccionado] = useState('');
+    const [busquedaProducto, setBusquedaProducto] = useState('');
+    const [showProductosDropdown, setShowProductosDropdown] = useState(false);
     const [cantidad, setCantidad] = useState('');
     const [pagada, setPagada] = useState(true);
     const [promoSeleccionada, setPromoSeleccionada] = useState('');
+    const [busquedaPromo, setBusquedaPromo] = useState('');
+    const [showPromosDropdown, setShowPromosDropdown] = useState(false);
     const [promoCantidad, setPromoCantidad] = useState('1');
     const [promosAdded, setPromosAdded] = useState<{ id_promocion: number; name: string; precio: number | null; cantidad: number }[]>([]);
 
+    const productSearchRef = useRef<HTMLDivElement>(null);
+    const promoSearchRef = useRef<HTMLDivElement>(null);
+
+    // Cerrar dropdowns cuando se hace clic fuera
+    useEffect(() => {
+        const handleClickOutside = (event: MouseEvent) => {
+            if (productSearchRef.current && !productSearchRef.current.contains(event.target as Node)) {
+                setShowProductosDropdown(false);
+            }
+            if (promoSearchRef.current && !promoSearchRef.current.contains(event.target as Node)) {
+                setShowPromosDropdown(false);
+            }
+        };
+
+        document.addEventListener('mousedown', handleClickOutside);
+        return () => document.removeEventListener('mousedown', handleClickOutside);
+    }, []);
+
     if (!isOpen) return null;
+
+    // Filtrar productos basado en la búsqueda
+    const productosFiltrados = productos.filter(p => 
+        p.nombre.toLowerCase().includes(busquedaProducto.toLowerCase())
+    ).slice(0, 10); // Limitar a 10 resultados
+
+    // Filtrar promociones basado en la búsqueda
+    const promocionesFiltradas = promociones.filter(p => 
+        p.name.toLowerCase().includes(busquedaPromo.toLowerCase())
+    ).slice(0, 10);
+
+    const seleccionarProducto = (producto: Producto) => {
+        setProductoSeleccionado(String(producto.id_producto));
+        setBusquedaProducto(producto.nombre);
+        setShowProductosDropdown(false);
+    };
+
+    const seleccionarPromocion = (promo: Promocion) => {
+        setPromoSeleccionada(String(promo.id_promocion));
+        setBusquedaPromo(promo.name);
+        setShowPromosDropdown(false);
+    };
 
     const agregarItem = () => {
         const productoId = parseInt(productoSeleccionado);
@@ -179,6 +230,7 @@ export const ModalNuevaVenta: React.FC<ModalNuevaVentaProps> = ({
             unidadMedidaId: producto.id_unidad_medida
         }]);
         setProductoSeleccionado('');
+        setBusquedaProducto('');
         setCantidad('');
     };
 
@@ -200,9 +252,11 @@ export const ModalNuevaVenta: React.FC<ModalNuevaVentaProps> = ({
         onSubmit([...productosDetalles, ...promocionesDetalles], pagada);
         setItems([]);
         setProductoSeleccionado('');
+        setBusquedaProducto('');
         setCantidad('');
         setPromosAdded([]);
         setPromoSeleccionada('');
+        setBusquedaPromo('');
     };
 
     const agregarPromocion = () => {
@@ -220,6 +274,7 @@ export const ModalNuevaVenta: React.FC<ModalNuevaVentaProps> = ({
         }
         setPromosAdded(prev => [...prev, { id_promocion: promo.id_promocion, name: promo.name, precio: promo.precio, cantidad: cant }]);
         setPromoSeleccionada('');
+        setBusquedaPromo('');
         setPromoCantidad('1');
     };
 
@@ -259,26 +314,68 @@ export const ModalNuevaVenta: React.FC<ModalNuevaVentaProps> = ({
                     <button className="btn-close" onClick={onClose}>×</button>
                 </div>
                 <div className="modal-minimal-body">
-                    <div className="form-group">
-                        <label>Producto</label>
-                        <select value={productoSeleccionado} onChange={(e) => setProductoSeleccionado(e.target.value)}>
-                            <option value="">Seleccionar producto</option>
-                            {productos.map(p => (
-                                <option key={p.id_producto} value={p.id_producto}>
-                                    {p.nombre} (Stock: {p.stock}) - ${p.id_unidad_medida === 1 ? p.precioventa * 100 : p.precioventa}
-                                </option>
-                            ))}
-                        </select>
-                    </div>
-                    <div className="form-group">
-                        <label>Cantidad</label>
+                    <div className="form-group" style={{ position: 'relative' }} ref={productSearchRef}>
+                        <label>Buscar Producto</label>
                         <input
-                            type="number"
-                            value={cantidad}
-                            onChange={(e) => setCantidad(e.target.value)}
-                            min="1"
-                            placeholder="0"
+                            type="text"
+                            value={busquedaProducto}
+                            onChange={(e) => {
+                                setBusquedaProducto(e.target.value);
+                                setShowProductosDropdown(true);
+                                setProductoSeleccionado('');
+                            }}
+                            onFocus={() => setShowProductosDropdown(true)}
+                            placeholder="Escribe para buscar..."
                         />
+                        {showProductosDropdown && busquedaProducto && productosFiltrados.length > 0 && (
+                            <div style={{
+                                position: 'absolute',
+                                top: '100%',
+                                left: 0,
+                                right: 0,
+                                backgroundColor: 'white',
+                                border: '1px solid #ddd',
+                                borderRadius: '4px',
+                                maxHeight: '200px',
+                                overflowY: 'auto',
+                                zIndex: 1000,
+                                boxShadow: '0 2px 8px rgba(0,0,0,0.1)'
+                            }}>
+                                {productosFiltrados.map(p => (
+                                    <div
+                                        key={p.id_producto}
+                                        onClick={() => seleccionarProducto(p)}
+                                        style={{
+                                            padding: '8px 12px',
+                                            cursor: 'pointer',
+                                            borderBottom: '1px solid #f0f0f0',
+                                            fontSize: '14px'
+                                        }}
+                                        onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#f5f5f5'}
+                                        onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'white'}
+                                    >
+                                        <div style={{ fontWeight: 500 }}>{p.nombre}</div>
+                                        <div style={{ fontSize: '12px', color: '#666' }}>
+                                            Stock: {p.stock} | ${p.id_unidad_medida === 1 ? (p.precioventa * 100).toFixed(2) : p.precioventa.toFixed(2)}{p.id_unidad_medida === 1 ? ' x100gr' : ''}
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        )}
+                    </div>
+                    <div className="form-group" style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                        <div style={{ width: '50%' }}>
+                            <input
+                                type="number"
+                                value={cantidad}
+                                onChange={(e) => setCantidad(e.target.value)}
+                                min="1"
+                                placeholder="0"
+                            />
+                        </div>
+                        <button className="btn-secondary" onClick={agregarItem} style={{ width: '50%' }} disabled={loading}>
+                            + Agregar Producto
+                        </button>
                     </div>
                     <div className="form-group" style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
                         <label style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
@@ -286,34 +383,70 @@ export const ModalNuevaVenta: React.FC<ModalNuevaVentaProps> = ({
                             <span>Pagada</span>
                         </label>
                     </div>
-                    <button className="btn-secondary" onClick={agregarItem} style={{ width: '100%' }} disabled={loading}>
-                        + Agregar Producto
-                    </button>
 
                     <div style={{ height: 8 }} />
-                    <div className="form-group">
-                        <label>Promoción</label>
-                        <select value={promoSeleccionada} onChange={(e) => setPromoSeleccionada(e.target.value)}>
-                            <option value="">Seleccionar promoción</option>
-                            {promociones?.map(p => (
-                                <option key={p.id_promocion} value={p.id_promocion}>
-                                    {p.name} - ${p.precio ?? 0}
-                                </option>
-                            ))}
-                        </select>
-                    </div>
-                    <div className="form-group">
-                        <label>Cantidad promo</label>
+                    <div className="form-group" style={{ position: 'relative' }} ref={promoSearchRef}>
+                        <label>Buscar Promoción</label>
                         <input
-                            type="number"
-                            value={promoCantidad}
-                            onChange={(e) => setPromoCantidad(e.target.value)}
-                            min="1"
+                            type="text"
+                            value={busquedaPromo}
+                            onChange={(e) => {
+                                setBusquedaPromo(e.target.value);
+                                setShowPromosDropdown(true);
+                                setPromoSeleccionada('');
+                            }}
+                            onFocus={() => setShowPromosDropdown(true)}
+                            placeholder="Escribe para buscar..."
                         />
+                        {showPromosDropdown && busquedaPromo && promocionesFiltradas.length > 0 && (
+                            <div style={{
+                                position: 'absolute',
+                                top: '100%',
+                                left: 0,
+                                right: 0,
+                                backgroundColor: 'white',
+                                border: '1px solid #ddd',
+                                borderRadius: '4px',
+                                maxHeight: '200px',
+                                overflowY: 'auto',
+                                zIndex: 1000,
+                                boxShadow: '0 2px 8px rgba(0,0,0,0.1)'
+                            }}>
+                                {promocionesFiltradas.map(p => (
+                                    <div
+                                        key={p.id_promocion}
+                                        onClick={() => seleccionarPromocion(p)}
+                                        style={{
+                                            padding: '8px 12px',
+                                            cursor: 'pointer',
+                                            borderBottom: '1px solid #f0f0f0',
+                                            fontSize: '14px'
+                                        }}
+                                        onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#f5f5f5'}
+                                        onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'white'}
+                                    >
+                                        <div style={{ fontWeight: 500 }}>{p.name}</div>
+                                        <div style={{ fontSize: '12px', color: '#666' }}>
+                                            Precio: ${(p.precio ?? 0).toFixed(2)}
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        )}
                     </div>
-                    <button className="btn-secondary" onClick={agregarPromocion} style={{ width: '100%' }} disabled={loading}>
-                        + Agregar Promoción
-                    </button>
+                    <div className="form-group" style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                        <div style={{ width: '50%' }}>
+                            <input
+                                type="number"
+                                value={promoCantidad}
+                                onChange={(e) => setPromoCantidad(e.target.value)}
+                                min="1"
+                                />
+                        </div>
+                        <button className="btn-secondary" onClick={agregarPromocion} style={{ width: '50%' }} disabled={loading}>
+                            + Agregar Promoción
+                        </button>
+                    </div>
 
                     {items.length > 0 && (
                         <div className="items-list">
