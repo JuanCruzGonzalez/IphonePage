@@ -1,8 +1,9 @@
 import React, { useState } from 'react';
-import { VentaConDetalles } from '../types';
+import { VentaConDetalles, Gasto } from '../types';
 
 interface VentasPageProps {
   ventas: VentaConDetalles[];
+  gastos?: Gasto[];
   total?: number;
   page?: number;
   pageSize?: number;
@@ -12,7 +13,7 @@ interface VentasPageProps {
   onSearch?: (opts?: { desde?: string; hasta?: string; estado?: boolean; baja?: boolean }) => void;
 }
 
-export const VentasPage: React.FC<VentasPageProps> = ({ ventas, total = 0, page = 1, pageSize = 10, onPageChange, onNuevaVenta, onToggleVentaFlag, onSearch }) => {
+export const VentasPage: React.FC<VentasPageProps> = ({ ventas, gastos = [], total = 0, page = 1, pageSize = 10, onPageChange, onNuevaVenta, onToggleVentaFlag, onSearch }) => {
 
   const [desde, setDesde] = useState<string>('');
   const [hasta, setHasta] = useState<string>('');
@@ -77,7 +78,7 @@ export const VentasPage: React.FC<VentasPageProps> = ({ ventas, total = 0, page 
     try { return new Intl.NumberFormat('es-AR', { style: 'currency', currency: 'ARS' }).format(n); } catch { return `$${n.toFixed(2)}`; }
   };
 
-  const computeMetrics = (list: VentaConDetalles[]) => {
+  const computeMetrics = (list: VentaConDetalles[], gastosActivos: Gasto[]) => {
     let revenue = 0;
     let cost = 0;
     for (const venta of list) {
@@ -89,8 +90,12 @@ export const VentasPage: React.FC<VentasPageProps> = ({ ventas, total = 0, page 
         cost += qty * prodCost;
       }
     }
+    // Agregar gastos activos al costo
+    const totalGastos = gastosActivos.reduce((sum, g) => sum + g.costo, 0);
+    cost += totalGastos;
+    
     const profit = revenue - cost;
-    return { revenue, cost, profit };
+    return { revenue, cost, profit, gastos: totalGastos };
   };
 
   // ventas del mes actual
@@ -105,7 +110,8 @@ export const VentasPage: React.FC<VentasPageProps> = ({ ventas, total = 0, page 
       return ymd >= firstYMD && ymd <= lastYMD;
     });
   })();
-  const metricsMesActual = computeMetrics(ventasMesActual);
+  const gastosActivos = gastos.filter(g => g.estado === true);
+  const metricsMesActual = computeMetrics(ventasMesActual, gastosActivos);
 
   return (
     <div className="page">

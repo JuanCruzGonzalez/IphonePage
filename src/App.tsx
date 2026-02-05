@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import './App.css';
 import './ToastStyles.css';
-import { Producto, VentaConDetalles, UnidadMedida, Promocion, DetalleVentaInput, PromocionConDetalles } from './types';
+import { Producto, VentaConDetalles, UnidadMedida, Promocion, DetalleVentaInput, PromocionConDetalles, Gasto } from './types';
 import {
   createVenta,
   reactivarVenta,
@@ -19,16 +19,19 @@ import {
   updateProductoEstado,
 } from './api/productoService';
 import { getPromocionesActivas, getPromociones,updatePromocion, deletePromocion, getDetallePromocion } from './api/promocionService';
+import { getGastos, createGasto, updateGasto, updateGastoEstado } from './api/gastoService';
 import ModalVerPromocion from './components/ModalVerPromocion';
 import { Sidebar } from './components/Sidebar';
 import { VentasPage } from './pages/VentasPage';
 import { ProductosPage } from './pages/ProductosPage';
 import { StockPage } from './pages/StockPage';
 import { PromocionesPage } from './pages/PromocionesPage';
+import { GastosPage } from './pages/GastosPage';
 import { ModalNuevaVenta } from './components/ModalNuevaVenta';
 import { ModalNuevoProducto } from './components/ModalNuevoProducto';
 import { ModalActualizarStock } from './components/ModalActualizarStock';
 import { ModalCrearPromocion } from './components/ModalCrearPromocion';
+import { ModalGasto } from './components/ModalGasto';
 import { Toast, ConfirmModal } from './components/ToastModal';
 import { useToast, useConfirm } from './hooks/useToast';
 import { useDisableWheelOnNumberInputs } from './hooks/useDisableWheelOnNumberInputs';
@@ -37,7 +40,7 @@ import { useAsync } from './hooks/useAsync';
 import { createPromocion } from './api/promocionService';
 
 function App() {
-  const [activeSection, setActiveSection] = useState<'ventas' | 'productos' | 'stock' | 'promociones'>('ventas');
+  const [activeSection, setActiveSection] = useState<'ventas' | 'productos' | 'stock' | 'promociones' | 'gastos'>('ventas');
   const [ventas, setVentas] = useState<VentaConDetalles[]>([]);
   const [ventasPageNum, setVentasPageNum] = useState(1);
   const [ventasTotal, setVentasTotal] = useState(0);
@@ -51,6 +54,8 @@ function App() {
   const [promociones, setPromociones] = useState<Promocion[]>([]);
   const [promocionToEdit, setPromocionToEdit] = useState<PromocionConDetalles | null>(null);
   const [unidadesMedida, setUnidadesMedida] = useState<UnidadMedida[]>([]);
+  const [gastos, setGastos] = useState<Gasto[]>([]);
+  const [gastoToEdit, setGastoToEdit] = useState<Gasto | null>(null);
   const modalCrearPromocion = useModal(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -59,6 +64,7 @@ function App() {
   const modalNuevoProducto = useModal(false);
   const [productToEdit, setProductToEdit] = useState<null | any>(null);
   const modalActualizarStock = useModal(false);
+  const modalGasto = useModal(false);
 
   // Hooks para toast y confirmación
   const { toast, showSuccess, showError, showWarning, hideToast } = useToast();
@@ -100,15 +106,16 @@ function App() {
       await initAsync.execute(async () => {
         // Load first page of productos (with total) and first page of ventas, plus other data in parallel
         const productosPagePromise = getProductosPage(1, PAGE_SIZE, '');
-  const ventasPagePromise = getVentasPage(1, VENTAS_PAGE_SIZE, { baja: false });
+        const ventasPagePromise = getVentasPage(1, VENTAS_PAGE_SIZE, { baja: false });
         const othersPromise = Promise.all([
           getProductosActivos(),
           getUnidadesMedidas(),
           getPromocionesActivas(),
           getPromociones(),
+          getGastos(),
         ]);
 
-        const [productosPageResult, ventasPageResult, [productosActivosData, unidadesData, promocionesActivasData, promocionesData]] = await Promise.all([
+        const [productosPageResult, ventasPageResult, [productosActivosData, unidadesData, promocionesActivasData, promocionesData, gastosData]] = await Promise.all([
           productosPagePromise,
           ventasPagePromise,
           othersPromise,
@@ -124,6 +131,7 @@ function App() {
         setVentasPageNum(1);
         setPromocionesActivas(promocionesActivasData || []);
         setPromociones(promocionesData || []);
+        setGastos(gastosData || []);
         setError(null);
       });
       if (timer) {
@@ -438,6 +446,64 @@ function App() {
     }
   };
 
+  // ============= HANDLERS GASTOS =============
+  const crearGastoAsync = useAsync();
+  const actualizarGastoAsync = useAsync();
+  const toggleGastoEstadoAsync = useAsync();
+
+  const handleNuevoGasto = () => {
+    setGastoToEdit(null);
+    modalGasto.open();
+  };
+
+  const handleEditarGasto = (gasto: Gasto) => {
+    setGastoToEdit(gasto);
+    modalGasto.open();
+  };
+
+  const handleSubmitGasto = async (costo: number, descripcion: string | null) => {
+    try {
+      if (gastoToEdit) {
+        // Editar gasto existente
+        await actualizarGastoAsync.execute(() => updateGasto(gastoToEdit.id_gasto, { costo, descripcion }));
+        showSuccess('Gasto actualizado correctamente');
+      } else {
+        // Crear nuevo gasto
+        await crearGastoAsync.execute(() => createGasto(costo, descripcion));
+        showSuccess('Gasto creado correctamente');
+      }
+      modalGasto.close();
+      const gastosData = await getGastos();
+      setGastos(gastosData || []);
+    } catch (err) {
+      showError(gastoToEdit ? 'Error al actualizar el gasto' : 'Error al crear el gasto');
+      console.error(err);
+    }
+  };
+
+  const handleToggleGastoEstado = async (id_gasto: number, estadoActual: boolean, descripcion: string | null) => {
+    const mensaje = estadoActual ? 'desactivar' : 'activar';
+    const label = descripcion || `Gasto #${id_gasto}`;
+    
+    showConfirm(
+      `¿${mensaje.charAt(0).toUpperCase() + mensaje.slice(1)} gasto?`,
+      `¿Estás seguro de ${mensaje} "${label}"?`,
+      async () => {
+        try {
+          await toggleGastoEstadoAsync.execute(() => updateGastoEstado(id_gasto, !estadoActual));
+          const gastosData = await getGastos();
+          setGastos(gastosData || []);
+          showSuccess(`Gasto ${estadoActual ? 'desactivado' : 'activado'} correctamente`);
+        } catch (err) {
+          showError(`Error al ${mensaje} el gasto`);
+          console.error(err);
+        }
+      },
+      estadoActual ? 'danger' : 'info'
+    );
+  };
+
+
   if (initAsync.loading) {
     return (
       <div className="loading-screen">
@@ -469,6 +535,7 @@ function App() {
         {activeSection === 'ventas' && (
           <VentasPage
             ventas={ventas}
+            gastos={gastos}
             total={ventasTotal}
             page={ventasPageNum}
             pageSize={VENTAS_PAGE_SIZE}
@@ -496,7 +563,7 @@ function App() {
 
         {activeSection === 'stock' && (
           <StockPage
-            productos={productos}
+            productos={productosActivos}
             onActualizarStock={modalActualizarStock.open}
           />
         )}
@@ -507,6 +574,14 @@ function App() {
             onEditPromocion={handleEditarPromocion}
             onChangePromocion={handleChangePromocion}
             onViewPromocion={handleVerPromocion}
+          />
+        )}
+        {activeSection === 'gastos' && (
+          <GastosPage
+            gastos={gastos}
+            onNuevoGasto={handleNuevoGasto}
+            onEditarGasto={handleEditarGasto}
+            onToggleEstado={handleToggleGastoEstado}
           />
         )}
       </main>
@@ -564,6 +639,14 @@ function App() {
         showError={showError}
         showWarning={showWarning}
         loading={actualizarStockAsync.loading}
+      />
+
+      <ModalGasto
+        isOpen={modalGasto.isOpen}
+        onClose={() => { modalGasto.close(); setGastoToEdit(null); }}
+        onSubmit={handleSubmitGasto}
+        initialGasto={gastoToEdit}
+        loading={gastoToEdit ? actualizarGastoAsync.loading : crearGastoAsync.loading}
       />
 
       {/* Toast Notification */}

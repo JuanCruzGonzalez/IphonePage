@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { Producto, Promocion, DetalleVentaInput } from '../types';
+import { updateProducto } from '../api/productoService';
 
 // Small row component for product items (editable unit price)
 const ProductRow: React.FC<{
@@ -135,6 +136,7 @@ export const ModalNuevaVenta: React.FC<ModalNuevaVentaProps> = ({
     onSubmit,
     showError,
     showWarning,
+    showToast,
     loading = false,
 }) => {
     const [items, setItems] = useState<{ id_producto: number; cantidad: number; nombre: string; precioventa: number; unidadMedidaId: number }[]>([]);
@@ -225,8 +227,16 @@ export const ModalNuevaVenta: React.FC<ModalNuevaVentaProps> = ({
         setPromosAdded(prev => prev.filter(p => p.id_promocion !== id_promocion));
     };
 
-    const updateProductPrice = (id_producto: number, newPrice: number) => {
+    const updateProductPrice = async (id_producto: number, newPrice: number) => {
         setItems(prev => prev.map(it => it.id_producto === id_producto ? { ...it, precioventa: newPrice } : it));
+        
+        try {
+            await updateProducto(id_producto, { precioventa: newPrice });
+            showToast?.('Precio actualizado en la base de datos');
+        } catch (error) {
+            showError?.('Error al actualizar el precio en la base de datos');
+            console.error('Error updating price:', error);
+        }
     };
 
     const updateProductCantidad = (id_producto: number, cantidad: number) => {

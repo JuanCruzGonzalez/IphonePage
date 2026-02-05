@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { Producto } from '../types';
 
 interface StockPageProps {
@@ -7,11 +7,22 @@ interface StockPageProps {
 }
 
 export const StockPage: React.FC<StockPageProps> = ({ productos, onActualizarStock }) => {
+  const [currentPage, setCurrentPage] = useState(1);
+  const pageSize = 15;
+
   const productosOrdenados = [...productos].sort((a, b) => a.stock - b.stock);
   const stockBajo = productos.filter(p => p.stock < 10);
   const stockMedio = productos.filter(p => p.stock >= 10 && p.stock < 30);
   const stockAlto = productos.filter(p => p.stock >= 30);
 
+  // Paginación
+  const totalPages = Math.max(1, Math.ceil(productosOrdenados.length / pageSize));
+  const startIndex = (currentPage - 1) * pageSize;
+  const endIndex = startIndex + pageSize;
+  const productosPaginados = productosOrdenados.slice(startIndex, endIndex);
+  useEffect(() => {
+    console.log(productos)
+  }, []);
   return (
     <div className="page">
       <div className="page-header">
@@ -40,7 +51,19 @@ export const StockPage: React.FC<StockPageProps> = ({ productos, onActualizarSto
       </div>
 
       <div className="card">
-        <h2 className="card-title">Inventario por Stock</h2>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+          <h2 className="card-title">Inventario por Stock</h2>
+          <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+            <button className="btn-sm" onClick={() => setCurrentPage(Math.max(1, currentPage - 1))} disabled={currentPage <= 1}>◀︎</button>
+            <div style={{ padding: '6px 10px', fontSize: '14px' }}>
+              {currentPage} / {totalPages} 
+              <span style={{ color: '#666', marginLeft: 8 }}>
+                ({startIndex + 1}-{Math.min(endIndex, productosOrdenados.length)} de {productosOrdenados.length})
+              </span>
+            </div>
+            <button className="btn-sm" onClick={() => setCurrentPage(Math.min(totalPages, currentPage + 1))} disabled={currentPage >= totalPages}>▶︎</button>
+          </div>
+        </div>
         <div className="table-wrapper">
           <table className="table">
             <thead>
@@ -52,14 +75,14 @@ export const StockPage: React.FC<StockPageProps> = ({ productos, onActualizarSto
               </tr>
             </thead>
             <tbody>
-              {productosOrdenados.length === 0 ? (
+              {productosPaginados.length === 0 ? (
                 <tr>
                   <td colSpan={4} className="empty-state">
                     No hay productos para mostrar
                   </td>
                 </tr>
               ) : (
-                productosOrdenados.map(producto => (
+                productosPaginados.map(producto => (
                   <tr key={producto.id_producto}>
                     <td className="font-medium">{producto.nombre}</td>
                     <td className="text-muted">{producto.descripcion || '—'}</td>

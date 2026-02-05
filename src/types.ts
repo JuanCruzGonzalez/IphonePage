@@ -86,3 +86,10 @@ export type DetalleVentaInput = DetalleVentaProductoInput | DetalleVentaPromocio
 export interface VentaConDetalles extends Venta {
   detalle_venta: (DetalleVenta & { producto?: Producto; promocion?: Promocion })[];
 }
+
+export interface Gasto {
+  id_gasto: number;
+  costo: number;
+  descripcion: string | null;
+  estado: boolean;
+}
