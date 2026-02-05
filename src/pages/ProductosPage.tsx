@@ -89,7 +89,16 @@ export const ProductosPage: React.FC<ProductosPageProps> = ({ productos, total =
           <option value="inactive">Inactivos</option>
         </select>
       </div>
-
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 12, marginBottom: 12 }}>
+        <div>
+          Mostrando {total === 0 ? 0 : showingFrom} - {total === 0 ? 0 : showingTo} de {total}
+        </div>
+        <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+          <button className="btn-sm" onClick={() => onPageChange?.(Math.max(1, page - 1))} disabled={page <= 1}>◀︎</button>
+          <div style={{ padding: '6px 10px' }}>{page} / {totalPages}</div>
+          <button className="btn-sm" onClick={() => onPageChange?.(Math.min(totalPages, page + 1))} disabled={page >= totalPages}>▶︎</button>
+        </div>
+      </div>
       <div className="card">
         <div className="table-wrapper">
           <table className="table">
@@ -98,6 +107,7 @@ export const ProductosPage: React.FC<ProductosPageProps> = ({ productos, total =
                 <th>Nombre</th>
                 <th>Precio de Costo</th>
                 <th>Precio de Venta</th>
+                <th>Vencimiento</th>
                 <th>Estado</th>
                 <th>Acciones</th>
               </tr>
@@ -105,7 +115,7 @@ export const ProductosPage: React.FC<ProductosPageProps> = ({ productos, total =
             <tbody>
               {displayedProducts.length === 0 ? (
                 <tr>
-                  <td colSpan={5} className="empty-state">
+                  <td colSpan={6} className="empty-state">
                     No hay productos registrados
                   </td>
                 </tr>
@@ -115,11 +125,12 @@ export const ProductosPage: React.FC<ProductosPageProps> = ({ productos, total =
                     <td className="font-medium">{producto.nombre}</td>
                     <td className="text-muted">{producto.unidad_medida?.id_unidad_medida === 1 ? producto.costo * 100 : producto.costo}</td>
                     <td className="text-muted">{producto.unidad_medida?.id_unidad_medida === 1 ? producto.precioventa * 100 : producto.precioventa}</td>
+                    <td className="text-muted">{producto.vencimiento ? new Date(producto.vencimiento).toLocaleDateString() : 'N/A'}</td>
                     <td>
                       <span className={`status-badge ${producto.estado ? 'active' : 'inactive'}`}>
                         {producto.estado ? 'Activo' : 'Inactivo'}
                       </span>
-                    </td>
+                    </td> 
                     <td style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
                       <button
                         className="btn-sm btn-secondary mr-2"

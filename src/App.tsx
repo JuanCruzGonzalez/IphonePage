@@ -324,7 +324,7 @@ function App() {
   };
 
   // Handlers para crear producto
-  const handleNuevoProducto = async (producto: { nombre: string; descripcion: string; stock: number; costo: number; precioventa: number; unidadMedida: number; estado: boolean }) => {
+  const handleNuevoProducto = async (producto: { nombre: string; descripcion: string; stock: number; costo: number; precioventa: number; unidadMedida: number; estado: boolean; vencimiento?: Date | null }) => {
     try {
       await crearProductoAsync.execute(() => createProducto({
         nombre: producto.nombre,
@@ -334,6 +334,7 @@ function App() {
         precioventa: producto.precioventa,
         id_unidad_medida: producto.unidadMedida,
         estado: producto.estado,
+        vencimiento: producto.vencimiento || undefined,
       }));
       await cargarDatos();
       modalNuevoProducto.close();
@@ -361,7 +362,7 @@ function App() {
   };
 
   // Handler para editar un producto existente
-  const handleEditarProducto = async (producto: { nombre: string; descripcion: string; stock: number; costo: number; precioventa: number; unidadMedida: number; estado: boolean }) => {
+  const handleEditarProducto = async (producto: { nombre: string; descripcion: string; stock: number; costo: number; precioventa: number; unidadMedida: number; estado: boolean; vencimiento?: Date | null }) => {
     if (!productToEdit) return;
     try {
       const updated = await editarProductoAsync.execute(() => updateProducto(productToEdit.id_producto, {
@@ -372,6 +373,7 @@ function App() {
         precioventa: producto.precioventa,
         id_unidad_medida: producto.unidadMedida,
         estado: producto.estado,
+        vencimiento: producto.vencimiento || undefined,
       }));
       if (!updated) {
         showError('No se pudo actualizar el producto');

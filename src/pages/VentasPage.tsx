@@ -163,6 +163,24 @@ export const VentasPage: React.FC<VentasPageProps> = ({ ventas, total = 0, page 
           </div>
         </div>
       </div>
+      {/* Pager */}
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 12, marginBottom: 12 }}>
+        <div>
+          Mostrando {total === 0 ? 0 : Math.min((page - 1) * pageSize + 1, total)} - {total === 0 ? 0 : Math.min(page * pageSize, total)} de {total}
+        </div>
+        <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+          {(() => {
+            const totalPages = Math.max(1, Math.ceil((total || 0) / pageSize));
+            return (
+              <>
+                <button className="btn-sm" onClick={() => onPageChange?.(Math.max(1, page - 1), { desde: desde || undefined, hasta: hasta || undefined, estado: estadoFilter === 'pagada' ? true : estadoFilter === 'pendiente' ? false : undefined, baja: estadoFilter === 'baja' ? true : false })} disabled={page <= 1}>◀︎</button>
+                <div style={{ padding: '6px 10px' }}>{page} / {totalPages}</div>
+                <button className="btn-sm" onClick={() => onPageChange?.(Math.min(totalPages, page + 1), { desde: desde || undefined, hasta: hasta || undefined, estado: estadoFilter === 'pagada' ? true : estadoFilter === 'pendiente' ? false : undefined, baja: estadoFilter === 'baja' ? true : false })} disabled={page >= totalPages}>▶︎</button>
+              </>
+            );
+          })()}
+        </div>
+      </div>
       <div className="card">
         <div className="table-wrapper">
           <table className="table">

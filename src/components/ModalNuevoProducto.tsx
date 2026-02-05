@@ -5,7 +5,7 @@ interface ModalNuevoProductoProps {
   isOpen: boolean;
   onClose: () => void;
   unidadesMedida: UnidadMedida[];
-  onSubmit: (producto: { nombre: string; descripcion: string; stock: number; costo: number; precioventa: number; unidadMedida: number; estado: boolean}) => void;
+  onSubmit: (producto: { nombre: string; descripcion: string; stock: number; costo: number; precioventa: number; unidadMedida: number; estado: boolean; vencimiento?: Date | null}) => void;
   initialProduct?: {
     id_producto: number;
     nombre: string;
@@ -15,6 +15,7 @@ interface ModalNuevoProductoProps {
     precioventa: number;
     id_unidad_medida: number;
     estado: boolean;
+    vencimiento?: Date | null;
   } | null;
   showError?: (message: string) => void;
   showWarning?: (message: string) => void;
@@ -37,6 +38,11 @@ export const ModalNuevoProducto: React.FC<ModalNuevoProductoProps> = ({
   const [precioventa, setPrecioventa] = useState(initialProduct ? String(initialProduct.precioventa) : '');
   const [unidadMedida, setUnidadMedida] = useState(initialProduct ? String(initialProduct.id_unidad_medida) : '');
   const [estadoProducto, setEstadoProducto] = useState<string>(initialProduct ? (initialProduct.estado ? '1' : '2') : '1');
+  const [vencimiento, setVencimiento] = useState<string>(
+    initialProduct?.vencimiento 
+      ? new Date(initialProduct.vencimiento).toISOString().split('T')[0]
+      : ''
+  );
 
   useEffect(() => {
     if (initialProduct) {
@@ -55,6 +61,11 @@ export const ModalNuevoProducto: React.FC<ModalNuevoProductoProps> = ({
       }
       setUnidadMedida(String(initialProduct.id_unidad_medida ?? ''));
       setEstadoProducto((initialProduct.estado ?? true) ? '1' : '2');
+      setVencimiento(
+        initialProduct.vencimiento 
+          ? new Date(initialProduct.vencimiento).toISOString().split('T')[0]
+          : ''
+      );
     } else {
       setNombre('');
       setDescripcion('');
@@ -63,6 +74,7 @@ export const ModalNuevoProducto: React.FC<ModalNuevoProductoProps> = ({
       setPrecioventa('');
       setUnidadMedida('');
       setEstadoProducto('1');
+      setVencimiento('');
     }
   }, [initialProduct, isOpen]);
 
@@ -82,6 +94,7 @@ export const ModalNuevoProducto: React.FC<ModalNuevoProductoProps> = ({
       precioventa: unidadMedida === '1' ? parseInt(precioventa)/100 : parseInt(precioventa),
       unidadMedida: parseInt(unidadMedida),
       estado: estadoProducto === '1',
+      vencimiento: vencimiento ? new Date(vencimiento) : null,
     });
 
     setNombre('');
@@ -90,6 +103,7 @@ export const ModalNuevoProducto: React.FC<ModalNuevoProductoProps> = ({
     setCosto('');
     setPrecioventa('');
     setUnidadMedida('');
+    setVencimiento('');
   };
   const textoGramos = unidadMedida === '1' ? '(por 100 gramos)' : '';
   return (
@@ -165,6 +179,15 @@ export const ModalNuevoProducto: React.FC<ModalNuevoProductoProps> = ({
               <option value="1">Activo</option>
               <option value="2">Inavilitado</option>
             </select>
+          </div>
+          <div className="form-group">
+            <label>Fecha de Vencimiento</label>
+            <input
+              type="date"
+              value={vencimiento}
+              onChange={(e) => setVencimiento(e.target.value)}
+              placeholder="Opcional"
+            />
           </div>
         </div>
         <div className="modal-minimal-footer">

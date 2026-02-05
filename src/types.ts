@@ -9,6 +9,7 @@ export interface Producto {
   id_unidad_medida: number;
   unidad_medida?: UnidadMedida;
   estado: boolean;
+  vencimiento?: Date;
 }
 
 export interface UnidadMedida {

@@ -1,6 +1,13 @@
 import { supabase } from '../supabaseClient';
 import { Producto, UnidadMedida } from '../types';
 
+// Helper para convertir fecha sin desplazamiento de zona horaria
+const parseDateLocal = (dateString: string | null): Date | null => {
+  if (!dateString) return null;
+  const [year, month, day] = dateString.split('-').map(Number);
+  return new Date(year, month - 1, day);
+};
+
 export async function getProductos() {
   const { data, error } = await supabase
     .from('producto')
@@ -8,7 +15,7 @@ export async function getProductos() {
     id_producto,
     nombre,
     descripcion,
-    stock,
+    stock, 
     costo,
     precioventa,
     id_unidad_medida,
@@ -17,13 +24,13 @@ export async function getProductos() {
       nombre,
       abreviacion
     ),
-    estado
+    estado,
+    vencimiento
   `)
   .order('nombre', { ascending: true })
   // PostgREST/Supabase may apply a default limit (often 25). Use range to
   // explicitly request more rows (0..999 = 1000 rows).
   .range(0, 999);
-      
       
   if (error) {
     console.error('Error al obtener productos:', error);
@@ -43,6 +50,7 @@ export async function getProductos() {
       ? (p.unidad_medida[0] ?? null)
       : (p.unidad_medida ?? null),
     estado: p.estado,
+    vencimiento: parseDateLocal(p.vencimiento),
   })) as Producto[];
 
   return productos;
@@ -63,7 +71,8 @@ export async function getProductosActivos() {
       nombre,
       abreviacion
     ),
-    estado
+    estado,
+    vencimiento
   `).eq('estado', true)
   .order('nombre', { ascending: true })
   .range(0, 999);
@@ -87,6 +96,7 @@ export async function getProductosActivos() {
       ? (p.unidad_medida[0] ?? null)
       : (p.unidad_medida ?? null),
     estado: p.estado,
+    vencimiento: parseDateLocal(p.vencimiento),
   })) as Producto[];
 
   return productos;
@@ -107,6 +117,7 @@ export async function buscarProductos(q: string) {
     precioventa,
     id_unidad_medida,
     estado,
+    vencimiento,
     unidad_medida (
       id_unidad_medida,
       nombre,
@@ -133,6 +144,7 @@ export async function buscarProductos(q: string) {
     precioventa: p.precioventa,
     id_unidad_medida: p.id_unidad_medida,
     estado: p.estado,
+    vencimiento: parseDateLocal(p.vencimiento),
     unidad_medida: Array.isArray(p.unidad_medida) ? (p.unidad_medida[0] ?? null) : (p.unidad_medida ?? null),
   })) as Producto[];
 
@@ -153,6 +165,7 @@ export async function getProductosPage(page = 1, pageSize = 5, q = '') {
     precioventa,
     id_unidad_medida,
     estado,
+    vencimiento,
     unidad_medida ( id_unidad_medida, nombre, abreviacion )
   `;
 
@@ -178,12 +191,14 @@ export async function getProductosPage(page = 1, pageSize = 5, q = '') {
     nombre: p.nombre,
     descripcion: p.descripcion,
     stock: p.stock,
-    costo: p.costo,
+    costo: p.costo, 
     precioventa: p.precioventa,
     id_unidad_medida: p.id_unidad_medida,
     estado: p.estado,
     unidad_medida: Array.isArray(p.unidad_medida) ? (p.unidad_medida[0] ?? null) : (p.unidad_medida ?? null),
+    vencimiento: parseDateLocal(p.vencimiento),
   })) as Producto[];
+  console.log(productos);
 
   return { productos, total: (count ?? 0) as number };
 }
@@ -256,6 +271,7 @@ export async function updateProducto(
     precioventa: number;
     id_unidad_medida: number;
     estado: boolean;
+    vencimiento?: Date | null;
   }>
 ) {
   // Try RPC transaction first
