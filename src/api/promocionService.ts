@@ -1,4 +1,4 @@
-import { supabase } from '../supabaseClient';
+import { supabase, handleAuthError } from '../supabaseClient';
 import { Promocion, PromocionDetalleInput, DetallePromocionConCantidad } from '../types';
 
 export async function getPromociones() {
@@ -9,6 +9,7 @@ export async function getPromociones() {
 
   if (error) {
     console.error('Error al obtener promociones:', error);
+    await handleAuthError(error);
     throw error;
   }
 
@@ -31,6 +32,7 @@ export async function getPromocionesActivas() {
 
   if (error) {
     console.error('Error al obtener promociones:', error);
+    await handleAuthError(error);
     throw error;
   }
 
@@ -70,6 +72,7 @@ export async function createPromocion(name: string, precio: number | null, produ
 
   if (promoError) {
     console.error('Error al crear promocion:', promoError);
+    await handleAuthError(promoError);
     throw promoError;
   }
 
@@ -80,6 +83,7 @@ export async function createPromocion(name: string, precio: number | null, produ
     const { error: detallesError } = await supabase.from('detalle_promocion').insert(detalles);
     if (detallesError) {
       console.error('Error al crear detalles de promocion:', detallesError);
+      await handleAuthError(detallesError);
       throw detallesError;
     }
   }
@@ -95,6 +99,7 @@ export async function getDetallePromocion(id_promocion: number) {
 
   if (error) {
     console.error('Error al obtener detalle promocion:', error);
+    await handleAuthError(error);
     throw error;
   }
 
@@ -131,6 +136,7 @@ export async function updatePromocion(id_promocion: number, name: string, precio
 
   if (promoError) {
     console.error('Error al actualizar promocion:', promoError);
+    await handleAuthError(promoError);
     throw promoError;
   }
 
@@ -155,6 +161,7 @@ export async function updatePromocion(id_promocion: number, name: string, precio
           .eq('id_detalle_promocion', existente.id_detalle_promocion);
         if (updErr) {
           console.error('Error al actualizar detalle promocion:', updErr);
+          await handleAuthError(updErr);
           throw updErr;
         }
       }
@@ -163,6 +170,7 @@ export async function updatePromocion(id_promocion: number, name: string, precio
       const { error: insErr } = await supabase.from('detalle_promocion').insert([{ id_promocion, id_producto: p.id_producto, cantidad: p.cantidad }]);
       if (insErr) {
         console.error('Error al insertar detalle promocion nuevo:', insErr);
+        await handleAuthError(insErr);
         throw insErr;
       }
     }
@@ -175,6 +183,7 @@ export async function updatePromocion(id_promocion: number, name: string, precio
     const { error: delErr } = await supabase.from('detalle_promocion').delete().in('id_detalle_promocion', ids);
     if (delErr) {
       console.error('Error al borrar detalles removidos:', delErr);
+      await handleAuthError(delErr);
       throw delErr;
     }
   }
@@ -194,6 +203,7 @@ export async function deletePromocion(id_promocion: number, estado: boolean) {
 
     if (error) {
       console.error('Error al desactivar promocion:', error);
+      await handleAuthError(error);
       throw error;
     }
 

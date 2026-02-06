@@ -1,5 +1,5 @@
 // api/ventasService.ts
-import { supabase } from '../supabaseClient';
+import { supabase, handleAuthError } from '../supabaseClient';
 import { DetalleVenta, VentaConDetalles } from '../types';
 
 // ============= VENTAS =============
@@ -25,6 +25,7 @@ export async function getVentas() {
       hint: error.hint,
       code: error.code
     });
+    await handleAuthError(error);
     throw error;
   }
 
@@ -90,6 +91,7 @@ export async function buscarVentas(options?: { desde?: string; hasta?: string; e
 
   if (error) {
     console.error('❌ Error al buscar ventas:', error);
+    await handleAuthError(error);
     throw error;
   }
 
@@ -158,6 +160,7 @@ export async function getVentasPage(
 
   if (error) {
     console.error('❌ Error al obtener página de ventas:', error);
+    await handleAuthError(error);
     throw error;
   }
 
@@ -196,6 +199,7 @@ export async function createVenta(
 
   if (error) {
     console.error('Error al crear venta via RPC:', error);
+    await handleAuthError(error);
     throw error;
   }
 
@@ -216,6 +220,7 @@ export async function getDetallesVenta(id_venta: number) {
 
   if (error) {
     console.error('Error al obtener detalles de venta:', error);
+    await handleAuthError(error);
     throw error;
   }
 
@@ -261,6 +266,7 @@ export async function updateVentaBaja(id_venta: number, baja: boolean) {
 
   if (error) {
     console.error('Error en update venta baja:', error);
+    await handleAuthError(error);
     throw error;
   }
 
@@ -279,6 +285,7 @@ export async function reactivarVenta(id_venta: number) {
 
   if (error) {
     console.error('Error al reactivar venta:', error);
+    await handleAuthError(error);
     throw error;
   }
 
@@ -299,6 +306,7 @@ export async function updateVentaFlag(
 
     if (error) {
       console.error('Error al ejecutar RPC toggle_venta_baja:', error);
+      await handleAuthError(error);
       throw error;
     }
 
@@ -315,6 +323,9 @@ export async function updateVentaFlag(
     .select()
     .maybeSingle();
 
-  if (error) throw error;
+  if (error) {
+    await handleAuthError(error);
+    throw error;
+  }
   return data;
 }

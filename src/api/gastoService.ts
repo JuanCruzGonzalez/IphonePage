@@ -1,4 +1,4 @@
-import { supabase } from '../supabaseClient';
+import { supabase, handleAuthError } from '../supabaseClient';
 import { Gasto } from '../types';
 
 /**
@@ -12,6 +12,7 @@ export async function getGastos() {
 
   if (error) {
     console.error('Error al obtener gastos:', error);
+    await handleAuthError(error);
     throw error;
   }
 
@@ -30,6 +31,7 @@ export async function getGastosActivos() {
 
   if (error) {
     console.error('Error al obtener gastos activos:', error);
+    await handleAuthError(error);
     throw error;
   }
 
@@ -52,6 +54,7 @@ export async function createGasto(costo: number, descripcion: string | null) {
 
   if (error) {
     console.error('Error al crear gasto:', error);
+    await handleAuthError(error);
     throw error;
   }
 
@@ -78,6 +81,7 @@ export async function updateGasto(
 
   if (error) {
     console.error('Error al actualizar gasto:', error);
+    await handleAuthError(error);
     throw error;
   }
 
@@ -102,6 +106,7 @@ export async function deleteGasto(id_gasto: number) {
 
   if (error) {
     console.error('Error al eliminar gasto:', error);
+    await handleAuthError(error);
     throw error;
   }
 

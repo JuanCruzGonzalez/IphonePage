@@ -1,4 +1,4 @@
-import { supabase } from '../supabaseClient';
+import { supabase, handleAuthError } from '../supabaseClient';
 
 const BUCKET_NAME = 'productos';
 
@@ -21,6 +21,7 @@ export async function uploadProductImage(file: File, productId: number): Promise
 
   if (error) {
     console.error('Error al subir imagen:', error);
+    await handleAuthError(error);
     throw error;
   }
 
@@ -51,6 +52,7 @@ export async function deleteProductImage(imagePath: string): Promise<void> {
 
   if (error) {
     console.error('Error al eliminar imagen:', error);
+    await handleAuthError(error);
     throw error;
   }
 }

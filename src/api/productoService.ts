@@ -1,4 +1,4 @@
-import { supabase } from '../supabaseClient';
+import { supabase, handleAuthError } from '../supabaseClient';
 import { Producto, UnidadMedida } from '../types';
 
 // Helper para convertir fecha sin desplazamiento de zona horaria
@@ -35,6 +35,7 @@ export async function getProductos() {
       
   if (error) {
     console.error('Error al obtener productos:', error);
+    await handleAuthError(error);
     throw error;
   }
   if (!data) return [];
@@ -83,6 +84,7 @@ export async function getProductosActivos() {
       
   if (error) {
     console.error('Error al obtener productos:', error);
+    await handleAuthError(error);
     throw error;
   }
   if (!data) return [];
@@ -135,6 +137,7 @@ export async function buscarProductos(q: string) {
 
   if (error) {
     console.error('Error al buscar productos:', error);
+    await handleAuthError(error);
     throw error;
   }
 
@@ -190,6 +193,7 @@ export async function getProductosPage(page = 1, pageSize = 5, q = '') {
 
   if (error) {
     console.error('Error al obtener página de productos:', error);
+    await handleAuthError(error);
     throw error;
   }
 
@@ -220,6 +224,7 @@ export async function createProducto(producto: Omit<Producto, 'id_producto'>) {
 
   if (error) {
     console.error('Error al crear producto:', error);
+    await handleAuthError(error);
     throw error;
   }
 
@@ -246,6 +251,7 @@ export async function updateStockProducto(id_producto: number, nuevoStock: numbe
 
   if (error) {
     console.error('Error al actualizar stock:', error);
+    await handleAuthError(error);
     throw error;
   }
 
@@ -261,6 +267,7 @@ export async function getUnidadesMedidas() {
 
   if (error) {
     console.error('❌ Error al obtener unidades de medida:', error);
+    await handleAuthError(error);
     throw error;
   }
 
@@ -317,6 +324,7 @@ export async function updateProducto(
 
   if (error) {
     console.error('Error al actualizar producto:', error);
+    await handleAuthError(error);
     throw error;
   }
 
@@ -373,6 +381,7 @@ export async function updateProductoEstado(id_producto: number, activo: boolean)
 
   if (error) {
     console.error('Error al actualizar estado de producto:', error);
+    await handleAuthError(error);
     throw error;
   }
 

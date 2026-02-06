@@ -7,4 +7,19 @@ if (!supabaseUrl || !supabaseAnonKey) {
   throw new Error('Faltan las variables de entorno de Supabase');
 }
 
-export const supabase = createClient(supabaseUrl, supabaseAnonKey);
+export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
+  auth: {
+    autoRefreshToken: true,
+    persistSession: true,
+    detectSessionInUrl: true
+  }
+});
+
+// Helper function to handle auth errors
+export const handleAuthError = async (error: any) => {
+  if (error?.code === 'PGRST301' || error?.code === 'PGRST302' || error?.code === 'PGRST303' || error?.message?.includes('JWT')) {
+    console.log('JWT expired or invalid, signing out...');
+    await supabase.auth.signOut();
+    window.location.href = '/login';
+  }
+};
