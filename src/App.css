@@ -416,6 +416,7 @@ nav{
 
 .table td {
   padding: 16px 20px;
+  min-height: 88px;
   font-size: 14px;
   border-bottom: 1px solid var(--color-border);
 }
@@ -960,6 +961,10 @@ input[type=number] {
   .table th,
   .table td {
     padding: 10px 12px;
+  }
+
+  .table td {
+    min-height: 105px;
   }
 
   /* Ajustes para items de venta en móvil */
