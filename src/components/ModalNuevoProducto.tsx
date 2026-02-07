@@ -215,7 +215,7 @@ export const ModalNuevoProducto: React.FC<ModalNuevoProductoProps> = ({
             <label>Estado</label>
             <select value={estadoProducto} onChange={(e) => setEstadoProducto(e.target.value)}>
               <option value="1">Activo</option>
-              <option value="2">Inavilitado</option>
+              <option value="2">Inactivo</option>
             </select>
           </div>
           <div className="form-group">
