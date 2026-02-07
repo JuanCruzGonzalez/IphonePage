@@ -125,6 +125,10 @@ export const ClientePage: React.FC = () => {
     return `$${precio.toFixed(2)}`;
   };
 
+  const obtenerItemEnCarrito = (id_producto: number): ItemCarrito | undefined => {
+    return carrito.find(item => item.id_producto === id_producto);
+  };
+
   if (loading) {
     return (
       <div className="cliente-loading">
@@ -148,7 +152,7 @@ export const ClientePage: React.FC = () => {
               🛍️
             </div>
             <h1 className="cliente-header-title">
-              Tienda
+              CHAÑAR
             </h1>
           </div>
 
@@ -201,10 +205,6 @@ export const ClientePage: React.FC = () => {
                   </div>
                 )}
                 
-                {/* Badge de stock */}
-                <div className={`cliente-product-stock-badge ${producto.stock > 10 ? 'high-stock' : 'low-stock'}`}>
-                  Stock: {producto.stock} {producto.unidad_medida?.abreviacion}
-                </div>
               </div>
 
               {/* Contenido */}
@@ -235,13 +235,55 @@ export const ClientePage: React.FC = () => {
                 </div>
                 </div>
 
-                <button
-                  onClick={() => manejarAgregarProducto(producto)}
-                  disabled={producto.stock <= 0}
-                  className={`cliente-product-add-btn ${producto.stock > 0 ? 'available' : 'unavailable'}`}
-                >
-                  {producto.stock > 0 ? '+ Agregar al carrito' : 'Sin stock'}
-                </button>
+                {/* Botón de agregar o controles de cantidad */}
+                {(() => {
+                  const itemEnCarrito = obtenerItemEnCarrito(producto.id_producto);
+                  
+                  if (itemEnCarrito) {
+                    // Mostrar controles + y -
+                    return (
+                      <div className="cliente-product-quantity-controls">
+                        <button
+                          onClick={() => actualizarCantidad(
+                            producto.id_producto,
+                            itemEnCarrito.cantidad - (producto.id_unidad_medida === 1 ? 10 : 1)
+                          )}
+                          className="cliente-product-quantity-btn"
+                        >
+                          −
+                        </button>
+                        
+                        <span className="cliente-product-quantity-display">
+                          {producto.id_unidad_medida === 1
+                            ? `${Math.round(itemEnCarrito.cantidad)}gr`
+                            : `${itemEnCarrito.cantidad}`
+                          }
+                        </span>
+
+                        <button
+                          onClick={() => actualizarCantidad(
+                            producto.id_producto,
+                            itemEnCarrito.cantidad + (producto.id_unidad_medida === 1 ? 10 : 1)
+                          )}
+                          className="cliente-product-quantity-btn"
+                        >
+                          +
+                        </button>
+                      </div>
+                    );
+                  } else {
+                    // Mostrar botón de agregar
+                    return (
+                      <button
+                        onClick={() => manejarAgregarProducto(producto)}
+                        disabled={producto.stock <= 0}
+                        className={`cliente-product-add-btn ${producto.stock > 0 ? 'available' : 'unavailable'}`}
+                      >
+                        {producto.stock > 0 ? '+ Agregar al carrito' : 'Sin stock'}
+                      </button>
+                    );
+                  }
+                })()}
               </div>
             </div>
           ))}
@@ -324,7 +366,7 @@ export const ClientePage: React.FC = () => {
                 </p>
               </div>
               <button onClick={() => setMostrarCarrito(false)} className="cliente-cart-close-btn">
-                ×
+                <span>x</span>
               </button>
             </div>
 
