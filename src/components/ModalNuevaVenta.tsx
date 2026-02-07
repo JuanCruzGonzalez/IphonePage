@@ -374,7 +374,7 @@ export const ModalNuevaVenta: React.FC<ModalNuevaVentaProps> = ({
                             />
                         </div>
                         <button className="btn-secondary" onClick={agregarItem} style={{ width: '50%' }} disabled={loading}>
-                            + Agregar Producto
+                            + Agregar
                         </button>
                     </div>
                     <div className="form-group" style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
@@ -444,7 +444,7 @@ export const ModalNuevaVenta: React.FC<ModalNuevaVentaProps> = ({
                                 />
                         </div>
                         <button className="btn-secondary" onClick={agregarPromocion} style={{ width: '50%' }} disabled={loading}>
-                            + Agregar Promoción
+                            + Agregar
                         </button>
                     </div>
 

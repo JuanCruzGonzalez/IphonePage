@@ -643,6 +643,10 @@
   font-weight: 600;
   color: #1f2937;
   flex: 1;
+  word-wrap: break-word;
+  word-break: break-word;
+  overflow-wrap: break-word;
+  line-height: 1.4;
 }
 
 .cliente-cart-item-delete {
@@ -663,6 +667,8 @@
   display: flex;
   justify-content: space-between;
   align-items: center;
+  flex-wrap: wrap;
+  gap: 12px;
 }
 
 .cliente-cart-item-controls {
@@ -672,6 +678,7 @@
   background: white;
   border-radius: 10px;
   padding: 4px;
+  flex-shrink: 0;
 }
 
 .cliente-cart-item-btn {
@@ -685,6 +692,9 @@
   font-weight: 700;
   font-size: 18px;
   transition: all 0.3s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .cliente-cart-item-btn:hover {
@@ -708,9 +718,8 @@
 
 /* --- Footer del Carrito --- */
 .cliente-cart-footer {
-  border-top: 1px solid #e5e7eb;
-  padding: 24px;
   background: white;
+  margin-top: 20px;
 }
 
 .cliente-cart-total {
@@ -718,19 +727,19 @@
   justify-content: space-between;
   align-items: center;
   margin-bottom: 20px;
-  padding: 16px;
+  padding: 12px 20px;
   background: linear-gradient(135deg, #667eea10 0%, #764ba210 100%);
   border-radius: 12px;
 }
 
 .cliente-cart-total-label {
-  font-size: 18px;
+  font-size: 15px;
   font-weight: 600;
   color: #374151;
 }
 
 .cliente-cart-total-value {
-  font-size: 28px;
+  font-size: 20px;
   font-weight: 700;
   background: #037a35be;
   -webkit-background-clip: text;
@@ -746,7 +755,7 @@
 
 .cliente-cart-clear-btn {
   width: 100%;
-  padding: 14px;
+  padding: 10px 20px;
   background: #f3f4f6;
   color: #374151;
   border: none;
@@ -762,8 +771,11 @@
 }
 
 .cliente-cart-checkout-btn {
+  display: flex;
+  justify-content: center;
+  align-items: center;
   width: 100%;
-  padding: 16px;
+  padding: 12px 20px;
   background: #037a35be;
   color: white;
   border: none;
