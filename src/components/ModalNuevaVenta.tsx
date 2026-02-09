@@ -1,19 +1,42 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Producto, Promocion, DetalleVentaInput } from '../types';
+import { Producto, Promocion, DetalleVentaInput, UnidadMedida } from '../types';
 import { updateProducto } from '../api/productoService';
 
 // Small row component for product items (editable unit price)
 const ProductRow: React.FC<{
-    item: { id_producto: number; cantidad: number; nombre: string; precioventa: number; unidadMedidaId: number };
+    item: { id_producto: number; cantidad: number; nombre: string; precioventa: number; unidadMedida: UnidadMedida };
     onUpdatePrice: (id_producto: number, newPrice: number) => void;
     onRemove: (id_producto: number) => void;
     onChangeCantidad: (id_producto: number, cantidad: number) => void;
 }> = ({ item, onUpdatePrice, onRemove, onChangeCantidad }) => {
     return (
         <div key={item.id_producto} className="item-row">
-            <div style={{ display: 'flex', alignItems: 'center', gap: 12, justifyContent: 'space-between', width: '100%' }}>
-                <span>{item.nombre}</span>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+            <div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12, width: '100%' }}>
+                    <span>{item.nombre}</span>
+                    <span style={{ marginLeft: 8, color: '#666', display: 'flex', alignItems: 'center', gap: 4 }}>
+                        <span>Precio: </span>
+                        <input
+                            style={{
+                                width: '70px',
+                                backgroundColor: 'transparent',
+                                color: '#000',
+                                border: '1px solid #ccc',
+                                borderRadius: 4,
+                                padding: '2px 6px',
+                            }}
+                            type="number"
+                            value={item.unidadMedida.id_unidad_medida === 1 ? String(item.precioventa * 100) : String(item.precioventa)}
+                            onChange={(e) => {
+                                const val = e.target.value === '' ? 0 : parseFloat(e.target.value);
+                                onUpdatePrice(item.id_producto, item.unidadMedida.id_unidad_medida === 1 ? val / 100 : val);
+                            }}
+                            min="0"
+                        />
+                        {item.unidadMedida.id_unidad_medida === 1 ? 'x100gr' : 'x' + item.unidadMedida.abreviacion}
+                    </span>
+                </div>
+                <div>
                     <div className="qty-controls">
                         <button type="button" className="qty-button" onClick={() => onChangeCantidad(item.id_producto, Math.max(1, item.cantidad - 1))}>−</button>
                         <input
@@ -31,38 +54,19 @@ const ProductRow: React.FC<{
                             style={{ width: 60, textAlign: 'center' }}
                         />
                         <button type="button" className="qty-button" onClick={() => onChangeCantidad(item.id_producto, item.cantidad + 1)}>+</button>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
+                            <span style={{ fontWeight: 'bold', width: 'fit-content' }}>${item.cantidad * item.precioventa}</span>
+                            <button className="btn-remove" onClick={() => onRemove(item.id_producto)}>
+                                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                    <polyline points="3 6 5 6 21 6"></polyline>
+                                    <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"></path>
+                                    <path d="M10 11v6"></path>
+                                    <path d="M14 11v6"></path>
+                                </svg>
+                            </button>
+                        </div>
                     </div>
-                    <span style={{ marginLeft: 8, color: '#666', display: 'flex', alignItems: 'center', gap: 4 }}>
-                        <input
-                            style={{
-                                width: '70px',
-                                backgroundColor: 'transparent',
-                                color: '#000',
-                                border: '1px solid #ccc',
-                                borderRadius: 4,
-                                padding: '2px 6px',
-                            }}
-                            type="number"
-                            value={item.unidadMedidaId === 1 ? String(item.precioventa * 100) : String(item.precioventa)}
-                            onChange={(e) => {
-                                const val = e.target.value === '' ? 0 : parseFloat(e.target.value);
-                                onUpdatePrice(item.id_producto, item.unidadMedidaId === 1 ? val / 100 : val);
-                            }}
-                            min="0"
-                        />
-                        {item.unidadMedidaId === 1 ? 'x100gr' : ''}
-                    </span>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
-                        <span style={{ fontWeight: 'bold', width: 'fit-content' }}>${item.cantidad * item.precioventa}</span>
-                        <button className="btn-remove" onClick={() => onRemove(item.id_producto)}>
-                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                              <polyline points="3 6 5 6 21 6"></polyline>
-                              <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"></path>
-                              <path d="M10 11v6"></path>
-                              <path d="M14 11v6"></path>
-                            </svg>
-                        </button>
-                    </div>
+
                 </div>
             </div>
         </div>
@@ -146,7 +150,7 @@ export const ModalNuevaVenta: React.FC<ModalNuevaVentaProps> = ({
     showToast,
     loading = false,
 }) => {
-    const [items, setItems] = useState<{ id_producto: number; cantidad: number; nombre: string; precioventa: number; unidadMedidaId: number }[]>([]);
+    const [items, setItems] = useState<{ id_producto: number; cantidad: number; nombre: string; precioventa: number; unidadMedida: UnidadMedida }[]>([]);
     const [productoSeleccionado, setProductoSeleccionado] = useState('');
     const [busquedaProducto, setBusquedaProducto] = useState('');
     const [showProductosDropdown, setShowProductosDropdown] = useState(false);
@@ -179,12 +183,12 @@ export const ModalNuevaVenta: React.FC<ModalNuevaVentaProps> = ({
     if (!isOpen) return null;
 
     // Filtrar productos basado en la búsqueda
-    const productosFiltrados = productos.filter(p => 
+    const productosFiltrados = productos.filter(p =>
         p.nombre.toLowerCase().includes(busquedaProducto.toLowerCase())
     ).slice(0, 10); // Limitar a 10 resultados
 
     // Filtrar promociones basado en la búsqueda
-    const promocionesFiltradas = promociones.filter(p => 
+    const promocionesFiltradas = promociones.filter(p =>
         p.name.toLowerCase().includes(busquedaPromo.toLowerCase())
     ).slice(0, 10);
 
@@ -222,12 +226,19 @@ export const ModalNuevaVenta: React.FC<ModalNuevaVentaProps> = ({
             return;
         }
 
+        // Crear objeto UnidadMedida si no existe
+        const unidadMedida: UnidadMedida = producto.unidad_medida || {
+            id_unidad_medida: producto.id_unidad_medida,
+            nombre: producto.id_unidad_medida === 1 ? 'Kilogramo' : 'Unidad',
+            abreviacion: producto.id_unidad_medida === 1 ? 'kg' : 'u'
+        };
+
         setItems([...items, {
             id_producto: productoId,
             cantidad: cant,
             nombre: producto.nombre,
             precioventa: producto.precioventa,
-            unidadMedidaId: producto.id_unidad_medida
+            unidadMedida
         }]);
         setProductoSeleccionado('');
         setBusquedaProducto('');
@@ -284,7 +295,7 @@ export const ModalNuevaVenta: React.FC<ModalNuevaVentaProps> = ({
 
     const updateProductPrice = async (id_producto: number, newPrice: number) => {
         setItems(prev => prev.map(it => it.id_producto === id_producto ? { ...it, precioventa: newPrice } : it));
-        
+
         try {
             await updateProducto(id_producto, { precioventa: newPrice });
             showToast?.('Precio actualizado en la base de datos');
@@ -441,7 +452,7 @@ export const ModalNuevaVenta: React.FC<ModalNuevaVentaProps> = ({
                                 value={promoCantidad}
                                 onChange={(e) => setPromoCantidad(e.target.value)}
                                 min="1"
-                                />
+                            />
                         </div>
                         <button className="btn-secondary" onClick={agregarPromocion} style={{ width: '50%' }} disabled={loading}>
                             + Agregar
