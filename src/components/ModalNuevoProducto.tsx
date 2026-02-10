@@ -85,7 +85,11 @@ export const ModalNuevoProducto: React.FC<ModalNuevoProductoProps> = ({
       } else {
         setPrecioventa(String(initialProduct.precioventa ?? ''));
       }
-      setPromocionActiva(initialProduct.promocion_activa ?? false);
+      
+      // Actualizar promoción
+      const tienePromocion = initialProduct.promocion_activa ?? false;
+      setPromocionActiva(tienePromocion);
+      
       if (initialProduct.precio_promocion != null) {
         if (initialProduct.id_unidad_medida === 1) {
           setPrecioPromocion(String(initialProduct.precio_promocion * 100));
@@ -95,6 +99,7 @@ export const ModalNuevoProducto: React.FC<ModalNuevoProductoProps> = ({
       } else {
         setPrecioPromocion('');
       }
+      
       setUnidadMedida(String(initialProduct.id_unidad_medida ?? ''));
       setEstadoProducto((initialProduct.estado ?? true) ? '1' : '2');
       setVencimiento(
@@ -106,8 +111,6 @@ export const ModalNuevoProducto: React.FC<ModalNuevoProductoProps> = ({
       setImagePreview(null);
       setImageToCrop(null);
       setShowCropper(false);
-      setPromocionActiva(false);
-      setPrecioPromocion('');
     } else {
       setNombre('');
       setDescripcion('');

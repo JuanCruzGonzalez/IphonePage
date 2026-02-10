@@ -175,13 +175,12 @@ export const ClientePage: React.FC = () => {
         <div className="cliente-header-content">
           <div className="cliente-header-logo">
             <div className="cliente-header-icon">
-              🛍️
+              <img src="./public/logo.png" alt="Logo Chañar" style={{ width: 105, height: 'auto' }} />
             </div>
-            <h1 className="cliente-header-title">
-              CHAÑAR
-            </h1>
           </div>
-
+          <h1 className="cliente-header-title">
+            Chañar
+          </h1>
           <button
             onClick={() => setMostrarCarrito(!mostrarCarrito)}
             className="cliente-header-cart-btn"
