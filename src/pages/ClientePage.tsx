@@ -175,7 +175,7 @@ export const ClientePage: React.FC = () => {
         <div className="cliente-header-content">
           <div className="cliente-header-logo">
             <div className="cliente-header-icon">
-              <img src="./public/logo.png" alt="Logo Chañar" style={{ width: 105, height: 'auto' }} />
+              <img src="/logo.png" alt="Logo Chañar" style={{ width: 105, height: 'auto' }} />
             </div>
           </div>
           <h1 className="cliente-header-title">
