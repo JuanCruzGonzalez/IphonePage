@@ -249,7 +249,7 @@ export const ClientePage: React.FC = () => {
                       }
                     </div>
                     {producto.id_unidad_medida === 1 && (
-                      <span className="cliente-product-price-unit">
+                      <span className="cliente-product-price-unit" style={{fontWeight: 700}}>
                         x 100gr
                       </span>
                     )}

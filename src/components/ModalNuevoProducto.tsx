@@ -1,4 +1,6 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
+import Cropper from 'react-easy-crop';
+import 'react-easy-crop/react-easy-crop.css';
 import { UnidadMedida } from '../types';
 import { getProductImageUrl } from '../api/storageService';
 
@@ -47,6 +49,11 @@ export const ModalNuevoProducto: React.FC<ModalNuevoProductoProps> = ({
   );
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
+  const [imageToCrop, setImageToCrop] = useState<string | null>(null);
+  const [crop, setCrop] = useState({ x: 0, y: 0 });
+  const [zoom, setZoom] = useState(1);
+  const [croppedAreaPixels, setCroppedAreaPixels] = useState<any>(null);
+  const [showCropper, setShowCropper] = useState(false);
 
   useEffect(() => {
     if (initialProduct) {
@@ -72,6 +79,8 @@ export const ModalNuevoProducto: React.FC<ModalNuevoProductoProps> = ({
       );
       setImageFile(null);
       setImagePreview(null);
+      setImageToCrop(null);
+      setShowCropper(false);
     } else {
       setNombre('');
       setDescripcion('');
@@ -83,6 +92,8 @@ export const ModalNuevoProducto: React.FC<ModalNuevoProductoProps> = ({
       setVencimiento('');
       setImageFile(null);
       setImagePreview(null);
+      setImageToCrop(null);
+      setShowCropper(false);
     }
   }, [initialProduct, isOpen]);
 
@@ -99,19 +110,96 @@ export const ModalNuevoProducto: React.FC<ModalNuevoProductoProps> = ({
         showWarning?.('La imagen debe ser menor a 5MB');
         return;
       }
-      setImageFile(file);
-      // Crear preview
+      // Cargar imagen para recorte
       const reader = new FileReader();
       reader.onloadend = () => {
-        setImagePreview(reader.result as string);
+        setImageToCrop(reader.result as string);
+        setShowCropper(true);
       };
       reader.readAsDataURL(file);
     }
+    // Reset input
+    e.target.value = '';
   };
 
   const handleRemoveImage = () => {
     setImageFile(null);
     setImagePreview(null);
+    setImageToCrop(null);
+    setShowCropper(false);
+  };
+
+  const onCropComplete = useCallback((_croppedArea: any, croppedAreaPixels: any) => {
+    setCroppedAreaPixels(croppedAreaPixels);
+  }, []);
+
+  const createImage = (url: string): Promise<HTMLImageElement> =>
+    new Promise((resolve, reject) => {
+      const image = new Image();
+      image.addEventListener('load', () => resolve(image));
+      image.addEventListener('error', (error) => reject(error));
+      image.src = url;
+    });
+
+  const getCroppedImg = async (imageSrc: string, pixelCrop: any): Promise<Blob | null> => {
+    const image = await createImage(imageSrc);
+    const canvas = document.createElement('canvas');
+    const ctx = canvas.getContext('2d');
+
+    if (!ctx) return null;
+
+    // Set canvas size to square (1:1 ratio)
+    const size = Math.min(pixelCrop.width, pixelCrop.height);
+    canvas.width = size;
+    canvas.height = size;
+
+    ctx.drawImage(
+      image,
+      pixelCrop.x,
+      pixelCrop.y,
+      pixelCrop.width,
+      pixelCrop.height,
+      0,
+      0,
+      size,
+      size
+    );
+
+    return new Promise((resolve) => {
+      canvas.toBlob((blob) => {
+        resolve(blob);
+      }, 'image/jpeg', 0.95);
+    });
+  };
+
+  const handleCropConfirm = async () => {
+    if (!imageToCrop || !croppedAreaPixels) return;
+
+    try {
+      const croppedBlob = await getCroppedImg(imageToCrop, croppedAreaPixels);
+      if (croppedBlob) {
+        // Convert blob to File
+        const file = new File([croppedBlob], 'cropped-image.jpg', { type: 'image/jpeg' });
+        setImageFile(file);
+        
+        // Create preview
+        const previewUrl = URL.createObjectURL(croppedBlob);
+        setImagePreview(previewUrl);
+        
+        setShowCropper(false);
+        setImageToCrop(null);
+      }
+    } catch (error) {
+      console.error('Error al recortar la imagen:', error);
+      showWarning?.('Error al procesar la imagen');
+    }
+  };
+
+  const handleCropCancel = () => {
+    setShowCropper(false);
+    setImageToCrop(null);
+    setCrop({ x: 0, y: 0 });
+    setZoom(1);
   };
 
   if (!isOpen) return null;
@@ -142,6 +230,8 @@ export const ModalNuevoProducto: React.FC<ModalNuevoProductoProps> = ({
     setVencimiento('');
     setImageFile(null);
     setImagePreview(null);
+    setImageToCrop(null);
+    setShowCropper(false);
   };
   const textoGramos = unidadMedida === '1' ? '(por 100 gramos)' : '';
   return (
@@ -284,6 +374,57 @@ export const ModalNuevoProducto: React.FC<ModalNuevoProductoProps> = ({
           </button>
         </div>
       </div>
+
+      {/* Modal de recorte de imagen */}
+      {showCropper && imageToCrop && (
+        <div className="modal-overlay" style={{ zIndex: 1001 }} onClick={handleCropCancel}>
+          <div 
+            className="modal-minimal" 
+            onClick={(e) => e.stopPropagation()}
+            style={{ maxWidth: '600px', height: '80vh', display: 'flex', flexDirection: 'column' }}
+          >
+            <div className="modal-minimal-header">
+              <h2>Recortar Imagen (1:1)</h2>
+              <button className="btn-close" onClick={handleCropCancel}>×</button>
+            </div>
+            <div style={{ position: 'relative', flex: 1, minHeight: 0, backgroundColor: '#000' }}>
+              <Cropper
+                image={imageToCrop}
+                crop={crop}
+                zoom={zoom}
+                aspect={1}
+                onCropChange={setCrop}
+                onZoomChange={setZoom}
+                onCropComplete={onCropComplete}
+              />
+            </div>
+            <div style={{ padding: '20px', borderTop: '1px solid #ddd' }}>
+              <div style={{ marginBottom: '20px' }}>
+                <label style={{ display: 'block', marginBottom: '8px', fontSize: '14px', fontWeight: 600 }}>
+                  Zoom
+                </label>
+                <input
+                  type="range"
+                  min={1}
+                  max={3}
+                  step={0.1}
+                  value={zoom}
+                  onChange={(e) => setZoom(Number(e.target.value))}
+                  style={{ width: '100%' }}
+                />
+              </div>
+              <div style={{ display: 'flex', gap: '12px' }}>
+                <button className="btn-secondary" onClick={handleCropCancel} style={{ flex: 1 }}>
+                  Cancelar
+                </button>
+                <button className="btn-primary" onClick={handleCropConfirm} style={{ flex: 1 }}>
+                  Confirmar Recorte
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

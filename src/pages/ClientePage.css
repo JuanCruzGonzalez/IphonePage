@@ -204,18 +204,23 @@
 .cliente-product-image-container {
   position: relative;
   width: 100%;
-  height: 200px;
+  padding-bottom: 100%; /* Aspecto 1:1 (cuadrado) */
   overflow: hidden;
-  background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
 }
 
 .cliente-product-image {
+  position: absolute;
+  top: 0;
+  left: 0;
   width: 100%;
   height: 100%;
   object-fit: cover;
 }
 
 .cliente-product-image-placeholder {
+  position: absolute;
+  top: 0;
+  left: 0;
   width: 100%;
   height: 100%;
   display: flex;
@@ -240,7 +245,6 @@
 .cliente-product-content {
   padding: 20px;
   display: flex;
-  height: 50%;
   flex-direction: column;
   justify-content: end;
   min-height: 205px;
@@ -270,14 +274,14 @@
   -webkit-line-clamp: 2;
   -webkit-box-orient: vertical;
   line-clamp: 2;
-  height: 15px;
+  height: 19px;
   overflow: hidden;
 }
 
 .cliente-product-price-container {
   display: flex;
-  justify-content: space-between;
   align-items: center;
+  gap: 5px;
   margin-bottom: 16px;
 }
 
