@@ -333,7 +333,18 @@ function App() {
   };
 
   // Handlers para crear producto
-  const handleNuevoProducto = async (producto: { nombre: string; descripcion: string; stock: number; costo: number; precioventa: number; unidadMedida: number; estado: boolean; vencimiento?: Date | null }, imageFile?: File | null) => {
+  const handleNuevoProducto = async (producto: { 
+    nombre: string; 
+    descripcion: string; 
+    stock: number; 
+    costo: number; 
+    precioventa: number; 
+    unidadMedida: number; 
+    estado: boolean; 
+    vencimiento?: Date | null;
+    promocionActiva?: boolean;
+    precioPromocion?: number | null;
+  }, imageFile?: File | null) => {
     try {
       const createdProduct = await crearProductoAsync.execute(() => createProducto({
         nombre: producto.nombre,
@@ -341,6 +352,8 @@ function App() {
         stock: producto.stock,
         costo: producto.costo,
         precioventa: producto.precioventa,
+        precio_promocion: producto.precioPromocion || null,
+        promocion_activa: producto.promocionActiva || false,
         id_unidad_medida: producto.unidadMedida,
         estado: producto.estado,
         vencimiento: producto.vencimiento || undefined,
@@ -383,7 +396,18 @@ function App() {
   };
 
   // Handler para editar un producto existente
-  const handleEditarProducto = async (producto: { nombre: string; descripcion: string; stock: number; costo: number; precioventa: number; unidadMedida: number; estado: boolean; vencimiento?: Date | null }, imageFile?: File | null) => {
+  const handleEditarProducto = async (producto: { 
+    nombre: string; 
+    descripcion: string; 
+    stock: number; 
+    costo: number; 
+    precioventa: number; 
+    unidadMedida: number; 
+    estado: boolean; 
+    vencimiento?: Date | null;
+    promocionActiva?: boolean;
+    precioPromocion?: number | null;
+  }, imageFile?: File | null) => {
     if (!productToEdit) return;
     try {
       // Si hay una nueva imagen, subirla (esto reemplazará la anterior automáticamente)
@@ -403,6 +427,8 @@ function App() {
         stock: producto.stock,
         costo: producto.costo,
         precioventa: producto.precioventa,
+        precio_promocion: producto.precioPromocion || null,
+        promocion_activa: producto.promocionActiva || false,
         id_unidad_medida: producto.unidadMedida,
         estado: producto.estado,
         vencimiento: producto.vencimiento || undefined,

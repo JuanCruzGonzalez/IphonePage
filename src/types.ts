@@ -6,6 +6,8 @@ export interface Producto {
   stock: number;
   costo: number;
   precioventa: number;
+  precio_promocion?: number | null;
+  promocion_activa?: boolean;
   id_unidad_medida: number;
   unidad_medida?: UnidadMedida;
   estado: boolean;

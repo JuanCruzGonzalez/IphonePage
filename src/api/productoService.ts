@@ -18,6 +18,8 @@ export async function getProductos() {
     stock, 
     costo,
     precioventa,
+    precio_promocion,
+    promocion_activa,
     id_unidad_medida,
     unidad_medida (
       id_unidad_medida,
@@ -47,6 +49,8 @@ export async function getProductos() {
     stock: p.stock,
     costo: p.costo,
     precioventa: p.precioventa,
+    precio_promocion: p.precio_promocion,
+    promocion_activa: p.promocion_activa,
     id_unidad_medida: p.id_unidad_medida,
     unidad_medida: Array.isArray(p.unidad_medida)
       ? (p.unidad_medida[0] ?? null)
@@ -68,6 +72,8 @@ export async function getProductosActivos() {
     stock,
     costo,
     precioventa,
+    precio_promocion,
+    promocion_activa,
     id_unidad_medida,
     unidad_medida (
       id_unidad_medida,
@@ -96,6 +102,8 @@ export async function getProductosActivos() {
     stock: p.stock,
     costo: p.costo,
     precioventa: p.precioventa,
+    precio_promocion: p.precio_promocion,
+    promocion_activa: p.promocion_activa,
     id_unidad_medida: p.id_unidad_medida,
     unidad_medida: Array.isArray(p.unidad_medida)
       ? (p.unidad_medida[0] ?? null)
@@ -284,6 +292,8 @@ export async function updateProducto(
     stock: number;
     costo: number;
     precioventa: number;
+    precio_promocion?: number | null;
+    promocion_activa?: boolean;
     id_unidad_medida: number;
     estado: boolean;
     vencimiento?: Date | null;
@@ -302,6 +312,8 @@ export async function updateProducto(
         stock: p.stock,
         costo: p.costo,
         precioventa: p.precioventa,
+        precio_promocion: p.precio_promocion,
+        promocion_activa: p.promocion_activa,
         id_unidad_medida: p.id_unidad_medida,
         estado: p.estado,
         vencimiento: parseDateLocal(p.vencimiento),
@@ -318,7 +330,7 @@ export async function updateProducto(
     .update(changes)
     .eq('id_producto', id_producto)
     .select(
-      `id_producto,nombre,descripcion,stock,costo,precioventa,id_unidad_medida,estado,vencimiento,imagen_path,unidad_medida(id_unidad_medida,nombre,abreviacion)`
+      `id_producto,nombre,descripcion,stock,costo,precioventa,precio_promocion,promocion_activa,id_unidad_medida,estado,vencimiento,imagen_path,unidad_medida(id_unidad_medida,nombre,abreviacion)`
     )
     .single();
 
@@ -338,6 +350,8 @@ export async function updateProducto(
     stock: p.stock,
     costo: p.costo,
     precioventa: p.precioventa,
+    precio_promocion: p.precio_promocion,
+    promocion_activa: p.promocion_activa,
     id_unidad_medida: p.id_unidad_medida,
     estado: p.estado,
     vencimiento: parseDateLocal(p.vencimiento),

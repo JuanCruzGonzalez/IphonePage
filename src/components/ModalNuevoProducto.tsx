@@ -8,7 +8,18 @@ interface ModalNuevoProductoProps {
   isOpen: boolean;
   onClose: () => void;
   unidadesMedida: UnidadMedida[];
-  onSubmit: (producto: { nombre: string; descripcion: string; stock: number; costo: number; precioventa: number; unidadMedida: number; estado: boolean; vencimiento?: Date | null}, imageFile?: File | null) => void;
+  onSubmit: (producto: { 
+    nombre: string; 
+    descripcion: string; 
+    stock: number; 
+    costo: number; 
+    precioventa: number; 
+    unidadMedida: number; 
+    estado: boolean; 
+    vencimiento?: Date | null;
+    promocionActiva?: boolean;
+    precioPromocion?: number | null;
+  }, imageFile?: File | null) => void;
   initialProduct?: {
     id_producto: number;
     nombre: string;
@@ -20,6 +31,8 @@ interface ModalNuevoProductoProps {
     estado: boolean;
     vencimiento?: Date | null;
     imagen_path?: string | null;
+    promocion_activa?: boolean;
+    precio_promocion?: number | null;
   } | null;
   showError?: (message: string) => void;
   showWarning?: (message: string) => void;
@@ -54,6 +67,8 @@ export const ModalNuevoProducto: React.FC<ModalNuevoProductoProps> = ({
   const [zoom, setZoom] = useState(1);
   const [croppedAreaPixels, setCroppedAreaPixels] = useState<any>(null);
   const [showCropper, setShowCropper] = useState(false);
+  const [promocionActiva, setPromocionActiva] = useState(initialProduct?.promocion_activa ?? false);
+  const [precioPromocion, setPrecioPromocion] = useState(initialProduct?.precio_promocion ? String(initialProduct.precio_promocion) : '');
 
   useEffect(() => {
     if (initialProduct) {
@@ -70,6 +85,16 @@ export const ModalNuevoProducto: React.FC<ModalNuevoProductoProps> = ({
       } else {
         setPrecioventa(String(initialProduct.precioventa ?? ''));
       }
+      setPromocionActiva(initialProduct.promocion_activa ?? false);
+      if (initialProduct.precio_promocion != null) {
+        if (initialProduct.id_unidad_medida === 1) {
+          setPrecioPromocion(String(initialProduct.precio_promocion * 100));
+        } else {
+          setPrecioPromocion(String(initialProduct.precio_promocion));
+        }
+      } else {
+        setPrecioPromocion('');
+      }
       setUnidadMedida(String(initialProduct.id_unidad_medida ?? ''));
       setEstadoProducto((initialProduct.estado ?? true) ? '1' : '2');
       setVencimiento(
@@ -81,6 +106,8 @@ export const ModalNuevoProducto: React.FC<ModalNuevoProductoProps> = ({
       setImagePreview(null);
       setImageToCrop(null);
       setShowCropper(false);
+      setPromocionActiva(false);
+      setPrecioPromocion('');
     } else {
       setNombre('');
       setDescripcion('');
@@ -94,6 +121,8 @@ export const ModalNuevoProducto: React.FC<ModalNuevoProductoProps> = ({
       setImagePreview(null);
       setImageToCrop(null);
       setShowCropper(false);
+      setPromocionActiva(false);
+      setPrecioPromocion('');
     }
   }, [initialProduct, isOpen]);
 
@@ -210,6 +239,10 @@ export const ModalNuevoProducto: React.FC<ModalNuevoProductoProps> = ({
       return;
     }
 
+    const precioPromocionFinal = promocionActiva && precioPromocion 
+      ? (unidadMedida === '1' ? parseFloat(precioPromocion) / 100 : parseFloat(precioPromocion))
+      : null;
+
     onSubmit({
       nombre: nombre.trim(),
       descripcion: descripcion.trim(),
@@ -219,6 +252,8 @@ export const ModalNuevoProducto: React.FC<ModalNuevoProductoProps> = ({
       unidadMedida: parseInt(unidadMedida),
       estado: estadoProducto === '1',
       vencimiento: vencimiento ? new Date(vencimiento) : null,
+      promocionActiva: promocionActiva,
+      precioPromocion: precioPromocionFinal,
     }, imageFile);
 
     setNombre('');
@@ -232,6 +267,8 @@ export const ModalNuevoProducto: React.FC<ModalNuevoProductoProps> = ({
     setImagePreview(null);
     setImageToCrop(null);
     setShowCropper(false);
+    setPromocionActiva(false);
+    setPrecioPromocion('');
   };
   const textoGramos = unidadMedida === '1' ? '(por 100 gramos)' : '';
   return (
@@ -301,6 +338,34 @@ export const ModalNuevoProducto: React.FC<ModalNuevoProductoProps> = ({
               placeholder="0"
             />
           </div>
+          <div className="form-group">
+            <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer' }}>
+              <input 
+                type="checkbox" 
+                checked={promocionActiva} 
+                onChange={(e) => {
+                  setPromocionActiva(e.target.checked);
+                  if (!e.target.checked) {
+                    setPrecioPromocion('');
+                  }
+                }}
+                style={{width: 'fit-content'}}
+              />
+              <span>Precio Promocional</span>
+            </label>
+          </div>
+          {promocionActiva && (
+            <div className="form-group">
+              <label>Precio Promocional {textoGramos}</label>
+              <input
+                type="number"
+                value={precioPromocion}
+                onChange={(e) => setPrecioPromocion(e.target.value)}
+                min="0"
+                placeholder="0"
+              />
+            </div>
+          )}
           <div className="form-group">
             <label>Estado</label>
             <select value={estadoProducto} onChange={(e) => setEstadoProducto(e.target.value)}>

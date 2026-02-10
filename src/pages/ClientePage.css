@@ -246,8 +246,8 @@
   padding: 20px;
   display: flex;
   flex-direction: column;
-  justify-content: end;
-  min-height: 205px;
+  justify-content: space-between;
+  min-height: 215px;
 }
 
 .cliente-product-title {
@@ -282,7 +282,7 @@
   display: flex;
   align-items: center;
   gap: 5px;
-  margin-bottom: 16px;
+  margin-bottom: 5px;
 }
 
 .cliente-product-price {
@@ -331,7 +331,6 @@
 /* --- Controles de Cantidad en Producto --- */
 .cliente-product-quantity-controls {
   display: flex;
-  align-items: center;
   justify-content: space-between;
   width: 100%;
   gap: 8px;

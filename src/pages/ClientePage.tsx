@@ -57,6 +57,11 @@ export const ClientePage: React.FC = () => {
   const agregarAlCarrito = (producto: Producto, cantidad: number = 1) => {
     const itemExistente = carrito.find(item => item.id_producto === producto.id_producto);
 
+    // Usar precio promocional si está activo, sino precio normal
+    const precioUsar = (producto.promocion_activa && producto.precio_promocion != null)
+      ? producto.precio_promocion
+      : producto.precioventa;
+
     if (itemExistente) {
       setCarrito(carrito.map(item =>
         item.id_producto === producto.id_producto
@@ -67,7 +72,7 @@ export const ClientePage: React.FC = () => {
       setCarrito([...carrito, {
         id_producto: producto.id_producto,
         nombre: producto.nombre,
-        precio: producto.precioventa,
+        precio: precioUsar,
         cantidad,
         unidadMedidaId: producto.id_unidad_medida,
         unidadMedidaNombre: producto.unidad_medida?.abreviacion || '',
@@ -225,7 +230,23 @@ export const ClientePage: React.FC = () => {
                     📦
                   </div>
                 )}
-
+                {producto.promocion_activa && producto.precio_promocion != null && (
+                  <span style={{
+                    position: 'absolute',
+                    top: '12px',
+                    right: '12px',
+                    backgroundColor: '#e74c3c',
+                    color: 'white',
+                    padding: '6px 10px',
+                    borderRadius: '6px',
+                    fontSize: '12px',
+                    fontWeight: 700,
+                    boxShadow: '0 2px 8px rgba(231, 76, 60, 0.4)',
+                    zIndex: 10,
+                  }}>
+                    OFERTA
+                  </span>
+                )}
               </div>
 
               {/* Contenido */}
@@ -240,20 +261,6 @@ export const ClientePage: React.FC = () => {
                       {producto.descripcion}
                     </p>
                   )}
-
-                  <div className="cliente-product-price-container">
-                    <div className="cliente-product-price">
-                      {producto.id_unidad_medida === 1
-                        ? `${formatearPrecio(producto.precioventa * 100)}`
-                        : formatearPrecio(producto.precioventa)
-                      }
-                    </div>
-                    {producto.id_unidad_medida === 1 && (
-                      <span className="cliente-product-price-unit" style={{fontWeight: 700}}>
-                        x 100gr
-                      </span>
-                    )}
-                  </div>
                 </div>
 
                 {/* Botón de agregar o controles de cantidad */}
@@ -263,45 +270,138 @@ export const ClientePage: React.FC = () => {
                   if (itemEnCarrito) {
                     // Mostrar controles + y -
                     return (
-                      <div className="cliente-product-quantity-controls">
-                        <button
-                          onClick={() => actualizarCantidad(
-                            producto.id_producto,
-                            itemEnCarrito.cantidad - (producto.id_unidad_medida === 1 ? 10 : 1)
+                      <div style={{ display: 'flex', flexDirection: 'column' }}>
+                        <div className="cliente-product-price-container">
+                          {producto.promocion_activa && producto.precio_promocion != null ? (
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                              <div style={{
+                                fontSize: '14px',
+                                color: '#999',
+                                textDecoration: 'line-through'
+                              }}>
+                                {producto.id_unidad_medida === 1
+                                  ? `${formatearPrecio(producto.precioventa * 100)}`
+                                  : formatearPrecio(producto.precioventa)
+                                }
+                              </div>
+                              <div style={{ display: 'flex', alignItems: 'baseline', gap: '6px' }}>
+                                <div className="cliente-product-price" style={{ color: '#e74c3c' }}>
+                                  {producto.id_unidad_medida === 1
+                                    ? `${formatearPrecio(producto.precio_promocion * 100)}`
+                                    : formatearPrecio(producto.precio_promocion)
+                                  }
+                                </div>
+                                {producto.id_unidad_medida === 1 && (
+                                  <span className="cliente-product-price-unit" style={{ fontWeight: 700 }}>
+                                    x 100gr
+                                  </span>
+                                )}
+                              </div>
+                            </div>
+                          ) : (
+                            <>
+                              <div className="cliente-product-price">
+                                {producto.id_unidad_medida === 1
+                                  ? `${formatearPrecio(producto.precioventa * 100)}`
+                                  : formatearPrecio(producto.precioventa)
+                                }
+                              </div>
+                              {producto.id_unidad_medida === 1 && (
+                                <span className="cliente-product-price-unit" style={{ fontWeight: 700 }}>
+                                  x 100gr
+                                </span>
+                              )}
+                            </>
                           )}
-                          className="cliente-product-quantity-btn"
-                        >
-                          −
-                        </button>
+                        </div>
+                        <div className="cliente-product-quantity-controls">
 
-                        <span className="cliente-product-quantity-display">
-                          {producto.id_unidad_medida === 1
-                            ? `${Math.round(itemEnCarrito.cantidad)}gr`
-                            : `${itemEnCarrito.cantidad}`
-                          }
-                        </span>
+                          <button
+                            onClick={() => actualizarCantidad(
+                              producto.id_producto,
+                              itemEnCarrito.cantidad - (producto.id_unidad_medida === 1 ? 10 : 1)
+                            )}
+                            className="cliente-product-quantity-btn"
+                          >
+                            −
+                          </button>
 
-                        <button
-                          onClick={() => actualizarCantidad(
-                            producto.id_producto,
-                            itemEnCarrito.cantidad + (producto.id_unidad_medida === 1 ? 10 : 1)
-                          )}
-                          className="cliente-product-quantity-btn"
-                        >
-                          +
-                        </button>
+                          <span className="cliente-product-quantity-display">
+                            {producto.id_unidad_medida === 1
+                              ? `${Math.round(itemEnCarrito.cantidad)}gr`
+                              : `${itemEnCarrito.cantidad}`
+                            }
+                          </span>
+
+                          <button
+                            onClick={() => actualizarCantidad(
+                              producto.id_producto,
+                              itemEnCarrito.cantidad + (producto.id_unidad_medida === 1 ? 10 : 1)
+                            )}
+                            className="cliente-product-quantity-btn"
+                          >
+                            +
+                          </button>
+                        </div>
                       </div>
                     );
                   } else {
                     // Mostrar botón de agregar
                     return (
-                      <button
-                        onClick={() => manejarAgregarProducto(producto)}
-                        disabled={producto.stock <= 0}
-                        className={`cliente-product-add-btn ${producto.stock > 0 ? 'available' : 'unavailable'}`}
-                      >
-                        {producto.stock > 0 ? '+ Agregar al carrito' : 'Sin stock'}
-                      </button>
+                      <>
+                        <div>
+                          <div className="cliente-product-price-container">
+                            {producto.promocion_activa && producto.precio_promocion != null ? (
+                              <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                                <div style={{
+                                  fontSize: '14px',
+                                  color: '#999',
+                                  textDecoration: 'line-through'
+                                }}>
+                                  {producto.id_unidad_medida === 1
+                                    ? `${formatearPrecio(producto.precioventa * 100)}`
+                                    : formatearPrecio(producto.precioventa)
+                                  }
+                                </div>
+                                <div style={{ display: 'flex', alignItems: 'baseline', gap: '6px' }}>
+                                  <div className="cliente-product-price" style={{ color: '#e74c3c' }}>
+                                    {producto.id_unidad_medida === 1
+                                      ? `${formatearPrecio(producto.precio_promocion * 100)}`
+                                      : formatearPrecio(producto.precio_promocion)
+                                    }
+                                  </div>
+                                  {producto.id_unidad_medida === 1 && (
+                                    <span className="cliente-product-price-unit" style={{ fontWeight: 700 }}>
+                                      x 100gr
+                                    </span>
+                                  )}
+                                </div>
+                              </div>
+                            ) : (
+                              <>
+                                <div className="cliente-product-price">
+                                  {producto.id_unidad_medida === 1
+                                    ? `${formatearPrecio(producto.precioventa * 100)}`
+                                    : formatearPrecio(producto.precioventa)
+                                  }
+                                </div>
+                                {producto.id_unidad_medida === 1 && (
+                                  <span className="cliente-product-price-unit" style={{ fontWeight: 700 }}>
+                                    x 100gr
+                                  </span>
+                                )}
+                              </>
+                            )}
+                          </div>
+                          <button
+                            onClick={() => manejarAgregarProducto(producto)}
+                            disabled={producto.stock <= 0}
+                            className={`cliente-product-add-btn ${producto.stock > 0 ? 'available' : 'unavailable'}`}
+                          >
+                            {producto.stock > 0 ? '+ Agregar al carrito' : 'Sin stock'}
+                          </button>
+                        </div>
+                      </>
                     );
                   }
                 })()}
