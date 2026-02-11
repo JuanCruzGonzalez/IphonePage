@@ -6,6 +6,7 @@ import LoginForm from './auth/form.tsx'
 import { AuthProvider } from './auth/AuthContext.tsx'
 import { ProtectedRoute } from './auth/ProtectedRoute.tsx'
 import { ClientePage } from './pages/ClientePage.tsx'
+import { HomePage } from './pages/HomePage.tsx'
 import './index.css'
 
 createRoot(document.getElementById('root')!).render(
@@ -14,6 +15,7 @@ createRoot(document.getElementById('root')!).render(
       <BrowserRouter>
         <Routes>
           <Route path="/login" element={<LoginForm />} />
+          <Route path="/home" element={<HomePage />} />
           <Route path="/tienda" element={<ClientePage />} />
           <Route path="/*" element={
             <ProtectedRoute>

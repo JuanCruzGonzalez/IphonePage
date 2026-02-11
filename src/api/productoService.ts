@@ -222,7 +222,6 @@ export async function getProductosPage(page = 1, pageSize = 5, q = '') {
     vencimiento: parseDateLocal(p.vencimiento),
     imagen_path: p.imagen_path,
   })) as Producto[];
-  console.log(productos);
 
   return { productos, total: (count ?? 0) as number };
 }

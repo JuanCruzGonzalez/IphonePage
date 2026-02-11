@@ -1,7 +1,9 @@
-import React, { useState, useEffect } from 'react';
-import { Producto } from '../types';
+import React, { useState, useEffect, useMemo } from 'react';
+import { Producto, Categoria } from '../types';
 import { getProductosActivos } from '../api/productoService';
 import { getProductImageUrl } from '../api/storageService';
+import { getCategoriasActivas } from '../api/categoriaService';
+import { supabase } from '../supabaseClient';
 import './ClientePage.css';
 
 interface ItemCarrito {
@@ -25,6 +27,14 @@ export const ClientePage: React.FC = () => {
   const [cantidadGramos, setCantidadGramos] = useState('');
   const [mostrarCarrito, setMostrarCarrito] = useState(false);
 
+  // Estados para filtros
+  const [categorias, setCategorias] = useState<Categoria[]>([]);
+  const [categoriasSeleccionadas, setCategoriasSeleccionadas] = useState<number[]>([]);
+  const [productosCategorias, setProductosCategorias] = useState<Map<number, number[]>>(new Map());
+  const [maxPrice, setMaxPrice] = useState(0);
+  const [priceFilter, setPriceFilter] = useState(0);
+  const [categoriasExpanded, setCategoriasExpanded] = useState(true);
+
   useEffect(() => {
     cargarProductos();
   }, []);
@@ -33,6 +43,37 @@ export const ClientePage: React.FC = () => {
     try {
       const data = await getProductosActivos();
       setProductos(data);
+
+      if (data.length > 0) {
+        // Calcular max precio considerando productos por gramos
+        const max = Math.max(...data.map(p => {
+          const precio = p.id_unidad_medida === 1 ? p.precioventa * 1 : p.precioventa;
+          return precio;
+        }));
+        setMaxPrice(Math.ceil(max));
+        setPriceFilter(Math.ceil(max));
+      }
+
+      // Cargar categorías activas
+      const categs = await getCategoriasActivas();
+      setCategorias(categs);
+
+      // Cargar relaciones producto-categoría
+      const { data: relaciones, error } = await supabase
+        .from('categoria_producto')
+        .select('id_producto, id_categoria');
+
+      if (!error && relaciones) {
+        const mapa = new Map<number, number[]>();
+        relaciones.forEach((rel: any) => {
+          if (!mapa.has(rel.id_producto)) {
+            mapa.set(rel.id_producto, []);
+          }
+          mapa.get(rel.id_producto)!.push(rel.id_categoria);
+        });
+        setProductosCategorias(mapa);
+      }
+
     } catch (error) {
       console.error('Error al cargar productos:', error);
     } finally {
@@ -40,9 +81,51 @@ export const ClientePage: React.FC = () => {
     }
   };
 
-  const productosFiltrados = productos.filter(p =>
-    p.nombre.toLowerCase().includes(busqueda.toLowerCase())
-  );
+  const productosFiltrados = useMemo(() => {
+    let result = productos.filter(p =>
+      p.nombre.toLowerCase().includes(busqueda.toLowerCase())
+    );
+
+    // Filtrar por categorías seleccionadas
+    if (categoriasSeleccionadas.length > 0) {
+      result = result.filter(p => {
+        const categsDelProducto = productosCategorias.get(p.id_producto) || [];
+        return categsDelProducto.some(catId => categoriasSeleccionadas.includes(catId));
+      });
+    }
+
+    // Filtrar por precio
+    if (priceFilter < maxPrice) {
+      result = result.filter(p => {
+        let precio = (p.promocion_activa && p.precio_promocion != null)
+          ? p.precio_promocion
+          : p.precioventa;
+        // Ajustar precio para productos por gramos
+        if (p.id_unidad_medida === 1) {
+          precio = precio * 100;
+        }
+        return precio <= priceFilter;
+      });
+    }
+
+    return result;
+  }, [productos, busqueda, categoriasSeleccionadas, productosCategorias, priceFilter, maxPrice]);
+
+  const toggleCategoria = (id_categoria: number) => {
+    setCategoriasSeleccionadas(prev => {
+      if (prev.includes(id_categoria)) {
+        return prev.filter(id => id !== id_categoria);
+      } else {
+        return [...prev, id_categoria];
+      }
+    });
+  };
+
+  const resetFilters = () => {
+    setBusqueda('');
+    setPriceFilter(maxPrice);
+    setCategoriasSeleccionadas([]);
+  };
 
   const abrirModalCantidad = (producto: Producto) => {
     setModalCantidad({ isOpen: true, producto });
@@ -177,16 +260,30 @@ export const ClientePage: React.FC = () => {
             <div className="cliente-header-icon">
               <img src="/logo.png" alt="Logo Chañar" style={{ width: 105, height: 'auto' }} />
             </div>
+            <h1 className="cliente-header-title">
+              Chañar
+            </h1>
           </div>
-          <h1 className="cliente-header-title">
-            Chañar
-          </h1>
+
+          {/* Buscador en header */}
+          <div className="cliente-header-search-container">
+            <div className="cliente-header-search-icon">
+              🔍
+            </div>
+            <input
+              type="text"
+              placeholder="Buscar productos..."
+              value={busqueda}
+              onChange={(e) => setBusqueda(e.target.value)}
+              className="cliente-header-search-input"
+            />
+          </div>
+
           <button
             onClick={() => setMostrarCarrito(!mostrarCarrito)}
             className="cliente-header-cart-btn"
           >
             <span className="cliente-header-cart-icon">🛒</span>
-            Carrito
             {carrito.length > 0 && (
               <span className="cliente-header-cart-badge">
                 {carrito.length}
@@ -196,159 +293,127 @@ export const ClientePage: React.FC = () => {
         </div>
       </header>
 
-      {/* Contenido principal */}
+      {/* Contenido principal con sidebar */}
       <div className="cliente-main-content">
-        {/* Buscador moderno */}
-        <div className="cliente-search-container">
-          <div className="cliente-search-icon">
-            🔍
-          </div>
-          <input
-            type="text"
-            placeholder="Buscar productos..."
-            value={busqueda}
-            onChange={(e) => setBusqueda(e.target.value)}
-            className="cliente-search-input"
-          />
-        </div>
+        <div className="cliente-content-with-sidebar">
 
-        {/* Grid de productos modernizado */}
-        <div className="cliente-products-grid">
-          {productosFiltrados.map(producto => (
-            <div key={producto.id_producto} className="cliente-product-card">
-              {/* Imagen del producto con overlay */}
-              <div className="cliente-product-image-container">
-                {producto.imagen_path ? (
-                  <img
-                    src={getProductImageUrl(producto.imagen_path) || undefined}
-                    alt={producto.nombre}
-                    className="cliente-product-image"
-                  />
-                ) : (
-                  <div className="cliente-product-image-placeholder">
-                    📦
-                  </div>
-                )}
-                {producto.promocion_activa && producto.precio_promocion != null && (
-                  <span style={{
-                    position: 'absolute',
-                    top: '12px',
-                    right: '12px',
-                    backgroundColor: '#e74c3c',
-                    color: 'white',
-                    padding: '6px 10px',
-                    borderRadius: '6px',
-                    fontSize: '12px',
-                    fontWeight: 700,
-                    boxShadow: '0 2px 8px rgba(231, 76, 60, 0.4)',
-                    zIndex: 10,
-                  }}>
-                    OFERTA
-                  </span>
-                )}
+          {/* Sidebar de filtros */}
+          <aside className="cliente-sidebar">
+            <div className="cliente-filters-header">
+              <h3 className="cliente-filters-title">Filtros</h3>
+              <button className="cliente-filters-reset" onClick={resetFilters}>
+                Limpiar
+              </button>
+            </div>
+
+            {/* Categorías */}
+            <div className="cliente-filter-group">
+              <h4
+                className="cliente-filter-group-title cliente-filter-group-title-collapsible"
+                onClick={() => setCategoriasExpanded(!categoriasExpanded)}
+              >
+                Categorías
+                <span className={`cliente-filter-collapse-icon ${categoriasExpanded ? 'expanded' : ''}`}>
+                  ▼
+                </span>
+              </h4>
+              {categoriasExpanded && (
+                <div className="cliente-filter-items">
+                  {categorias.map(cat => (
+                    <label
+                      key={cat.id_categoria}
+                      className="cliente-filter-item"
+                    >
+                      <input
+                        type="checkbox"
+                        checked={categoriasSeleccionadas.includes(cat.id_categoria)}
+                        onChange={() => toggleCategoria(cat.id_categoria)}
+                        className="cliente-filter-checkbox"
+                      />
+                      <span className="cliente-filter-label">{cat.nombre}</span>
+                    </label>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {/* Rango de Precio */}
+            <div className="cliente-filter-group">
+              <h4 className="cliente-filter-group-title">Rango de Precio</h4>
+              <div className="cliente-filter-price-range">
+                <input
+                  type="range"
+                  min={0}
+                  max={maxPrice}
+                  value={priceFilter}
+                  onChange={(e) => setPriceFilter(Number(e.target.value))}
+                  className="cliente-filter-price-slider"
+                />
+                <div className="cliente-filter-price-labels">
+                  <span>$0</span>
+                  <span>${priceFilter}</span>
+                </div>
               </div>
-
-              {/* Contenido */}
-              <div className="cliente-product-content">
-                <div className="cliente-product-info">
-                  <h3 className="cliente-product-title">
-                    {producto.nombre}
-                  </h3>
-
-                  {producto.descripcion && (
-                    <p className="cliente-product-description">
-                      {producto.descripcion}
-                    </p>
+            </div>
+          </aside>
+          {/* Grid de productos */}
+          <div className="cliente-products-grid">
+            {productosFiltrados.map(producto => (
+              <div key={producto.id_producto} className="cliente-product-card">
+                {/* Imagen del producto con overlay */}
+                <div className="cliente-product-image-container">
+                  {producto.imagen_path ? (
+                    <img
+                      src={getProductImageUrl(producto.imagen_path) || undefined}
+                      alt={producto.nombre}
+                      className="cliente-product-image"
+                    />
+                  ) : (
+                    <div className="cliente-product-image-placeholder">
+                      📦
+                    </div>
+                  )}
+                  {producto.promocion_activa && producto.precio_promocion != null && (
+                    <span style={{
+                      position: 'absolute',
+                      top: '12px',
+                      right: '12px',
+                      backgroundColor: '#e74c3c',
+                      color: 'white',
+                      padding: '6px 10px',
+                      borderRadius: '6px',
+                      fontSize: '12px',
+                      fontWeight: 700,
+                      boxShadow: '0 2px 8px rgba(231, 76, 60, 0.4)',
+                      zIndex: 10,
+                    }}>
+                      OFERTA
+                    </span>
                   )}
                 </div>
 
-                {/* Botón de agregar o controles de cantidad */}
-                {(() => {
-                  const itemEnCarrito = obtenerItemEnCarrito(producto.id_producto);
+                {/* Contenido */}
+                <div className="cliente-product-content">
+                  <div className="cliente-product-info">
+                    <h3 className="cliente-product-title">
+                      {producto.nombre}
+                    </h3>
 
-                  if (itemEnCarrito) {
-                    // Mostrar controles + y -
-                    return (
-                      <div style={{ display: 'flex', flexDirection: 'column' }}>
-                        <div className="cliente-product-price-container">
-                          {producto.promocion_activa && producto.precio_promocion != null ? (
-                            <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                              <div style={{
-                                fontSize: '14px',
-                                color: '#999',
-                                textDecoration: 'line-through'
-                              }}>
-                                {producto.id_unidad_medida === 1
-                                  ? `${formatearPrecio(producto.precioventa * 100)}`
-                                  : formatearPrecio(producto.precioventa)
-                                }
-                              </div>
-                              <div style={{ display: 'flex', alignItems: 'baseline', gap: '6px' }}>
-                                <div className="cliente-product-price" style={{ color: '#e74c3c' }}>
-                                  {producto.id_unidad_medida === 1
-                                    ? `${formatearPrecio(producto.precio_promocion * 100)}`
-                                    : formatearPrecio(producto.precio_promocion)
-                                  }
-                                </div>
-                                {producto.id_unidad_medida === 1 && (
-                                  <span className="cliente-product-price-unit" style={{ fontWeight: 700 }}>
-                                    x 100gr
-                                  </span>
-                                )}
-                              </div>
-                            </div>
-                          ) : (
-                            <>
-                              <div className="cliente-product-price">
-                                {producto.id_unidad_medida === 1
-                                  ? `${formatearPrecio(producto.precioventa * 100)}`
-                                  : formatearPrecio(producto.precioventa)
-                                }
-                              </div>
-                              {producto.id_unidad_medida === 1 && (
-                                <span className="cliente-product-price-unit" style={{ fontWeight: 700 }}>
-                                  x 100gr
-                                </span>
-                              )}
-                            </>
-                          )}
-                        </div>
-                        <div className="cliente-product-quantity-controls">
+                    {producto.descripcion && (
+                      <p className="cliente-product-description">
+                        {producto.descripcion}
+                      </p>
+                    )}
+                  </div>
 
-                          <button
-                            onClick={() => actualizarCantidad(
-                              producto.id_producto,
-                              itemEnCarrito.cantidad - (producto.id_unidad_medida === 1 ? 10 : 1)
-                            )}
-                            className="cliente-product-quantity-btn"
-                          >
-                            −
-                          </button>
+                  {/* Botón de agregar o controles de cantidad */}
+                  {(() => {
+                    const itemEnCarrito = obtenerItemEnCarrito(producto.id_producto);
 
-                          <span className="cliente-product-quantity-display">
-                            {producto.id_unidad_medida === 1
-                              ? `${Math.round(itemEnCarrito.cantidad)}gr`
-                              : `${itemEnCarrito.cantidad}`
-                            }
-                          </span>
-
-                          <button
-                            onClick={() => actualizarCantidad(
-                              producto.id_producto,
-                              itemEnCarrito.cantidad + (producto.id_unidad_medida === 1 ? 10 : 1)
-                            )}
-                            className="cliente-product-quantity-btn"
-                          >
-                            +
-                          </button>
-                        </div>
-                      </div>
-                    );
-                  } else {
-                    // Mostrar botón de agregar
-                    return (
-                      <>
-                        <div>
+                    if (itemEnCarrito) {
+                      // Mostrar controles + y -
+                      return (
+                        <div style={{ display: 'flex', flexDirection: 'column' }}>
                           <div className="cliente-product-price-container">
                             {producto.promocion_activa && producto.precio_promocion != null ? (
                               <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
@@ -392,31 +457,111 @@ export const ClientePage: React.FC = () => {
                               </>
                             )}
                           </div>
-                          <button
-                            onClick={() => manejarAgregarProducto(producto)}
-                            disabled={producto.stock <= 0}
-                            className={`cliente-product-add-btn ${producto.stock > 0 ? 'available' : 'unavailable'}`}
-                          >
-                            {producto.stock > 0 ? '+ Agregar al carrito' : 'Sin stock'}
-                          </button>
-                        </div>
-                      </>
-                    );
-                  }
-                })()}
-              </div>
-            </div>
-          ))}
-        </div>
+                          <div className="cliente-product-quantity-controls">
 
-        {productosFiltrados.length === 0 && (
-          <div className="cliente-empty-state">
-            <div className="cliente-empty-state-icon">🔍</div>
-            <p className="cliente-empty-state-text">
-              No se encontraron productos
-            </p>
+                            <button
+                              onClick={() => actualizarCantidad(
+                                producto.id_producto,
+                                itemEnCarrito.cantidad - (producto.id_unidad_medida === 1 ? 10 : 1)
+                              )}
+                              className="cliente-product-quantity-btn"
+                            >
+                              −
+                            </button>
+
+                            <span className="cliente-product-quantity-display">
+                              {producto.id_unidad_medida === 1
+                                ? `${Math.round(itemEnCarrito.cantidad)}gr`
+                                : `${itemEnCarrito.cantidad}`
+                              }
+                            </span>
+
+                            <button
+                              onClick={() => actualizarCantidad(
+                                producto.id_producto,
+                                itemEnCarrito.cantidad + (producto.id_unidad_medida === 1 ? 10 : 1)
+                              )}
+                              className="cliente-product-quantity-btn"
+                            >
+                              +
+                            </button>
+                          </div>
+                        </div>
+                      );
+                    } else {
+                      // Mostrar botón de agregar
+                      return (
+                        <>
+                          <div>
+                            <div className="cliente-product-price-container">
+                              {producto.promocion_activa && producto.precio_promocion != null ? (
+                                <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                                  <div style={{
+                                    fontSize: '14px',
+                                    color: '#999',
+                                    textDecoration: 'line-through'
+                                  }}>
+                                    {producto.id_unidad_medida === 1
+                                      ? `${formatearPrecio(producto.precioventa * 100)}`
+                                      : formatearPrecio(producto.precioventa)
+                                    }
+                                  </div>
+                                  <div style={{ display: 'flex', alignItems: 'baseline', gap: '6px' }}>
+                                    <div className="cliente-product-price" style={{ color: '#e74c3c' }}>
+                                      {producto.id_unidad_medida === 1
+                                        ? `${formatearPrecio(producto.precio_promocion * 100)}`
+                                        : formatearPrecio(producto.precio_promocion)
+                                      }
+                                    </div>
+                                    {producto.id_unidad_medida === 1 && (
+                                      <span className="cliente-product-price-unit" style={{ fontWeight: 700 }}>
+                                        x 100gr
+                                      </span>
+                                    )}
+                                  </div>
+                                </div>
+                              ) : (
+                                <>
+                                  <div className="cliente-product-price">
+                                    {producto.id_unidad_medida === 1
+                                      ? `${formatearPrecio(producto.precioventa * 100)}`
+                                      : formatearPrecio(producto.precioventa)
+                                    }
+                                  </div>
+                                  {producto.id_unidad_medida === 1 && (
+                                    <span className="cliente-product-price-unit" style={{ fontWeight: 700 }}>
+                                      x 100gr
+                                    </span>
+                                  )}
+                                </>
+                              )}
+                            </div>
+                            <button
+                              onClick={() => manejarAgregarProducto(producto)}
+                              disabled={producto.stock <= 0}
+                              className={`cliente-product-add-btn ${producto.stock > 0 ? 'available' : 'unavailable'}`}
+                            >
+                              {producto.stock > 0 ? '+ Agregar al carrito' : 'Sin stock'}
+                            </button>
+                          </div>
+                        </>
+                      );
+                    }
+                  })()}
+                </div>
+              </div>
+            ))}
+
+            {productosFiltrados.length === 0 && (
+              <div className="cliente-empty-state">
+                <div className="cliente-empty-state-icon">🔍</div>
+                <p className="cliente-empty-state-text">
+                  No se encontraron productos
+                </p>
+              </div>
+            )}
           </div>
-        )}
+        </div>
       </div>
 
       {/* Modal cantidad en gramos - modernizado */}

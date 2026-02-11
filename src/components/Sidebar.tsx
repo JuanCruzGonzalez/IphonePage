@@ -3,8 +3,8 @@ import { useAuth } from '../auth/AuthContext';
 import { useNavigate } from 'react-router-dom';
 
 interface SidebarProps {
-  activeSection: 'ventas' | 'productos' | 'stock' | 'promociones' | 'gastos';
-  onSectionChange: (section: 'ventas' | 'productos' | 'stock' | 'promociones' | 'gastos') => void;
+  activeSection: 'ventas' | 'productos' | 'stock' | 'promociones' | 'gastos' | 'categorias';
+  onSectionChange: (section: 'ventas' | 'productos' | 'stock' | 'promociones' | 'gastos' | 'categorias') => void;
 }
 
 export const Sidebar: React.FC<SidebarProps> = ({ activeSection, onSectionChange }) => {
@@ -16,7 +16,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeSection, onSectionChange
     setIsMobileMenuOpen(!isMobileMenuOpen);
   };
 
-  const handleSectionChange = (section: 'ventas' | 'productos' | 'stock' | 'promociones' | 'gastos') => {
+  const handleSectionChange = (section: 'ventas' | 'productos' | 'stock' | 'promociones' | 'gastos' | 'categorias') => {
     onSectionChange(section);
     setIsMobileMenuOpen(false);
   };
@@ -27,6 +27,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeSection, onSectionChange
     { id: 'stock' as const, label: 'Stock', icon: '📈' },
     { id: 'promociones' as const, label: 'Promociones', icon: '🎁' },
     { id: 'gastos' as const, label: 'Gastos', icon: '💰' },
+    { id: 'categorias' as const, label: 'Categorías', icon: '🏷️' },
   ];
 
   const handleLogout = async () => {

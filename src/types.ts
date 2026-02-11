@@ -96,3 +96,15 @@ export interface Gasto {
   descripcion: string | null;
   estado: boolean;
 }
+
+export interface Categoria {
+  id_categoria: number;
+  nombre: string;
+  estado: boolean;
+}
+
+export interface CategoriaProducto {
+  id_categoria_producto: number;
+  id_categoria: number;
+  id_producto: number;
+}

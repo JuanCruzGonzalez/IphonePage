@@ -14,7 +14,6 @@ export default function LoginForm() {
     useEffect(() => {
         // If user is already logged in, redirect to home
         if (user && !authLoading) {
-            console.log('Usuario detectado, redirigiendo...', user.email);
             navigate("/", { replace: true });
         }
     }, [user, authLoading, navigate]);
@@ -25,7 +24,7 @@ export default function LoginForm() {
         setLoading(true);
 
         try {
-            const { data, error: loginError } = await supabase.auth.signInWithPassword({
+            const { error: loginError } = await supabase.auth.signInWithPassword({
                 email,
                 password,
             });
@@ -33,10 +32,6 @@ export default function LoginForm() {
             if (loginError) {
                 setError(loginError.message);
                 setLoading(false);
-            } else if (data.user) {
-                // Login exitoso, el useEffect detectará el cambio en user y redirigirá
-                console.log('Login exitoso:', data.user.email);
-                // No hacemos setLoading(false) aquí porque el componente se desmontará al redirigir
             }
         } catch (err) {
             console.error('Error inesperado:', err);

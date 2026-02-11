@@ -1,13 +1,14 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import Cropper from 'react-easy-crop';
 import 'react-easy-crop/react-easy-crop.css';
-import { UnidadMedida } from '../types';
+import { UnidadMedida, Categoria } from '../types';
 import { getProductImageUrl } from '../api/storageService';
 
 interface ModalNuevoProductoProps {
   isOpen: boolean;
   onClose: () => void;
   unidadesMedida: UnidadMedida[];
+  categorias: Categoria[];
   onSubmit: (producto: { 
     nombre: string; 
     descripcion: string; 
@@ -19,7 +20,7 @@ interface ModalNuevoProductoProps {
     vencimiento?: Date | null;
     promocionActiva?: boolean;
     precioPromocion?: number | null;
-  }, imageFile?: File | null) => void;
+  }, imageFile?: File | null, categoriasIds?: number[]) => void;
   initialProduct?: {
     id_producto: number;
     nombre: string;
@@ -37,16 +38,19 @@ interface ModalNuevoProductoProps {
   showError?: (message: string) => void;
   showWarning?: (message: string) => void;
   loading?: boolean;
+  categoriasIniciales?: number[];
 }
 
 export const ModalNuevoProducto: React.FC<ModalNuevoProductoProps> = ({ 
   isOpen, 
   onClose, 
-  unidadesMedida, 
+  unidadesMedida,
+  categorias,
   onSubmit,
   showWarning,
   initialProduct = null,
   loading = false,
+  categoriasIniciales = [],
 }) => {
   const [nombre, setNombre] = useState(initialProduct?.nombre ?? '');
   const [descripcion, setDescripcion] = useState(initialProduct?.descripcion ?? '');
@@ -69,6 +73,8 @@ export const ModalNuevoProducto: React.FC<ModalNuevoProductoProps> = ({
   const [showCropper, setShowCropper] = useState(false);
   const [promocionActiva, setPromocionActiva] = useState(initialProduct?.promocion_activa ?? false);
   const [precioPromocion, setPrecioPromocion] = useState(initialProduct?.precio_promocion ? String(initialProduct.precio_promocion) : '');
+  const [categoriasSeleccionadas, setCategoriasSeleccionadas] = useState<number[]>(categoriasIniciales);
+  const [modalCategoriasOpen, setModalCategoriasOpen] = useState(false);
 
   useEffect(() => {
     if (initialProduct) {
@@ -126,8 +132,15 @@ export const ModalNuevoProducto: React.FC<ModalNuevoProductoProps> = ({
       setShowCropper(false);
       setPromocionActiva(false);
       setPrecioPromocion('');
+      setCategoriasSeleccionadas([]);
     }
   }, [initialProduct, isOpen]);
+
+  useEffect(() => {
+    if (isOpen) {
+      setCategoriasSeleccionadas(categoriasIniciales);
+    }
+  }, [categoriasIniciales, isOpen]);
 
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -257,7 +270,7 @@ export const ModalNuevoProducto: React.FC<ModalNuevoProductoProps> = ({
       vencimiento: vencimiento ? new Date(vencimiento) : null,
       promocionActiva: promocionActiva,
       precioPromocion: precioPromocionFinal,
-    }, imageFile);
+    }, imageFile, categoriasSeleccionadas);
 
     setNombre('');
     setDescripcion('');
@@ -272,6 +285,7 @@ export const ModalNuevoProducto: React.FC<ModalNuevoProductoProps> = ({
     setShowCropper(false);
     setPromocionActiva(false);
     setPrecioPromocion('');
+    setCategoriasSeleccionadas([]);
   };
   const textoGramos = unidadMedida === '1' ? '(por 100 gramos)' : '';
   return (
@@ -386,6 +400,74 @@ export const ModalNuevoProducto: React.FC<ModalNuevoProductoProps> = ({
             />
           </div>
           <div className="form-group">
+            <label>Categorías</label>
+            <button
+              type="button"
+              onClick={() => setModalCategoriasOpen(true)}
+              style={{
+                width: '100%',
+                padding: '12px 16px',
+                border: '1px solid #ddd',
+                borderRadius: '4px',
+                backgroundColor: '#fff',
+                cursor: 'pointer',
+                textAlign: 'left',
+                fontSize: '14px',
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'center'
+              }}
+            >
+              <span>
+                {categoriasSeleccionadas.length === 0 
+                  ? 'Seleccionar categorías...'
+                  : `${categoriasSeleccionadas.length} categoría${categoriasSeleccionadas.length !== 1 ? 's' : ''} seleccionada${categoriasSeleccionadas.length !== 1 ? 's' : ''}`
+                }
+              </span>
+              <span style={{ color: '#666' }}>▼</span>
+            </button>
+            {categoriasSeleccionadas.length > 0 && (
+              <div style={{ marginTop: '8px', display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
+                {categoriasSeleccionadas.map(catId => {
+                  const cat = categorias.find(c => c.id_categoria === catId);
+                  return cat ? (
+                    <span
+                      key={catId}
+                      style={{
+                        backgroundColor: '#e0e7ff',
+                        color: '#4f46e5',
+                        padding: '4px 10px',
+                        borderRadius: '12px',
+                        fontSize: '12px',
+                        fontWeight: 500,
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: '4px'
+                      }}
+                    >
+                      {cat.nombre}
+                      <button
+                        type="button"
+                        onClick={() => setCategoriasSeleccionadas(categoriasSeleccionadas.filter(id => id !== catId))}
+                        style={{
+                          background: 'none',
+                          border: 'none',
+                          color: '#4f46e5',
+                          cursor: 'pointer',
+                          padding: 0,
+                          fontSize: '14px',
+                          lineHeight: 1
+                        }}
+                      >
+                        ×
+                      </button>
+                    </span>
+                  ) : null;
+                })}
+              </div>
+            )}
+          </div>
+          <div className="form-group">
             <label>Imagen del Producto</label>
             <input
               type="file"
@@ -443,9 +525,98 @@ export const ModalNuevoProducto: React.FC<ModalNuevoProductoProps> = ({
         </div>
       </div>
 
+      {/* Modal de selección de categorías */}
+      {modalCategoriasOpen && (
+        <div className="modal-overlay" style={{ zIndex: 1001 }} onClick={() => setModalCategoriasOpen(false)}>
+          <div 
+            className="modal-minimal" 
+            onClick={(e) => e.stopPropagation()}
+            style={{ maxWidth: '500px', maxHeight: '80vh', display: 'flex', flexDirection: 'column' }}
+          >
+            <div className="modal-minimal-header">
+              <h2>Seleccionar Categorías</h2>
+              <button className="btn-close" onClick={() => setModalCategoriasOpen(false)}>×</button>
+            </div>
+            <div style={{ flex: 1, overflowY: 'auto', padding: '20px' }}>
+              {categorias.filter(c => c.estado).length === 0 ? (
+                <p style={{ margin: 0, color: '#999', fontSize: '14px', textAlign: 'center' }}>No hay categorías disponibles</p>
+              ) : (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                  {categorias.filter(c => c.estado).map(categoria => (
+                    <label 
+                      key={categoria.id_categoria}
+                      style={{ 
+                        display: 'flex', 
+                        alignItems: 'center', 
+                        gap: '12px', 
+                        padding: '12px',
+                        cursor: 'pointer',
+                        fontSize: '14px',
+                        border: '1px solid #e5e7eb',
+                        borderRadius: '8px',
+                        backgroundColor: categoriasSeleccionadas.includes(categoria.id_categoria) ? '#f0f9ff' : '#fff',
+                        transition: 'all 0.2s'
+                      }}
+                      onMouseEnter={(e) => {
+                        if (!categoriasSeleccionadas.includes(categoria.id_categoria)) {
+                          e.currentTarget.style.backgroundColor = '#f9fafb';
+                        }
+                      }}
+                      onMouseLeave={(e) => {
+                        if (!categoriasSeleccionadas.includes(categoria.id_categoria)) {
+                          e.currentTarget.style.backgroundColor = '#fff';
+                        }
+                      }}
+                    >
+                      <input
+                        type="checkbox"
+                        checked={categoriasSeleccionadas.includes(categoria.id_categoria)}
+                        onChange={(e) => {
+                          if (e.target.checked) {
+                            setCategoriasSeleccionadas([...categoriasSeleccionadas, categoria.id_categoria]);
+                          } else {
+                            setCategoriasSeleccionadas(categoriasSeleccionadas.filter(id => id !== categoria.id_categoria));
+                          }
+                        }}
+                        style={{ 
+                          width: '18px', 
+                          height: '18px',
+                          margin: 0,
+                          cursor: 'pointer',
+                          accentColor: '#3b82f6'
+                        }}
+                      />
+                      <span style={{ flex: 1, fontWeight: categoriasSeleccionadas.includes(categoria.id_categoria) ? 600 : 400 }}>
+                        {categoria.nombre}
+                      </span>
+                    </label>
+                  ))}
+                </div>
+              )}
+            </div>
+            <div className="modal-minimal-footer">
+              <button 
+                className="btn-secondary" 
+                onClick={() => setCategoriasSeleccionadas([])}
+                style={{ flex: 1 }}
+              >
+                Limpiar Todo
+              </button>
+              <button 
+                className="btn-primary" 
+                onClick={() => setModalCategoriasOpen(false)}
+                style={{ flex: 1 }}
+              >
+                Confirmar ({categoriasSeleccionadas.length})
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Modal de recorte de imagen */}
       {showCropper && imageToCrop && (
-        <div className="modal-overlay" style={{ zIndex: 1001 }} onClick={handleCropCancel}>
+        <div className="modal-overlay" style={{ zIndex: 1002 }} onClick={handleCropCancel}>
           <div 
             className="modal-minimal" 
             onClick={(e) => e.stopPropagation()}

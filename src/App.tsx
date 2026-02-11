@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import './App.css';
 import './ToastStyles.css';
-import { Producto, VentaConDetalles, UnidadMedida, Promocion, DetalleVentaInput, PromocionConDetalles, Gasto } from './types';
+import { Producto, VentaConDetalles, UnidadMedida, Promocion, DetalleVentaInput, PromocionConDetalles, Gasto, Categoria } from './types';
 import {
   createVenta,
   reactivarVenta,
@@ -21,6 +21,7 @@ import {
 import { uploadProductImage, updateProductImage } from './api/storageService';
 import { getPromocionesActivas, getPromociones,updatePromocion, deletePromocion, getDetallePromocion } from './api/promocionService';
 import { getGastos, createGasto, updateGasto, updateGastoEstado } from './api/gastoService';
+import { getCategorias, createCategoria, updateCategoria, updateCategoriaEstado, getCategoriasDeProducto, asignarCategoriasAProducto } from './api/categoriaService';
 import ModalVerPromocion from './components/ModalVerPromocion';
 import { Sidebar } from './components/Sidebar';
 import { VentasPage } from './pages/VentasPage';
@@ -28,11 +29,13 @@ import { ProductosPage } from './pages/ProductosPage';
 import { StockPage } from './pages/StockPage';
 import { PromocionesPage } from './pages/PromocionesPage';
 import { GastosPage } from './pages/GastosPage';
+import { CategoriasPage } from './pages/CategoriasPage';
 import { ModalNuevaVenta } from './components/ModalNuevaVenta';
 import { ModalNuevoProducto } from './components/ModalNuevoProducto';
 import { ModalActualizarStock } from './components/ModalActualizarStock';
 import { ModalCrearPromocion } from './components/ModalCrearPromocion';
 import { ModalGasto } from './components/ModalGasto';
+import { ModalCategoria } from './components/ModalCategoria';
 import { Toast, ConfirmModal } from './components/ToastModal';
 import { useToast, useConfirm } from './hooks/useToast';
 import { useDisableWheelOnNumberInputs } from './hooks/useDisableWheelOnNumberInputs';
@@ -41,7 +44,7 @@ import { useAsync } from './hooks/useAsync';
 import { createPromocion } from './api/promocionService';
 
 function App() {
-  const [activeSection, setActiveSection] = useState<'ventas' | 'productos' | 'stock' | 'promociones' | 'gastos'>('ventas');
+  const [activeSection, setActiveSection] = useState<'ventas' | 'productos' | 'stock' | 'promociones' | 'gastos' | 'categorias'>('ventas');
   const [ventas, setVentas] = useState<VentaConDetalles[]>([]);
   const [ventasPageNum, setVentasPageNum] = useState(1);
   const [ventasTotal, setVentasTotal] = useState(0);
@@ -57,6 +60,9 @@ function App() {
   const [unidadesMedida, setUnidadesMedida] = useState<UnidadMedida[]>([]);
   const [gastos, setGastos] = useState<Gasto[]>([]);
   const [gastoToEdit, setGastoToEdit] = useState<Gasto | null>(null);
+  const [categorias, setCategorias] = useState<Categoria[]>([]);
+  const [categoriaToEdit, setCategoriaToEdit] = useState<Categoria | null>(null);
+  const [categoriasDeProducto, setCategoriasDeProducto] = useState<number[]>([]);
   const modalCrearPromocion = useModal(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -66,6 +72,7 @@ function App() {
   const [productToEdit, setProductToEdit] = useState<null | any>(null);
   const modalActualizarStock = useModal(false);
   const modalGasto = useModal(false);
+  const modalCategoria = useModal(false);
 
   // Hooks para toast y confirmación
   const { toast, showSuccess, showError, showWarning, hideToast } = useToast();
@@ -114,9 +121,10 @@ function App() {
           getPromocionesActivas(),
           getPromociones(),
           getGastos(),
+          getCategorias(),
         ]);
 
-        const [productosPageResult, ventasPageResult, [productosActivosData, unidadesData, promocionesActivasData, promocionesData, gastosData]] = await Promise.all([
+        const [productosPageResult, ventasPageResult, [productosActivosData, unidadesData, promocionesActivasData, promocionesData, gastosData, categoriasData]] = await Promise.all([
           productosPagePromise,
           ventasPagePromise,
           othersPromise,
@@ -133,6 +141,7 @@ function App() {
         setPromocionesActivas(promocionesActivasData || []);
         setPromociones(promocionesData || []);
         setGastos(gastosData || []);
+        setCategorias(categoriasData || []);
         setError(null);
       });
       if (timer) {
@@ -195,7 +204,6 @@ function App() {
           }
 
           if (field === 'baja' && !currentValue === true) {
-            console.log('⏺️ Marcando venta como pendiente mediante updateVentaBaja');
             updated = await updateVentaBaja(id_venta, !currentValue);
           }
 
@@ -344,7 +352,7 @@ function App() {
     vencimiento?: Date | null;
     promocionActiva?: boolean;
     precioPromocion?: number | null;
-  }, imageFile?: File | null) => {
+  }, imageFile?: File | null, categoriasIds?: number[]) => {
     try {
       const createdProduct = await crearProductoAsync.execute(() => createProducto({
         nombre: producto.nombre,
@@ -369,9 +377,20 @@ function App() {
           showWarning('Producto creado pero no se pudo subir la imagen');
         }
       }
+
+      // Asignar categorías si hay
+      if (createdProduct && categoriasIds && categoriasIds.length > 0) {
+        try {
+          await asignarCategoriasAProducto(createdProduct.id_producto, categoriasIds);
+        } catch (catErr) {
+          console.error('Error al asignar categorías:', catErr);
+          showWarning('Producto creado pero no se pudieron asignar las categorías');
+        }
+      }
       
       await cargarDatos();
       modalNuevoProducto.close();
+      setCategoriasDeProducto([]);
       showSuccess('Producto agregado exitosamente');
     } catch (err) {
       showError('Error al agregar el producto');
@@ -407,7 +426,7 @@ function App() {
     vencimiento?: Date | null;
     promocionActiva?: boolean;
     precioPromocion?: number | null;
-  }, imageFile?: File | null) => {
+  }, imageFile?: File | null, categoriasIds?: number[]) => {
     if (!productToEdit) return;
     try {
       // Si hay una nueva imagen, subirla (esto reemplazará la anterior automáticamente)
@@ -438,9 +457,21 @@ function App() {
         showError('No se pudo actualizar el producto');
         return;
       }
+
+      // Actualizar categorías
+      if (categoriasIds !== undefined) {
+        try {
+          await asignarCategoriasAProducto(productToEdit.id_producto, categoriasIds);
+        } catch (catErr) {
+          console.error('Error al actualizar categorías:', catErr);
+          showWarning('Producto actualizado pero no se pudieron actualizar las categorías');
+        }
+      }
+
       await cargarDatos();
       modalNuevoProducto.close();
       setProductToEdit(null);
+      setCategoriasDeProducto([]);
       showSuccess('Producto actualizado exitosamente');
     } catch (err) {
       showError('Error al actualizar el producto');
@@ -448,8 +479,16 @@ function App() {
     }
   };
 
-  const openEditarProducto = (producto: any) => {
+  const openEditarProducto = async (producto: any) => {
     setProductToEdit(producto);
+    // Cargar categorías del producto
+    try {
+      const categoriasData = await getCategoriasDeProducto(producto.id_producto);
+      setCategoriasDeProducto(categoriasData.map(c => c.id_categoria));
+    } catch (err) {
+      console.error('Error al cargar categorías del producto:', err);
+      setCategoriasDeProducto([]);
+    }
     modalNuevoProducto.open();
   };
 
@@ -554,6 +593,62 @@ function App() {
     );
   };
 
+  // Handlers para categorías
+  const crearCategoriaAsync = useAsync();
+  const actualizarCategoriaAsync = useAsync();
+  const toggleCategoriaEstadoAsync = useAsync();
+
+  const handleNuevaCategoria = () => {
+    setCategoriaToEdit(null);
+    modalCategoria.open();
+  };
+
+  const handleEditarCategoria = (categoria: Categoria) => {
+    setCategoriaToEdit(categoria);
+    modalCategoria.open();
+  };
+
+  const handleSubmitCategoria = async (nombre: string) => {
+    try {
+      if (categoriaToEdit) {
+        // Editar categoría existente
+        await actualizarCategoriaAsync.execute(() => updateCategoria(categoriaToEdit.id_categoria, { nombre }));
+        showSuccess('Categoría actualizada correctamente');
+      } else {
+        // Crear nueva categoría
+        await crearCategoriaAsync.execute(() => createCategoria(nombre));
+        showSuccess('Categoría creada correctamente');
+      }
+      modalCategoria.close();
+      const categoriasData = await getCategorias();
+      setCategorias(categoriasData || []);
+    } catch (err) {
+      showError(categoriaToEdit ? 'Error al actualizar la categoría' : 'Error al crear la categoría');
+      console.error(err);
+    }
+  };
+
+  const handleToggleCategoriaEstado = async (id_categoria: number, estadoActual: boolean, nombre: string) => {
+    const mensaje = estadoActual ? 'desactivar' : 'activar';
+    
+    showConfirm(
+      `¿${mensaje.charAt(0).toUpperCase() + mensaje.slice(1)} categoría?`,
+      `¿Estás seguro de ${mensaje} "${nombre}"?`,
+      async () => {
+        try {
+          await toggleCategoriaEstadoAsync.execute(() => updateCategoriaEstado(id_categoria, !estadoActual));
+          const categoriasData = await getCategorias();
+          setCategorias(categoriasData || []);
+          showSuccess(`Categoría ${estadoActual ? 'desactivada' : 'activada'} correctamente`);
+        } catch (err) {
+          showError(`Error al ${mensaje} la categoría`);
+          console.error(err);
+        }
+      },
+      estadoActual ? 'danger' : 'info'
+    );
+  };
+
 
   if (initAsync.loading) {
     return (
@@ -635,6 +730,14 @@ function App() {
             onToggleEstado={handleToggleGastoEstado}
           />
         )}
+        {activeSection === 'categorias' && (
+          <CategoriasPage
+            categorias={categorias}
+            onNuevaCategoria={handleNuevaCategoria}
+            onEditarCategoria={handleEditarCategoria}
+            onToggleEstado={handleToggleCategoriaEstado}
+          />
+        )}
       </main>
 
       {/* Modales */}
@@ -674,9 +777,11 @@ function App() {
       <ModalNuevoProducto
         isOpen={modalNuevoProducto.isOpen}
         unidadesMedida={unidadesMedida}
-        onClose={() => { modalNuevoProducto.close(); setProductToEdit(null); }}
+        categorias={categorias}
+        onClose={() => { modalNuevoProducto.close(); setProductToEdit(null); setCategoriasDeProducto([]); }}
         onSubmit={productToEdit ? handleEditarProducto : handleNuevoProducto}
         initialProduct={productToEdit}
+        categoriasIniciales={categoriasDeProducto}
         showError={showError}
         showWarning={showWarning}
         loading={productToEdit ? editarProductoAsync.loading : crearProductoAsync.loading}
@@ -698,6 +803,14 @@ function App() {
         onSubmit={handleSubmitGasto}
         initialGasto={gastoToEdit}
         loading={gastoToEdit ? actualizarGastoAsync.loading : crearGastoAsync.loading}
+      />
+
+      <ModalCategoria
+        isOpen={modalCategoria.isOpen}
+        onClose={() => { modalCategoria.close(); setCategoriaToEdit(null); }}
+        onSubmit={handleSubmitCategoria}
+        initialCategoria={categoriaToEdit}
+        loading={categoriaToEdit ? actualizarCategoriaAsync.loading : crearCategoriaAsync.loading}
       />
 
       {/* Toast Notification */}

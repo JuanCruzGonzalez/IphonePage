@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { Producto } from '../types';
 
 interface StockPageProps {
@@ -20,9 +20,6 @@ export const StockPage: React.FC<StockPageProps> = ({ productos, onActualizarSto
   const startIndex = (currentPage - 1) * pageSize;
   const endIndex = startIndex + pageSize;
   const productosPaginados = productosOrdenados.slice(startIndex, endIndex);
-  useEffect(() => {
-    console.log(productos)
-  }, []);
   return (
     <div className="page">
       <div className="page-header">
