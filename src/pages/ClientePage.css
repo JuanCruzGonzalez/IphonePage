@@ -1107,5 +1107,6 @@
 
   .cliente-sidebar {
     padding: 16px;
+    order: 1;
   }
 }
