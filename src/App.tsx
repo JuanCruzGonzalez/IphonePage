@@ -1,13 +1,13 @@
 import { useState, useEffect } from 'react';
-import './App.css';
-import './ToastStyles.css';
-import { Producto, VentaConDetalles, UnidadMedida, Promocion, DetalleVentaInput, PromocionConDetalles, Gasto, Categoria } from './types';
+import './core/styles/app.css';
+import './core/styles/toast.css';
+import { Producto, VentaConDetalles, UnidadMedida, Promocion, DetalleVentaInput, PromocionConDetalles, Gasto, Categoria } from './core/types';
 import {
   createVenta,
   reactivarVenta,
   updateVentaBaja,
   getVentasPage,
-} from './api/ventaService';
+} from './features/ventas/services/ventaService';
 import {
   
   getProductosActivos,
@@ -17,31 +17,31 @@ import {
   getUnidadesMedidas,
   updateProducto,
   updateProductoEstado,
-} from './api/productoService';
-import { uploadProductImage, updateProductImage } from './api/storageService';
-import { getPromocionesActivas, getPromociones,updatePromocion, deletePromocion, getDetallePromocion } from './api/promocionService';
-import { getGastos, createGasto, updateGasto, updateGastoEstado } from './api/gastoService';
-import { getCategorias, createCategoria, updateCategoria, updateCategoriaEstado, getCategoriasDeProducto, asignarCategoriasAProducto } from './api/categoriaService';
-import ModalVerPromocion from './components/ModalVerPromocion';
-import { Sidebar } from './components/Sidebar';
-import { VentasPage } from './pages/VentasPage';
-import { ProductosPage } from './pages/ProductosPage';
-import { StockPage } from './pages/StockPage';
-import { PromocionesPage } from './pages/PromocionesPage';
-import { GastosPage } from './pages/GastosPage';
-import { CategoriasPage } from './pages/CategoriasPage';
-import { ModalNuevaVenta } from './components/ModalNuevaVenta';
-import { ModalNuevoProducto } from './components/ModalNuevoProducto';
-import { ModalActualizarStock } from './components/ModalActualizarStock';
-import { ModalCrearPromocion } from './components/ModalCrearPromocion';
-import { ModalGasto } from './components/ModalGasto';
-import { ModalCategoria } from './components/ModalCategoria';
-import { Toast, ConfirmModal } from './components/ToastModal';
-import { useToast, useConfirm } from './hooks/useToast';
-import { useDisableWheelOnNumberInputs } from './hooks/useDisableWheelOnNumberInputs';
-import { useModal } from './hooks/useModal';
-import { useAsync } from './hooks/useAsync';
-import { createPromocion } from './api/promocionService';
+} from './features/productos/services/productoService';
+import { uploadProductImage, updateProductImage } from './shared/services/storageService';
+import { getPromocionesActivas, getPromociones,updatePromocion, deletePromocion, getDetallePromocion } from './features/promociones/services/promocionService';
+import { getGastos, createGasto, updateGasto, updateGastoEstado } from './features/gastos/services/gastoService';
+import { getCategorias, createCategoria, updateCategoria, updateCategoriaEstado, getCategoriasDeProducto, asignarCategoriasAProducto } from './features/categorias/services/categoriaService';
+import ModalVerPromocion from './features/promociones/components/ModalVerPromocion';
+import { Sidebar } from './shared/components/Sidebar';
+import { VentasPage } from './features/ventas/VentasPage';
+import { ProductosPage } from './features/productos/ProductosPage';
+import { StockPage } from './features/stock/StockPage';
+import { PromocionesPage } from './features/promociones/PromocionesPage';
+import { GastosPage } from './features/gastos/GastosPage';
+import { CategoriasPage } from './features/categorias/CategoriasPage';
+import { ModalNuevaVenta } from './features/ventas/components/ModalNuevaVenta';
+import { ModalNuevoProducto } from './features/productos/components/ModalNuevoProducto';
+import { ModalActualizarStock } from './features/productos/components/ModalActualizarStock';
+import { ModalCrearPromocion } from './features/promociones/components/ModalCrearPromocion';
+import { ModalGasto } from './features/gastos/components/ModalGasto';
+import { ModalCategoria } from './features/categorias/components/ModalCategoria';
+import { Toast, ConfirmModal } from './shared/components/ToastModal';
+import { useToast, useConfirm } from './shared/hooks/useToast';
+import { useDisableWheelOnNumberInputs } from './shared/hooks/useDisableWheelOnNumberInputs';
+import { useModal } from './shared/hooks/useModal';
+import { useAsync } from './shared/hooks/useAsync';
+import { createPromocion } from './features/promociones/services/promocionService';
 
 function App() {
   const [activeSection, setActiveSection] = useState<'ventas' | 'productos' | 'stock' | 'promociones' | 'gastos' | 'categorias'>('ventas');
