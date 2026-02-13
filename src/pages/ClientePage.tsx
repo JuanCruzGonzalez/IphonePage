@@ -1,21 +1,27 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { Producto, Categoria } from '../types';
+import { Producto, Categoria, Promocion } from '../types';
 import { getProductosActivos } from '../api/productoService';
 import { getProductImageUrl } from '../api/storageService';
 import { getCategoriasActivas } from '../api/categoriaService';
+import { ClientePromociones } from '../components/ClientePromociones';
 import { supabase } from '../supabaseClient';
 import './ClientePage.css';
 
+type VistaActiva = 'productos' | 'promociones';
+
 interface ItemCarrito {
-  id_producto: number;
+  id: string;
+  tipo: 'producto' | 'promocion';
+  id_referencia: number;
   nombre: string;
   precio: number;
   cantidad: number;
-  unidadMedidaId: number;
-  unidadMedidaNombre: string;
+  unidadMedidaId?: number;
+  unidadMedidaNombre?: string;
 }
 
 export const ClientePage: React.FC = () => {
+  const [vistaActiva, setVistaActiva] = useState<VistaActiva>('productos');
   const [productos, setProductos] = useState<Producto[]>([]);
   const [carrito, setCarrito] = useState<ItemCarrito[]>([]);
   const [loading, setLoading] = useState(true);
@@ -33,7 +39,7 @@ export const ClientePage: React.FC = () => {
   const [productosCategorias, setProductosCategorias] = useState<Map<number, number[]>>(new Map());
   const [maxPrice, setMaxPrice] = useState(0);
   const [priceFilter, setPriceFilter] = useState(0);
-  const [categoriasExpanded, setCategoriasExpanded] = useState(true);
+  const [categoriasExpanded, setCategoriasExpanded] = useState(false);
 
   useEffect(() => {
     cargarProductos();
@@ -138,7 +144,8 @@ export const ClientePage: React.FC = () => {
   };
 
   const agregarAlCarrito = (producto: Producto, cantidad: number = 1) => {
-    const itemExistente = carrito.find(item => item.id_producto === producto.id_producto);
+    const id = `producto-${producto.id_producto}`;
+    const itemExistente = carrito.find(item => item.id === id);
 
     // Usar precio promocional si está activo, sino precio normal
     const precioUsar = (producto.promocion_activa && producto.precio_promocion != null)
@@ -147,18 +154,43 @@ export const ClientePage: React.FC = () => {
 
     if (itemExistente) {
       setCarrito(carrito.map(item =>
-        item.id_producto === producto.id_producto
+        item.id === id
           ? { ...item, cantidad: item.cantidad + cantidad }
           : item
       ));
     } else {
       setCarrito([...carrito, {
-        id_producto: producto.id_producto,
+        id,
+        tipo: 'producto' as const,
+        id_referencia: producto.id_producto,
         nombre: producto.nombre,
         precio: precioUsar,
         cantidad,
         unidadMedidaId: producto.id_unidad_medida,
         unidadMedidaNombre: producto.unidad_medida?.abreviacion || '',
+      }]);
+    }
+  };
+
+  const agregarPromocionAlCarrito = (promocion: Promocion, cantidad: number = 1) => {
+    const id = `promocion-${promocion.id_promocion}`;
+    const itemExistente = carrito.find(item => item.id === id);
+    const precio = promocion.precio || 0;
+
+    if (itemExistente) {
+      setCarrito(carrito.map(item =>
+        item.id === id
+          ? { ...item, cantidad: item.cantidad + cantidad }
+          : item
+      ));
+    } else {
+      setCarrito([...carrito, {
+        id,
+        tipo: 'promocion' as const,
+        id_referencia: promocion.id_promocion,
+        nombre: promocion.name,
+        precio,
+        cantidad,
       }]);
     }
   };
@@ -184,18 +216,18 @@ export const ClientePage: React.FC = () => {
     cerrarModalCantidad();
   };
 
-  const eliminarDelCarrito = (id_producto: number) => {
-    setCarrito(carrito.filter(item => item.id_producto !== id_producto));
+  const eliminarDelCarrito = (id: string) => {
+    setCarrito(carrito.filter(item => item.id !== id));
   };
 
-  const actualizarCantidad = (id_producto: number, nuevaCantidad: number) => {
+  const actualizarCantidad = (id: string, nuevaCantidad: number) => {
     if (nuevaCantidad <= 0) {
-      eliminarDelCarrito(id_producto);
+      eliminarDelCarrito(id);
       return;
     }
 
     setCarrito(carrito.map(item =>
-      item.id_producto === id_producto
+      item.id === id
         ? { ...item, cantidad: nuevaCantidad }
         : item
     ));
@@ -214,7 +246,7 @@ export const ClientePage: React.FC = () => {
   };
 
   const obtenerItemEnCarrito = (id_producto: number): ItemCarrito | undefined => {
-    return carrito.find(item => item.id_producto === id_producto);
+    return carrito.find(item => item.id === `producto-${id_producto}`);
   };
 
   const enviarPedidoWhatsApp = () => {
@@ -223,11 +255,16 @@ export const ClientePage: React.FC = () => {
     let mensaje = 'Hola Chañar, quería hacer el siguiente pedido:\n\n';
 
     carrito.forEach(item => {
-      const cantidad = item.unidadMedidaId === 1
-        ? `${Math.round(item.cantidad)}gr`
-        : `${item.cantidad} un`;
-
-      mensaje += `• ${item.nombre}: ${cantidad} - ${formatearPrecio(item.precio * item.cantidad)}\n`;
+      let cantidad = '';
+      if (item.tipo === 'promocion') {
+        cantidad = `${item.cantidad} un`;
+      } else if (item.unidadMedidaId === 1) {
+        cantidad = `${Math.round(item.cantidad)}gr`;
+      } else {
+        cantidad = `${item.cantidad} ${item.unidadMedidaNombre || 'un'}`;
+      }
+      const tipo = item.tipo === 'promocion' ? '🎁 ' : '';
+      mensaje += `${tipo}• ${item.nombre}: ${cantidad} - ${formatearPrecio(item.precio * item.cantidad)}\n`;
     });
 
     mensaje += `\n*Total: ${formatearPrecio(calcularTotal())}*`;
@@ -237,19 +274,6 @@ export const ClientePage: React.FC = () => {
 
     window.open(urlWhatsApp, '_blank');
   };
-
-  if (loading) {
-    return (
-      <div className="cliente-loading">
-        <div className="cliente-loading-content">
-          <div className="cliente-loading-spinner" />
-          <p className="cliente-loading-text">
-            Cargando productos...
-          </p>
-        </div>
-      </div>
-    );
-  }
 
   return (
     <div className="cliente-page">
@@ -264,6 +288,22 @@ export const ClientePage: React.FC = () => {
               Chañar
             </h1>
           </div>
+
+          {/* Navegación de vistas (desktop) */}
+          <nav className="cliente-header-nav">
+            <button 
+              className={`cliente-header-nav-link ${vistaActiva === 'productos' ? 'active' : ''}`}
+              onClick={() => setVistaActiva('productos')}
+            >
+              Productos
+            </button>
+            <button 
+              className={`cliente-header-nav-link ${vistaActiva === 'promociones' ? 'active' : ''}`}
+              onClick={() => setVistaActiva('promociones')}
+            >
+              Promociones
+            </button>
+          </nav>
 
           {/* Buscador en header */}
           <div className="cliente-header-search-container">
@@ -293,71 +333,102 @@ export const ClientePage: React.FC = () => {
         </div>
       </header>
 
-      {/* Contenido principal con sidebar */}
-      <div className="cliente-main-content">
-        <div className="cliente-content-with-sidebar">
+      {/* Navegación de vistas (mobile) */}
+      <nav className="cliente-header-nav-container">
+        <button 
+          className={`cliente-header-nav-link ${vistaActiva === 'productos' ? 'active' : ''}`}
+          onClick={() => setVistaActiva('productos')}
+        >
+          Productos
+        </button>
+        <button 
+          className={`cliente-header-nav-link ${vistaActiva === 'promociones' ? 'active' : ''}`}
+          onClick={() => setVistaActiva('promociones')}
+        >
+          Promociones
+        </button>
+      </nav>
 
-          {/* Sidebar de filtros */}
-          <aside className="cliente-sidebar">
-            <div className="cliente-filters-header">
-              <h3 className="cliente-filters-title">Filtros</h3>
-              <button className="cliente-filters-reset" onClick={resetFilters}>
-                Limpiar
-              </button>
-            </div>
-
-            {/* Categorías */}
-            <div className="cliente-filter-group">
-              <h4
-                className="cliente-filter-group-title cliente-filter-group-title-collapsible"
-                onClick={() => setCategoriasExpanded(!categoriasExpanded)}
-              >
-                Categorías
-                <span className={`cliente-filter-collapse-icon ${categoriasExpanded ? 'expanded' : ''}`}>
-                  ▼
-                </span>
-              </h4>
-              {categoriasExpanded && (
-                <div className="cliente-filter-items">
-                  {categorias.map(cat => (
-                    <label
-                      key={cat.id_categoria}
-                      className="cliente-filter-item"
-                    >
-                      <input
-                        type="checkbox"
-                        checked={categoriasSeleccionadas.includes(cat.id_categoria)}
-                        onChange={() => toggleCategoria(cat.id_categoria)}
-                        className="cliente-filter-checkbox"
-                      />
-                      <span className="cliente-filter-label">{cat.nombre}</span>
-                    </label>
-                  ))}
-                </div>
-              )}
-            </div>
-
-            {/* Rango de Precio */}
-            <div className="cliente-filter-group">
-              <h4 className="cliente-filter-group-title">Rango de Precio</h4>
-              <div className="cliente-filter-price-range">
-                <input
-                  type="range"
-                  min={0}
-                  max={maxPrice}
-                  value={priceFilter}
-                  onChange={(e) => setPriceFilter(Number(e.target.value))}
-                  className="cliente-filter-price-slider"
-                />
-                <div className="cliente-filter-price-labels">
-                  <span>$0</span>
-                  <span>${priceFilter}</span>
-                </div>
+      {/* Contenido Principal */}
+      {vistaActiva === 'productos' ? (
+        <>
+          {loading ? (
+            <div className="cliente-loading">
+              <div className="cliente-loading-content">
+                <div className="cliente-loading-spinner" />
+                <p className="cliente-loading-text">
+                  Cargando productos...
+                </p>
               </div>
             </div>
-          </aside>
-          {/* Grid de productos */}
-          <div className="cliente-products-grid">
+          ) : (
+            <>
+              {/* Contenido principal con sidebar */}
+              <div className="cliente-main-content">
+                <div className="cliente-content-with-sidebar">
+
+                  {/* Sidebar de filtros */}
+                  <aside className="cliente-sidebar">
+                    <div className="cliente-filters-header">
+                      <h3 className="cliente-filters-title">Filtros</h3>
+                      <button className="cliente-filters-reset" onClick={resetFilters}>
+                        Limpiar
+                      </button>
+                    </div>
+
+                    {/* Categorías */}
+                    <div className="cliente-filter-group">
+                      <h4
+                        className="cliente-filter-group-title cliente-filter-group-title-collapsible"
+                        onClick={() => setCategoriasExpanded(!categoriasExpanded)}
+                      >
+                        Categorías
+                        <span className={`cliente-filter-collapse-icon ${categoriasExpanded ? 'expanded' : ''}`}>
+                          ▼
+                        </span>
+                      </h4>
+                      {categoriasExpanded && (
+                        <div className="cliente-filter-items">
+                          {categorias.map(cat => (
+                            <label
+                              key={cat.id_categoria}
+                              className="cliente-filter-item"
+                            >
+                              <input
+                                type="checkbox"
+                                checked={categoriasSeleccionadas.includes(cat.id_categoria)}
+                                onChange={() => toggleCategoria(cat.id_categoria)}
+                                className="cliente-filter-checkbox"
+                              />
+                              <span className="cliente-filter-label">{cat.nombre}</span>
+                            </label>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Rango de Precio */}
+                    <div className="cliente-filter-group">
+                      <h4 className="cliente-filter-group-title">Rango de Precio</h4>
+                      <div className="cliente-filter-price-range">
+                        <input
+                          type="range"
+                          min={0}
+                          max={maxPrice}
+                          value={priceFilter}
+                          onChange={(e) => setPriceFilter(Number(e.target.value))}
+                          className="cliente-filter-price-slider"
+                        />
+                        <div className="cliente-filter-price-labels">
+                          <span>$0</span>
+                          <span>${priceFilter}</span>
+                        </div>
+                      </div>
+                    </div>
+                  </aside>
+
+                  {/* Grid de productos */}
+                  <div className="cliente-products-grid">
             {productosFiltrados.map(producto => (
               <div key={producto.id_producto} className="cliente-product-card">
                 {/* Imagen del producto con overlay */}
@@ -461,7 +532,7 @@ export const ClientePage: React.FC = () => {
 
                             <button
                               onClick={() => actualizarCantidad(
-                                producto.id_producto,
+                                `producto-${producto.id_producto}`,
                                 itemEnCarrito.cantidad - (producto.id_unidad_medida === 1 ? 10 : 1)
                               )}
                               className="cliente-product-quantity-btn"
@@ -478,7 +549,7 @@ export const ClientePage: React.FC = () => {
 
                             <button
                               onClick={() => actualizarCantidad(
-                                producto.id_producto,
+                                `producto-${producto.id_producto}`,
                                 itemEnCarrito.cantidad + (producto.id_unidad_medida === 1 ? 10 : 1)
                               )}
                               className="cliente-product-quantity-btn"
@@ -560,9 +631,18 @@ export const ClientePage: React.FC = () => {
                 </p>
               </div>
             )}
-          </div>
-        </div>
-      </div>
+                  </div>
+                </div>
+              </div>
+              </>
+            )}
+        </>
+      ) : (
+        <ClientePromociones
+          busqueda={busqueda}
+          agregarPromocionAlCarrito={agregarPromocionAlCarrito}
+        />
+      )}
 
       {/* Modal cantidad en gramos - modernizado */}
       {modalCantidad.isOpen && modalCantidad.producto && (
@@ -647,12 +727,12 @@ export const ClientePage: React.FC = () => {
               ) : (
                 <div className="cliente-cart-items-list">
                   {carrito.map(item => (
-                    <div key={item.id_producto} className="cliente-cart-item">
+                    <div key={item.id} className="cliente-cart-item">
                       <div className="cliente-cart-item-header">
                         <h3 className="cliente-cart-item-title">
                           {item.nombre}
                         </h3>
-                        <button onClick={() => eliminarDelCarrito(item.id_producto)} className="cliente-cart-item-delete">
+                        <button onClick={() => eliminarDelCarrito(item.id)} className="cliente-cart-item-delete">
                           <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                             <polyline points="3 6 5 6 21 6"></polyline>
                             <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"></path>
@@ -666,7 +746,7 @@ export const ClientePage: React.FC = () => {
                         {/* Controles de cantidad */}
                         <div className="cliente-cart-item-controls">
                           <button
-                            onClick={() => actualizarCantidad(item.id_producto, item.cantidad - (item.unidadMedidaId === 1 ? 10 : 1))}
+                            onClick={() => actualizarCantidad(item.id, item.cantidad - (item.unidadMedidaId === 1 ? 10 : 1))}
                             className="cliente-cart-item-btn"
                           >
                             −
@@ -675,12 +755,14 @@ export const ClientePage: React.FC = () => {
                           <span className="cliente-cart-item-quantity">
                             {item.unidadMedidaId === 1
                               ? `${Math.round(item.cantidad)}gr`
+                              : item.tipo === 'promocion'
+                              ? `${item.cantidad} un`
                               : `${item.cantidad} un`
                             }
                           </span>
 
                           <button
-                            onClick={() => actualizarCantidad(item.id_producto, item.cantidad + (item.unidadMedidaId === 1 ? 10 : 1))}
+                            onClick={() => actualizarCantidad(item.id, item.cantidad + (item.unidadMedidaId === 1 ? 10 : 1))}
                             className="cliente-cart-item-btn"
                           >
                             +

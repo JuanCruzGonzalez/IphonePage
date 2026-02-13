@@ -1,10 +1,11 @@
 import { supabase, handleAuthError } from '../supabaseClient';
 import { Promocion, PromocionDetalleInput, DetallePromocionConCantidad } from '../types';
+import { uploadPromocionImage, updatePromocionImage } from './storageService';
 
 export async function getPromociones() {
   const { data, error } = await supabase
     .from('promocion')
-    .select(`id_promocion,name,precio,estado`)
+    .select(`id_promocion,name,precio,estado,imagen_path`)
     .order('name', { ascending: true });
 
   if (error) {
@@ -20,13 +21,14 @@ export async function getPromociones() {
     name: p.name,
     precio: p.precio,
     estado: p.estado,
+    imagen_path: p.imagen_path,
   })) as Promocion[];
 }
 
 export async function getPromocionesActivas() {
   const { data, error } = await supabase
     .from('promocion')
-    .select(`id_promocion,name,precio,estado`)
+    .select(`id_promocion,name,precio,estado,imagen_path`)
     .eq('estado', true)
     .order('name', { ascending: true });
 
@@ -43,11 +45,60 @@ export async function getPromocionesActivas() {
     name: p.name,
     precio: p.precio,
     estado: p.estado,
+    imagen_path: p.imagen_path,
   })) as Promocion[];
 }
 
+export async function getPromocionesActivasConDetalles() {
+  const { data, error } = await supabase
+    .from('promocion')
+    .select(`
+      id_promocion,
+      name,
+      precio,
+      estado,
+      imagen_path,
+      detalle_promocion(
+        id_detalle_promocion,
+        id_producto,
+        cantidad,
+        producto(
+          id_producto,
+          nombre,
+          imagen_path,
+          id_unidad_medida
+        )
+      )
+    `)
+    .eq('estado', true)
+    .order('name', { ascending: true });
 
-export async function createPromocion(name: string, precio: number | null, productos: PromocionDetalleInput[], estado = true) {
+  if (error) {
+    console.error('Error al obtener promociones con detalles:', error);
+    await handleAuthError(error);
+    throw error;
+  }
+
+  if (!data) return [];
+
+  return (data as any[]).map(p => ({
+    id_promocion: p.id_promocion,
+    name: p.name,
+    precio: p.precio,
+    estado: p.estado,
+    imagen_path: p.imagen_path,
+    productos: p.detalle_promocion || [],
+  })) as any[];
+}
+
+
+export async function createPromocion(
+  name: string, 
+  precio: number | null, 
+  productos: PromocionDetalleInput[], 
+  estado = true,
+  imageFile?: File | null
+) {
   // Prefer server-side transactional RPC
   try {
     const payload = {
@@ -59,6 +110,24 @@ export async function createPromocion(name: string, precio: number | null, produ
 
     const { data: rpcData, error: rpcError } = await supabase.rpc('create_promocion_transaction', payload as any);
     if (rpcError) throw rpcError;
+    
+    // Si hay imagen, subirla y actualizar la promoción
+    if (imageFile && rpcData?.id_promocion) {
+      const imagePath = await uploadPromocionImage(imageFile, rpcData.id_promocion);
+      const { data: updatedPromo, error: updateError } = await supabase
+        .from('promocion')
+        .update({ imagen_path: imagePath })
+        .eq('id_promocion', rpcData.id_promocion)
+        .select()
+        .single();
+      
+      if (updateError) {
+        console.error('Error al actualizar imagen de promoción:', updateError);
+      } else {
+        return updatedPromo;
+      }
+    }
+    
     return rpcData;
   } catch (e) {
     // fallback to client-side implementation
@@ -77,6 +146,28 @@ export async function createPromocion(name: string, precio: number | null, produ
   }
 
   const id_promocion = promocion.id_promocion;
+
+  // Subir imagen si existe
+  if (imageFile) {
+    try {
+      const imagePath = await uploadPromocionImage(imageFile, id_promocion);
+      const { data: updatedPromo, error: updateError } = await supabase
+        .from('promocion')
+        .update({ imagen_path: imagePath })
+        .eq('id_promocion', id_promocion)
+        .select()
+        .single();
+      
+      if (updateError) {
+        console.error('Error al actualizar imagen de promoción:', updateError);
+      } else {
+        Object.assign(promocion, updatedPromo);
+      }
+    } catch (imageError) {
+      console.error('Error al subir imagen de promoción:', imageError);
+      // Continuar aunque falle la imagen
+    }
+  }
 
   if (Array.isArray(productos) && productos.length > 0) {
     const detalles = productos.map((p: PromocionDetalleInput) => ({ id_promocion, id_producto: p.id_producto, cantidad: p.cantidad }));
@@ -108,7 +199,15 @@ export async function getDetallePromocion(id_promocion: number) {
   return data as DetallePromocionConCantidad[];
 }
 
-export async function updatePromocion(id_promocion: number, name: string, precio: number | null, productos: PromocionDetalleInput[], estado = true) {
+export async function updatePromocion(
+  id_promocion: number, 
+  name: string, 
+  precio: number | null, 
+  productos: PromocionDetalleInput[], 
+  estado = true,
+  imageFile?: File | null,
+  oldImagePath?: string | null
+) {
   // Try server-side transactional RPC (recommended)
   try {
     const payload = {
@@ -121,9 +220,48 @@ export async function updatePromocion(id_promocion: number, name: string, precio
 
     const { data: rpcData, error: rpcError } = await supabase.rpc('update_promocion_transaction', payload as any);
     if (rpcError) throw rpcError;
+    
+    // Si hay nueva imagen, actualizarla
+    if (imageFile) {
+      try {
+        const imagePath = await updatePromocionImage(imageFile, id_promocion, oldImagePath);
+        const { data: updatedPromo, error: updateError } = await supabase
+          .from('promocion')
+          .update({ imagen_path: imagePath })
+          .eq('id_promocion', id_promocion)
+          .select()
+          .single();
+        
+        if (updateError) {
+          console.error('Error al actualizar imagen de promoción:', updateError);
+        } else {
+          return updatedPromo;
+        }
+      } catch (imageError) {
+        console.error('Error al subir imagen de promoción:', imageError);
+      }
+    }
+    
     return rpcData;
   } catch (e) {
     // fallback to client-side implementation
+  }
+
+  // Si hay nueva imagen, actualizarla
+  if (imageFile) {
+    try {
+      const imagePath = await updatePromocionImage(imageFile, id_promocion, oldImagePath);
+      const { error: imgUpdateError } = await supabase
+        .from('promocion')
+        .update({ imagen_path: imagePath })
+        .eq('id_promocion', id_promocion);
+      
+      if (imgUpdateError) {
+        console.error('Error al actualizar imagen de promoción:', imgUpdateError);
+      }
+    } catch (imageError) {
+      console.error('Error al subir imagen de promoción:', imageError);
+    }
   }
 
   // Update main promocion record

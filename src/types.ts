@@ -26,6 +26,7 @@ export interface Promocion {
   name: string;
   precio: number | null;
   estado: boolean;
+  imagen_path?: string | null;
 }
 
 // Promoción con detalles en memoria (solo para uso en el cliente cuando editamos)
@@ -45,6 +46,21 @@ export interface DetallePromocionConCantidad {
   id_promocion: number;
   id_producto: number;
   cantidad: number;
+}
+
+// Detalle de promoción con información del producto embebida (para vista del cliente)
+export interface DetallePromocionConProducto extends DetallePromocionConCantidad {
+  producto: {
+    id_producto: number;
+    nombre: string;
+    imagen_path?: string | null;
+    id_unidad_medida?: number;
+  };
+}
+
+// Promoción con detalles completos (incluyendo productos)
+export interface PromocionConDetallesCompletos extends Promocion {
+  productos: DetallePromocionConProducto[];
 }
 
 // Para crear/editar promociones necesitamos enviar id_producto + cantidad

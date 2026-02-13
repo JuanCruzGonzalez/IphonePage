@@ -243,15 +243,30 @@ function App() {
     }
   };
 
-  const handleCrearPromocion = async (payload: { name: string; precio: number | null; productos: { id_producto: number; cantidad: number }[]; estado: boolean }) => {
+  const handleCrearPromocion = async (
+    payload: { name: string; precio: number | null; productos: { id_producto: number; cantidad: number }[]; estado: boolean },
+    imageFile?: File | null
+  ) => {
     try {
       if (promocionToEdit) {
         // Edit flow
-        await editarPromocionAsync.execute(() => updatePromocion(promocionToEdit.id_promocion, payload.name, payload.precio, payload.productos, payload.estado));
+        await editarPromocionAsync.execute(() => 
+          updatePromocion(
+            promocionToEdit.id_promocion, 
+            payload.name, 
+            payload.precio, 
+            payload.productos, 
+            payload.estado,
+            imageFile,
+            promocionToEdit.imagen_path
+          )
+        );
         setPromocionToEdit(null);
         showSuccess('Promoción actualizada correctamente');
       } else {
-        await crearPromocionAsync.execute(() => createPromocion(payload.name, payload.precio, payload.productos, payload.estado));
+        await crearPromocionAsync.execute(() => 
+          createPromocion(payload.name, payload.precio, payload.productos, payload.estado, imageFile)
+        );
         showSuccess('Promoción creada correctamente');
       }
       await cargarDatos();
@@ -758,7 +773,7 @@ function App() {
       <ModalCrearPromocion
         isOpen={modalCrearPromocion.isOpen}
         onClose={modalCrearPromocion.close}
-        productos={productos}
+        productos={productosActivos}
         initialPromotion={promocionToEdit ? { ...promocionToEdit, productos: promocionToEdit.productos ?? [] } : undefined}
         onSubmit={handleCrearPromocion}
         showError={showError}

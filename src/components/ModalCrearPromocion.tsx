@@ -1,13 +1,15 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { Producto, PromocionDetalleInput } from '../types';
+import Cropper from 'react-easy-crop';
+import { getPromocionImageUrl } from '../api/storageService';
 
 interface ModalCrearPromocionProps {
   isOpen: boolean;
   onClose: () => void;
   productos: Producto[];
   // initialPromotion used for editing
-  initialPromotion?: { id_promocion: number; name: string; precio: number | null; productos: PromocionDetalleInput[]; estado: boolean } | null;
-  onSubmit: (payload: { name: string; precio: number | null; productos: PromocionDetalleInput[]; estado: boolean }) => void;
+  initialPromotion?: { id_promocion: number; name: string; precio: number | null; productos: PromocionDetalleInput[]; estado: boolean; imagen_path?: string | null } | null;
+  onSubmit: (payload: { name: string; precio: number | null; productos: PromocionDetalleInput[]; estado: boolean }, imageFile?: File | null) => void;
   showError?: (message: string) => void;
   showWarning?: (message: string) => void;
   loading?: boolean;
@@ -18,9 +20,22 @@ export const ModalCrearPromocion: React.FC<ModalCrearPromocionProps> = ({ isOpen
   const [precio, setPrecio] = useState('');
   // items: productos agregados a la promoción (incluye nombre para mostrar)
   const [items, setItems] = useState<{ id_producto: number; cantidad: number; nombre?: string; unidadMedidaId?: number }[]>([]);
-  const [productoSeleccionado, setProductoSeleccionado] = useState('');
+  const [productoSeleccionado, setProductoSeleccionado] = useState<Producto | null>(null);
+  const [busquedaProducto, setBusquedaProducto] = useState('');
+  const [showProductosDropdown, setShowProductosDropdown] = useState(false);
   const [cantidadInput, setCantidadInput] = useState('1');
   const [estado, setEstado] = useState<'1' | '2'>('1');
+  
+  const productSearchRef = useRef<HTMLDivElement>(null);
+  
+  // Estados para imagen
+  const [imageFile, setImageFile] = useState<File | null>(null);
+  const [imagePreview, setImagePreview] = useState<string | null>(null);
+  const [imageToCrop, setImageToCrop] = useState<string | null>(null);
+  const [crop, setCrop] = useState({ x: 0, y: 0 });
+  const [zoom, setZoom] = useState(1);
+  const [croppedAreaPixels, setCroppedAreaPixels] = useState<any>(null);
+  const [showCropper, setShowCropper] = useState(false);
 
   useEffect(() => {
     if (!isOpen) {
@@ -28,6 +43,12 @@ export const ModalCrearPromocion: React.FC<ModalCrearPromocionProps> = ({ isOpen
       setPrecio('');
       setItems([]);
       setEstado('1');
+      setImageFile(null);
+      setImagePreview(null);
+      setImageToCrop(null);
+      setShowCropper(false);
+      setBusquedaProducto('');
+      setShowProductosDropdown(false);
     } else {
       // populate when opening for edit
       if (initialPromotion) {
@@ -41,28 +62,170 @@ export const ModalCrearPromocion: React.FC<ModalCrearPromocionProps> = ({ isOpen
         setPrecio('');
         setItems([]);
         setEstado('1');
+        setImageFile(null);
+        setImagePreview(null);
       }
     }
   }, [isOpen]);
 
+  // Cerrar dropdowns cuando se hace clic fuera
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (productSearchRef.current && !productSearchRef.current.contains(event.target as Node)) {
+        setShowProductosDropdown(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  // Filtrar productos basado en la búsqueda
+  const productosFiltrados = productos.filter(p =>
+    p.nombre.toLowerCase().includes(busquedaProducto.toLowerCase()) &&
+    !items.find(it => it.id_producto === p.id_producto) // No mostrar productos ya agregados
+  ).slice(0, 10); // Limitar a 10 resultados
+
+  const seleccionarProducto = (producto: Producto) => {
+    setProductoSeleccionado(producto);
+    setBusquedaProducto(producto.nombre);
+    setShowProductosDropdown(false);
+  };
+
+  // Funciones para manejo de imágenes
+  const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      // Validar que sea una imagen
+      if (!file.type.startsWith('image/')) {
+        showWarning?.('Por favor selecciona un archivo de imagen válido');
+        return;
+      }
+      // Validar tamaño (max 5MB)
+      if (file.size > 5 * 1024 * 1024) {
+        showWarning?.('La imagen debe ser menor a 5MB');
+        return;
+      }
+      // Cargar imagen para recorte
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setImageToCrop(reader.result as string);
+        setShowCropper(true);
+      };
+      reader.readAsDataURL(file);
+    }
+    // Reset input
+    e.target.value = '';
+  };
+
+  const handleRemoveImage = () => {
+    setImageFile(null);
+    setImagePreview(null);
+    setImageToCrop(null);
+    setShowCropper(false);
+  };
+
+  const onCropComplete = useCallback((_croppedArea: any, croppedAreaPixels: any) => {
+    setCroppedAreaPixels(croppedAreaPixels);
+  }, []);
+
+  const createImage = (url: string): Promise<HTMLImageElement> =>
+    new Promise((resolve, reject) => {
+      const image = new Image();
+      image.addEventListener('load', () => resolve(image));
+      image.addEventListener('error', (error) => reject(error));
+      image.src = url;
+    });
+
+  const getCroppedImg = async (imageSrc: string, pixelCrop: any): Promise<Blob | null> => {
+    const image = await createImage(imageSrc);
+    const canvas = document.createElement('canvas');
+    const ctx = canvas.getContext('2d');
+
+    if (!ctx) return null;
+
+    // Set canvas size to square (1:1 ratio)
+    const size = Math.min(pixelCrop.width, pixelCrop.height);
+    canvas.width = size;
+    canvas.height = size;
+
+    ctx.drawImage(
+      image,
+      pixelCrop.x,
+      pixelCrop.y,
+      pixelCrop.width,
+      pixelCrop.height,
+      0,
+      0,
+      size,
+      size
+    );
+
+    return new Promise((resolve) => {
+      canvas.toBlob((blob) => {
+        resolve(blob);
+      }, 'image/jpeg', 0.95);
+    });
+  };
+
+  const handleCropConfirm = async () => {
+    if (!imageToCrop || !croppedAreaPixels) return;
+
+    try {
+      const croppedBlob = await getCroppedImg(imageToCrop, croppedAreaPixels);
+      if (croppedBlob) {
+        // Convert blob to File
+        const file = new File([croppedBlob], 'cropped-image.jpg', { type: 'image/jpeg' });
+        setImageFile(file);
+        
+        // Create preview
+        const previewUrl = URL.createObjectURL(croppedBlob);
+        setImagePreview(previewUrl);
+        
+        setShowCropper(false);
+        setImageToCrop(null);
+      }
+    } catch (error) {
+      console.error('Error al recortar imagen:', error);
+      showWarning?.('Error al procesar la imagen');
+    }
+  };
+
+  const handleCropCancel = () => {
+    setShowCropper(false);
+    setImageToCrop(null);
+    setCrop({ x: 0, y: 0 });
+    setZoom(1);
+  };
+
   if (!isOpen) return null;
 
   const agregarItem = () => {
-    const productoId = parseInt(productoSeleccionado);
-    const cant = parseInt(cantidadInput) || 0;
-    if (!productoId || cant <= 0) {
-      showWarning?.('Seleccione un producto y cantidad válida');
+    if (!productoSeleccionado) {
+      showWarning?.('Por favor selecciona un producto');
       return;
     }
-    const producto = productos.find(p => p.id_producto === productoId);
-    if (!producto) return;
+    
+    const cant = parseInt(cantidadInput) || 0;
+    if (cant <= 0) {
+      showWarning?.('Ingrese una cantidad válida');
+      return;
+    }
 
-    if (items.find(i => i.id_producto === productoId)) {
+    if (items.find(i => i.id_producto === productoSeleccionado.id_producto)) {
       showWarning?.('Este producto ya está agregado');
       return;
     }
-    setItems(prev => [...prev, { id_producto: productoId, cantidad: cant, nombre: producto.nombre, unidadMedidaId: producto.id_unidad_medida }]);
-    setProductoSeleccionado('');
+    
+    setItems(prev => [...prev, { 
+      id_producto: productoSeleccionado.id_producto, 
+      cantidad: cant, 
+      nombre: productoSeleccionado.nombre, 
+      unidadMedidaId: productoSeleccionado.id_unidad_medida 
+    }]);
+    
+    setProductoSeleccionado(null);
+    setBusquedaProducto('');
     setCantidadInput('1');
   };
 
@@ -84,7 +247,10 @@ export const ModalCrearPromocion: React.FC<ModalCrearPromocionProps> = ({ isOpen
 
     const precioNum = precio === '' ? null : (isNaN(Number(precio)) ? null : Number(precio));
 
-    onSubmit({ name: name.trim(), precio: precioNum, productos: items.map(i => ({ id_producto: i.id_producto, cantidad: i.cantidad })), estado: estado === '1' });
+    onSubmit(
+      { name: name.trim(), precio: precioNum, productos: items.map(i => ({ id_producto: i.id_producto, cantidad: i.cantidad })), estado: estado === '1' },
+      imageFile
+    );
   };
 
   return (
@@ -104,17 +270,73 @@ export const ModalCrearPromocion: React.FC<ModalCrearPromocionProps> = ({ isOpen
             <input type="number" value={precio} onChange={(e) => setPrecio(e.target.value)} placeholder="Precio de la promoción" />
           </div>
 
-          <div className="form-group">
-            <label>Producto</label>
-            <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-              <select value={productoSeleccionado} onChange={(e) => setProductoSeleccionado(e.target.value)} style={{ flex: 1 }}>
-                <option value="">Seleccionar producto</option>
-                {productos.map(p => (
-                  <option key={p.id_producto} value={p.id_producto}>{p.nombre}</option>
-                ))}
-              </select>
-              <input type="number" min={1} value={cantidadInput} onChange={(e) => setCantidadInput(e.target.value)} style={{ width: 90 }} />
-              <button className="btn-secondary" onClick={agregarItem} disabled={loading}>+ Agregar Producto</button>
+          <div className="form-group" style={{ position: 'relative' }} ref={productSearchRef}>
+            <label>Buscar y Agregar Productos</label>
+            <div style={{ display: 'flex', gap: 8, alignItems: 'flex-start' }}>
+              <div style={{ flex: 1, position: 'relative' }}>
+                <input
+                  type="text"
+                  value={busquedaProducto}
+                  onChange={(e) => {
+                    setBusquedaProducto(e.target.value);
+                    setShowProductosDropdown(true);
+                  }}
+                  onFocus={() => setShowProductosDropdown(true)}
+                  placeholder="Escribe para buscar productos..."
+                  style={{ width: '100%' }}
+                />
+                {showProductosDropdown && busquedaProducto && productosFiltrados.length > 0 && (
+                  <div style={{
+                    position: 'absolute',
+                    top: '100%',
+                    left: 0,
+                    right: 0,
+                    backgroundColor: 'white',
+                    border: '1px solid #ddd',
+                    borderRadius: '4px',
+                    maxHeight: '200px',
+                    overflowY: 'auto',
+                    zIndex: 1000,
+                    boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
+                    marginTop: '4px'
+                  }}>
+                    {productosFiltrados.map(p => (
+                      <div
+                        key={p.id_producto}
+                        onClick={() => seleccionarProducto(p)}
+                        style={{
+                          padding: '10px 12px',
+                          cursor: 'pointer',
+                          borderBottom: '1px solid #f0f0f0',
+                          fontSize: '14px'
+                        }}
+                        onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#f5f5f5'}
+                        onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'white'}
+                      >
+                        <div style={{ fontWeight: 500 }}>{p.nombre}</div>
+                        <div style={{ fontSize: '12px', color: '#666' }}>
+                          Stock: {p.stock} | ${p.id_unidad_medida === 1 ? (p.precioventa * 100).toFixed(2) : p.precioventa.toFixed(2)}{p.id_unidad_medida === 1 ? ' x100gr' : ''}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+              <input 
+                type="number" 
+                min={1} 
+                value={cantidadInput} 
+                onChange={(e) => setCantidadInput(e.target.value)} 
+                placeholder="Cantidad"
+                style={{ width: 100 }} 
+              />
+              <button 
+                className="btn-secondary" 
+                onClick={agregarItem}
+                disabled={loading || !productoSeleccionado}
+              >
+                + Agregar
+              </button>
             </div>
 
             {items.length > 0 && (
@@ -142,12 +364,113 @@ export const ModalCrearPromocion: React.FC<ModalCrearPromocionProps> = ({ isOpen
               <option value="2">Inactivo</option>
             </select>
           </div>
+
+          <div className="form-group">
+            <label>Imagen de la Promoción</label>
+            <input
+              type="file"
+              accept="image/*"
+              onChange={handleImageChange}
+              style={{ display: 'block', marginBottom: '0.5rem' }}
+            />
+            {imagePreview && (
+              <div style={{ marginTop: '0.5rem', position: 'relative', display: 'inline-block' }}>
+                <img 
+                  src={imagePreview} 
+                  alt="Preview" 
+                  style={{ maxWidth: '200px', maxHeight: '200px', borderRadius: '4px', border: '1px solid #ddd' }}
+                />
+                <button
+                  type="button"
+                  onClick={handleRemoveImage}
+                  style={{
+                    position: 'absolute',
+                    top: '5px',
+                    right: '5px',
+                    background: 'rgba(255, 0, 0, 0.8)',
+                    color: 'white',
+                    border: 'none',
+                    borderRadius: '50%',
+                    width: '24px',
+                    height: '24px',
+                    cursor: 'pointer',
+                    fontSize: '16px',
+                    lineHeight: '1',
+                    padding: '0'
+                  }}
+                >
+                  ×
+                </button>
+              </div>
+            )}
+            {!imagePreview && initialPromotion?.imagen_path && (
+              <div style={{ marginTop: '0.5rem' }}>
+                <img 
+                  src={getPromocionImageUrl(initialPromotion.imagen_path) || undefined} 
+                  alt="Imagen actual" 
+                  style={{ maxWidth: '200px', maxHeight: '200px', borderRadius: '4px', border: '1px solid #ddd' }}
+                />
+                <p style={{ fontSize: '0.85rem', color: '#666', marginTop: '0.25rem' }}>Imagen actual (sube una nueva para reemplazar)</p>
+              </div>
+            )}
+          </div>
         </div>
           <div className="modal-minimal-footer">
           <button className="btn-secondary" onClick={onClose} disabled={loading}>Cancelar</button>
           <button className="btn-primary" onClick={handleSubmit} disabled={loading}>{loading ? (initialPromotion ? 'Actualizando...' : 'Guardando...') : (initialPromotion ? 'Actualizar Promoción' : 'Crear Promoción')}</button>
         </div>
       </div>
+
+      {/* Modal de recorte de imagen */}
+      {showCropper && imageToCrop && (
+        <div className="modal-overlay" style={{ zIndex: 1002 }} onClick={handleCropCancel}>
+          <div 
+            className="modal-minimal" 
+            onClick={(e) => e.stopPropagation()}
+            style={{ maxWidth: '600px', height: '80vh', display: 'flex', flexDirection: 'column' }}
+          >
+            <div className="modal-minimal-header">
+              <h2>Recortar Imagen (1:1)</h2>
+              <button className="btn-close" onClick={handleCropCancel}>×</button>
+            </div>
+            <div style={{ position: 'relative', flex: 1, minHeight: 0, backgroundColor: '#000' }}>
+              <Cropper
+                image={imageToCrop}
+                crop={crop}
+                zoom={zoom}
+                aspect={1}
+                onCropChange={setCrop}
+                onZoomChange={setZoom}
+                onCropComplete={onCropComplete}
+              />
+            </div>
+            <div style={{ padding: '20px', borderTop: '1px solid #ddd' }}>
+              <div style={{ marginBottom: '20px' }}>
+                <label style={{ display: 'block', marginBottom: '8px', fontSize: '14px', fontWeight: 600 }}>
+                  Zoom
+                </label>
+                <input
+                  type="range"
+                  min={1}
+                  max={3}
+                  step={0.1}
+                  value={zoom}
+                  onChange={(e) => setZoom(Number(e.target.value))}
+                  style={{ width: '100%' }}
+                />
+              </div>
+              <div style={{ display: 'flex', gap: '12px' }}>
+                <button className="btn-secondary" onClick={handleCropCancel} style={{ flex: 1 }}>
+                  Cancelar
+                </button>
+                <button className="btn-primary" onClick={handleCropConfirm} style={{ flex: 1 }}>
+                  Confirmar Recorte
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
