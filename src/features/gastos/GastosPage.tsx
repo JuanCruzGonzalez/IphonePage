@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { Gasto } from '../../core/types';
+import { formatPrice } from '../../shared/utils';
 
 interface GastosPageProps {
   gastos: Gasto[];
@@ -25,14 +26,6 @@ export const GastosPage: React.FC<GastosPageProps> = ({
   const gastosActivos = gastos.filter(g => g.estado === true);
   const totalGastosActivos = gastosActivos.reduce((sum, g) => sum + g.costo, 0);
 
-  const formatCurrency = (n: number) => {
-    try {
-      return new Intl.NumberFormat('es-AR', { style: 'currency', currency: 'ARS' }).format(n);
-    } catch {
-      return `$${n.toFixed(2)}`;
-    }
-  };
-
   return (
     <div className="page">
       <div className="page-header">
@@ -48,7 +41,7 @@ export const GastosPage: React.FC<GastosPageProps> = ({
       <div className="stats-grid">
         <div className="stat-card-minimal">
           <div className="stat-label">Total Gastos Activos</div>
-          <div className="stat-value">{formatCurrency(totalGastosActivos)}</div>
+          <div className="stat-value">{formatPrice(totalGastosActivos)}</div>
         </div>
         <div className="stat-card-minimal">
           <div className="stat-label">Gastos Activos</div>
@@ -99,7 +92,7 @@ export const GastosPage: React.FC<GastosPageProps> = ({
                   <tr key={gasto.id_gasto}>
                     <td className="font-medium">#{gasto.id_gasto}</td>
                     <td>{gasto.descripcion || <span className="text-muted">Sin descripción</span>}</td>
-                    <td className="font-medium">{formatCurrency(gasto.costo)}</td>
+                    <td className="font-medium">{formatPrice(gasto.costo)}</td>
                     <td>
                       <span className={`status-badge ${gasto.estado ? 'active' : 'inactive'}`}>
                         {gasto.estado ? 'Activo' : 'Inactivo'}

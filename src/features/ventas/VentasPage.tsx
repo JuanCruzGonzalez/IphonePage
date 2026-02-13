@@ -1,5 +1,15 @@
 import React, { useState } from 'react';
 import { VentaConDetalles, Gasto } from '../../core/types';
+import {
+  calculateVentaTotal,
+  calculateMetrics,
+  dateToYMD,
+  formatDate,
+  getTodayYMD,
+  formatCurrency,
+  getCurrentMonthRange,
+  filterByDateRange
+} from '../../shared/utils';
 
 interface VentasPageProps {
   ventas: VentaConDetalles[];
@@ -45,73 +55,14 @@ export const VentasPage: React.FC<VentasPageProps> = ({ ventas, gastos = [], tot
 
   const [ventaSeleccionada, setVentaSeleccionada] = useState<VentaConDetalles | null>(null);
 
-  const calcularTotalVenta = (venta: VentaConDetalles) => {
-    return venta.detalle_venta.reduce((total, detalle) => {
-      return total + (detalle.cantidad * detalle.precio_unitario); // ✅ Usa el precio guardado
-    }, 0);
-  };
-
-  // Formateo de fechas sin efecto de zona horaria (evita -1 día)
-  const fechaToYMD = (fecha: string | null | undefined) => {
-    if (!fecha) return '';
-    const m = fecha.match(/^(\d{4})-(\d{2})-(\d{2})/);
-    if (m) return `${m[1]}-${m[2]}-${m[3]}`;
-    const d = new Date(fecha);
-    if (isNaN(d.getTime())) return fecha;
-    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
-  };
-
-  const formatDate = (fecha: string | null | undefined) => {
-    const ymd = fechaToYMD(fecha);
-    if (!ymd) return '';
-    const [y, m, d] = ymd.split('-').map(Number);
-    // Construir Date con componentes locales (evita convertir desde UTC)
-    const local = new Date(y, m - 1, d);
-    return local.toLocaleDateString('es-ES');
-  };
-
-  // const totalVentas = ventas.length; // no longer displayed directly; kept for compatibility if needed
-  const hoy = new Date().toISOString().split('T')[0];
-  const ventasHoy = ventas.filter(v => fechaToYMD(v.fecha) === hoy).length;
-
-  const formatCurrency = (n: number) => {
-    try { return new Intl.NumberFormat('es-AR', { style: 'currency', currency: 'ARS' }).format(n); } catch { return `$${n.toFixed(2)}`; }
-  };
-
-  const computeMetrics = (list: VentaConDetalles[], gastosActivos: Gasto[]) => {
-    let revenue = 0;
-    let cost = 0;
-    for (const venta of list) {
-      for (const d of venta.detalle_venta) {
-        const qty = d.cantidad || 0;
-        const price = d.precio_unitario || 0;
-        const prodCost = d.producto?.costo ?? 0;
-        revenue += qty * price;
-        cost += qty * prodCost;
-      }
-    }
-    // Agregar gastos activos al costo
-    const totalGastos = gastosActivos.reduce((sum, g) => sum + g.costo, 0);
-    cost += totalGastos;
-    
-    const profit = revenue - cost;
-    return { revenue, cost, profit, gastos: totalGastos };
-  };
+  const hoy = getTodayYMD();
+  const ventasHoy = ventas.filter(v => dateToYMD(v.fecha) === hoy).length;
 
   // ventas del mes actual
-  const ventasMesActual = (() => {
-    const now = new Date();
-    const firstOfThisMonth = new Date(now.getFullYear(), now.getMonth(), 1);
-    const lastDay = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
-    const firstYMD = `${firstOfThisMonth.getFullYear()}-${String(firstOfThisMonth.getMonth() + 1).padStart(2, '0')}-01`;
-    const lastYMD = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(lastDay).padStart(2, '0')}`;
-    return ventas.filter(v => {
-      const ymd = fechaToYMD(v.fecha);
-      return ymd >= firstYMD && ymd <= lastYMD;
-    });
-  })();
+  const monthRange = getCurrentMonthRange();
+  const ventasMesActual = filterByDateRange(ventas, monthRange, (v) => dateToYMD(v.fecha));
   const gastosActivos = gastos.filter(g => g.estado === true);
-  const metricsMesActual = computeMetrics(ventasMesActual, gastosActivos);
+  const metricsMesActual = calculateMetrics(ventasMesActual, gastosActivos);
 
   return (
     <div className="page">
@@ -213,7 +164,7 @@ export const VentasPage: React.FC<VentasPageProps> = ({ ventas, gastos = [], tot
                     <td className="text-muted">#{venta.id_venta}</td>
                     <td>{formatDate(venta.fecha)}</td>
                     <td>{venta.detalle_venta.length} producto(s)</td>
-                    <td><strong>${calcularTotalVenta(venta)}</strong></td>
+                    <td><strong>${calculateVentaTotal(venta)}</strong></td>
                     <td>
                       <span className={`status-badge ${venta.estado ? 'active' : 'inactive'}`}>
                         {venta.estado ? 'Pagada' : 'Se debe'}
@@ -388,7 +339,7 @@ export const VentasPage: React.FC<VentasPageProps> = ({ ventas, gastos = [], tot
                 fontWeight: 'bold'
               }}>
                 <span>Total:</span>
-                <span>${calcularTotalVenta(ventaSeleccionada)}</span>
+                <span>${calculateVentaTotal(ventaSeleccionada)}</span>
               </div>
             </div>
           </div>

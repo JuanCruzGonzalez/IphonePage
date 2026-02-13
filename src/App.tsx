@@ -1,7 +1,8 @@
 import { useState, useEffect } from 'react';
 import './core/styles/app.css';
 import './core/styles/toast.css';
-import { Producto, VentaConDetalles, UnidadMedida, Promocion, DetalleVentaInput, PromocionConDetalles, Gasto, Categoria } from './core/types';
+import { VentaConDetalles, UnidadMedida, Promocion, DetalleVentaInput, PromocionConDetalles, Gasto, Categoria } from './core/types';
+import { getTodayISO } from './shared/utils';
 import {
   createVenta,
   reactivarVenta,
@@ -9,23 +10,17 @@ import {
   getVentasPage,
 } from './features/ventas/services/ventaService';
 import {
-  
   getProductosActivos,
-  getProductosPage,
-  createProducto,
-  updateStockProducto,
   getUnidadesMedidas,
-  updateProducto,
-  updateProductoEstado,
 } from './features/productos/services/productoService';
-import { uploadProductImage, updateProductImage } from './shared/services/storageService';
 import { getPromocionesActivas, getPromociones,updatePromocion, deletePromocion, getDetallePromocion } from './features/promociones/services/promocionService';
 import { getGastos, createGasto, updateGasto, updateGastoEstado } from './features/gastos/services/gastoService';
-import { getCategorias, createCategoria, updateCategoria, updateCategoriaEstado, getCategoriasDeProducto, asignarCategoriasAProducto } from './features/categorias/services/categoriaService';
+import { getCategorias, createCategoria, updateCategoria, updateCategoriaEstado } from './features/categorias/services/categoriaService';
 import ModalVerPromocion from './features/promociones/components/ModalVerPromocion';
 import { Sidebar } from './shared/components/Sidebar';
 import { VentasPage } from './features/ventas/VentasPage';
 import { ProductosPage } from './features/productos/ProductosPage';
+import { ProductosProvider } from './features/productos/context/ProductosContext';
 import { StockPage } from './features/stock/StockPage';
 import { PromocionesPage } from './features/promociones/PromocionesPage';
 import { GastosPage } from './features/gastos/GastosPage';
@@ -48,12 +43,8 @@ function App() {
   const [ventas, setVentas] = useState<VentaConDetalles[]>([]);
   const [ventasPageNum, setVentasPageNum] = useState(1);
   const [ventasTotal, setVentasTotal] = useState(0);
-  const [productos, setProductos] = useState<Producto[]>([]);
-  const [productosPageNum, setProductosPageNum] = useState(1);
-  const [productosTotal, setProductosTotal] = useState(0);
-  const PAGE_SIZE = 8;
   const VENTAS_PAGE_SIZE = 8;
-  const [productosActivos, setProductosActivos] = useState<Producto[]>([]);
+  const [productosActivos, setProductosActivos] = useState<any[]>([]); // Para modales
   const [promocionesActivas, setPromocionesActivas] = useState<Promocion[]>([]);
   const [promociones, setPromociones] = useState<Promocion[]>([]);
   const [promocionToEdit, setPromocionToEdit] = useState<PromocionConDetalles | null>(null);
@@ -62,15 +53,11 @@ function App() {
   const [gastoToEdit, setGastoToEdit] = useState<Gasto | null>(null);
   const [categorias, setCategorias] = useState<Categoria[]>([]);
   const [categoriaToEdit, setCategoriaToEdit] = useState<Categoria | null>(null);
-  const [categoriasDeProducto, setCategoriasDeProducto] = useState<number[]>([]);
   const modalCrearPromocion = useModal(false);
   const [error, setError] = useState<string | null>(null);
 
   // Estados para modales
   const modalNuevaVenta = useModal(false);
-  const modalNuevoProducto = useModal(false);
-  const [productToEdit, setProductToEdit] = useState<null | any>(null);
-  const modalActualizarStock = useModal(false);
   const modalGasto = useModal(false);
   const modalCategoria = useModal(false);
 
@@ -86,10 +73,6 @@ function App() {
   }, []);
 
   const initAsync = useAsync<void>();
-  const buscarProductosAsync = useAsync<any[]>();
-  const crearProductoAsync = useAsync<any>();
-  const editarProductoAsync = useAsync<any>();
-  const actualizarStockAsync = useAsync<any>();
   const crearVentaAsync = useAsync<any>();
   const crearPromocionAsync = useAsync<any>();
   const editarPromocionAsync = useAsync<any>();
@@ -105,15 +88,13 @@ function App() {
       let timer: any | null = null;
       timer = setTimeout(() => {
         if (initAsync.loading) {
-          console.error('Carga inicial tardó demasiado — forzando reset de estado de carga');
           initAsync.reset();
           setError('La carga tardó demasiado. Intenta recargar la página.');
         }
       }, 15000);
 
       await initAsync.execute(async () => {
-        // Load first page of productos (with total) and first page of ventas, plus other data in parallel
-        const productosPagePromise = getProductosPage(1, PAGE_SIZE, '');
+        // Load first page of ventas and other data in parallel (productos handled by ProductosContext)
         const ventasPagePromise = getVentasPage(1, VENTAS_PAGE_SIZE, { baja: false });
         const othersPromise = Promise.all([
           getProductosActivos(),
@@ -124,16 +105,12 @@ function App() {
           getCategorias(),
         ]);
 
-        const [productosPageResult, ventasPageResult, [productosActivosData, unidadesData, promocionesActivasData, promocionesData, gastosData, categoriasData]] = await Promise.all([
-          productosPagePromise,
+        const [ventasPageResult, [productosActivosData, unidadesData, promocionesActivasData, promocionesData, gastosData, categoriasData]] = await Promise.all([
           ventasPagePromise,
           othersPromise,
         ]);
 
-        setProductos(productosPageResult.productos);
-        setProductosTotal(productosPageResult.total);
-        setProductosPageNum(1);
-        setProductosActivos(productosActivosData);
+        setProductosActivos(productosActivosData || []); // Para modales
         setUnidadesMedida(unidadesData || []);
         setVentas(ventasPageResult.ventas || []);
         setVentasTotal(ventasPageResult.total || 0);
@@ -149,25 +126,11 @@ function App() {
         timer = null;
       }
     } catch (err) {
-      console.error('❌ Error al cargar los datos:', err);
       setError('Error al cargar los datos: ' + (err as Error).message);
     }
   };
 
   // Load a specific page of productos (with optional search filter q)
-  const loadProductosPage = async (page = 1, q = '') => {
-    try {
-      const { productos: pageRows, total } = await getProductosPage(page, PAGE_SIZE, q);
-      console.debug('[loadProductosPage] page=', page, 'pageSize=', PAGE_SIZE, 'returned=', (pageRows || []).length, 'total=', total);
-      setProductos(pageRows || []);
-      setProductosTotal(total || 0);
-      setProductosPageNum(page);
-    } catch (err) {
-      console.error('Error cargando página de productos:', err);
-      showError('Error cargando productos');
-    }
-  };
-
   const handleToggleVentaFlag = (
     id_venta: number,
     field: 'estado' | 'baja',
@@ -215,7 +178,6 @@ function App() {
           await cargarDatos();
           showSuccess(`Venta ${updated.id_venta} actualizada correctamente`);
         } catch (err) {
-          console.error(`Error al actualizar ${field} de venta:`, err);
           const e: any = err;
           const message =
             e?.message ||
@@ -232,14 +194,13 @@ function App() {
   // Handlers para crear venta
   const handleNuevaVenta = async (items: DetalleVentaInput[], pagada: boolean) => {
     try {
-      const fecha = new Date().toISOString().split('T')[0];
+      const fecha = getTodayISO();
       await crearVentaAsync.execute(() => createVenta(fecha, items, pagada));
       await cargarDatos();
       modalNuevaVenta.close();
       showSuccess('Venta registrada exitosamente');
     } catch (err) {
       showError('Error al registrar la venta');
-      console.error(err);
     }
   };
 
@@ -272,7 +233,6 @@ function App() {
       await cargarDatos();
       modalCrearPromocion.close();
     } catch (err) {
-      console.error('Error creando/actualizando promocion:', err);
       showError('Error al crear o actualizar la promoción');
     }
   };
@@ -284,7 +244,6 @@ function App() {
       setPromocionToEdit({ ...promocion, productos: productosConCantidad });
       modalCrearPromocion.open();
     } catch (err) {
-      console.error('Error cargando detalle promocion para editar:', err);
       showError('No se pudo cargar los detalles de la promoción');
     }
   };
@@ -299,7 +258,6 @@ function App() {
           await cargarDatos();
           showSuccess(`Promoción ${estado ? 'dada de alta' : 'dada de baja'} correctamente`);
         } catch (err) {
-          console.error('Error eliminando promocion:', err);
           showError('No se pudo eliminar la promoción');
         }
       },
@@ -314,7 +272,6 @@ function App() {
       setPromocionVistaDetalles(detalles || []);
       modalVerPromocion.open();
     } catch (err) {
-      console.error('Error al cargar detalles de promocion:', err);
       showError('No se pudieron cargar los detalles de la promoción');
     }
   };
@@ -332,7 +289,6 @@ function App() {
       setVentasTotal(total || 0);
       setVentasPageNum(1);
     } catch (err) {
-      console.error('Error al buscar ventas:', err);
       const e: any = err;
       const message = e?.message || e?.error || (typeof e === 'string' ? e : JSON.stringify(e));
       showError(message || 'Error buscando ventas');
@@ -345,209 +301,11 @@ function App() {
     try {
       const safeOpts = { ...(opts || {}), baja: typeof opts?.baja === 'boolean' ? opts!.baja : false };
       const { ventas: pageRows, total } = await getVentasPage(page, VENTAS_PAGE_SIZE, safeOpts);
-      console.debug('[loadVentasPage] page=', page, 'pageSize=', VENTAS_PAGE_SIZE, 'returned=', (pageRows || []).length, 'total=', total);
       setVentas(pageRows || []);
       setVentasTotal(total || 0);
       setVentasPageNum(page);
     } catch (err) {
-      console.error('Error cargando página de ventas:', err);
       showError('Error cargando ventas');
-    }
-  };
-
-  // Handlers para crear producto
-  const handleNuevoProducto = async (producto: { 
-    nombre: string; 
-    descripcion: string; 
-    stock: number; 
-    costo: number; 
-    precioventa: number; 
-    unidadMedida: number; 
-    estado: boolean; 
-    vencimiento?: Date | null;
-    promocionActiva?: boolean;
-    precioPromocion?: number | null;
-  }, imageFile?: File | null, categoriasIds?: number[]) => {
-    try {
-      const createdProduct = await crearProductoAsync.execute(() => createProducto({
-        nombre: producto.nombre,
-        descripcion: producto.descripcion || null,
-        stock: producto.stock,
-        costo: producto.costo,
-        precioventa: producto.precioventa,
-        precio_promocion: producto.precioPromocion || null,
-        promocion_activa: producto.promocionActiva || false,
-        id_unidad_medida: producto.unidadMedida,
-        estado: producto.estado,
-        vencimiento: producto.vencimiento || undefined,
-      }));
-      
-      // Si hay una imagen, subirla y actualizar el producto
-      if (imageFile && createdProduct) {
-        try {
-          const imagePath = await uploadProductImage(imageFile, createdProduct.id_producto);
-          await updateProducto(createdProduct.id_producto, { imagen_path: imagePath });
-        } catch (imgErr) {
-          console.error('Error al subir la imagen:', imgErr);
-          showWarning('Producto creado pero no se pudo subir la imagen');
-        }
-      }
-
-      // Asignar categorías si hay
-      if (createdProduct && categoriasIds && categoriasIds.length > 0) {
-        try {
-          await asignarCategoriasAProducto(createdProduct.id_producto, categoriasIds);
-        } catch (catErr) {
-          console.error('Error al asignar categorías:', catErr);
-          showWarning('Producto creado pero no se pudieron asignar las categorías');
-        }
-      }
-      
-      await cargarDatos();
-      modalNuevoProducto.close();
-      setCategoriasDeProducto([]);
-      showSuccess('Producto agregado exitosamente');
-    } catch (err) {
-      showError('Error al agregar el producto');
-      console.error(err);
-    }
-  };
-
-  // Buscar productos a partir de texto (desde ProductosPage)
-  const handleBuscarProductos = async (texto: string) => {
-    try {
-      // Use paginated API for searches as well (reset to page 1)
-      const { productos: pageRows, total } = await getProductosPage(1, PAGE_SIZE, texto);
-      setProductos(pageRows || []);
-      setProductosTotal(total || 0);
-      setProductosPageNum(1);
-    } catch (err) {
-      console.error('Error al buscar productos:', err);
-      const e: any = err;
-      const message = e?.message || e?.error || (typeof e === 'string' ? e : JSON.stringify(e));
-      showError(message || 'Error buscando productos');
-    }
-  };
-
-  // Handler para editar un producto existente
-  const handleEditarProducto = async (producto: { 
-    nombre: string; 
-    descripcion: string; 
-    stock: number; 
-    costo: number; 
-    precioventa: number; 
-    unidadMedida: number; 
-    estado: boolean; 
-    vencimiento?: Date | null;
-    promocionActiva?: boolean;
-    precioPromocion?: number | null;
-  }, imageFile?: File | null, categoriasIds?: number[]) => {
-    if (!productToEdit) return;
-    try {
-      // Si hay una nueva imagen, subirla (esto reemplazará la anterior automáticamente)
-      let imagenPath = productToEdit.imagen_path;
-      if (imageFile) {
-        try {
-          imagenPath = await updateProductImage(imageFile, productToEdit.id_producto, productToEdit.imagen_path || undefined);
-        } catch (imgErr) {
-          console.error('Error al actualizar la imagen:', imgErr);
-          showWarning('Se actualizará el producto sin cambiar la imagen');
-        }
-      }
-      
-      const updated = await editarProductoAsync.execute(() => updateProducto(productToEdit.id_producto, {
-        nombre: producto.nombre,
-        descripcion: producto.descripcion || null,
-        stock: producto.stock,
-        costo: producto.costo,
-        precioventa: producto.precioventa,
-        precio_promocion: producto.precioPromocion || null,
-        promocion_activa: producto.promocionActiva || false,
-        id_unidad_medida: producto.unidadMedida,
-        estado: producto.estado,
-        vencimiento: producto.vencimiento || undefined,
-        imagen_path: imagenPath,
-      }));
-      if (!updated) {
-        showError('No se pudo actualizar el producto');
-        return;
-      }
-
-      // Actualizar categorías
-      if (categoriasIds !== undefined) {
-        try {
-          await asignarCategoriasAProducto(productToEdit.id_producto, categoriasIds);
-        } catch (catErr) {
-          console.error('Error al actualizar categorías:', catErr);
-          showWarning('Producto actualizado pero no se pudieron actualizar las categorías');
-        }
-      }
-
-      await cargarDatos();
-      modalNuevoProducto.close();
-      setProductToEdit(null);
-      setCategoriasDeProducto([]);
-      showSuccess('Producto actualizado exitosamente');
-    } catch (err) {
-      showError('Error al actualizar el producto');
-      console.error(err);
-    }
-  };
-
-  const openEditarProducto = async (producto: any) => {
-    setProductToEdit(producto);
-    // Cargar categorías del producto
-    try {
-      const categoriasData = await getCategoriasDeProducto(producto.id_producto);
-      setCategoriasDeProducto(categoriasData.map(c => c.id_categoria));
-    } catch (err) {
-      console.error('Error al cargar categorías del producto:', err);
-      setCategoriasDeProducto([]);
-    }
-    modalNuevoProducto.open();
-  };
-
-  // Handler para activar/desactivar producto con confirmación
-  const handleToggleProductoEstado = (id_producto: number, currentEstado: boolean, nombre?: string) => {
-    showConfirm(
-      currentEstado ? 'Dar de baja producto' : 'Dar de alta producto',
-      `¿Seguro que quieres ${currentEstado ? 'dar de baja' : 'dar de alta'} el producto ${nombre ?? '#' + id_producto}?`,
-      async () => {
-        try {
-          const updated = await updateProductoEstado(id_producto, !currentEstado);
-          if (!updated) {
-            showError(`No se encontró el producto #${id_producto}`);
-            return;
-          }
-          await cargarDatos();
-          showSuccess(`Producto ${updated.nombre} actualizado correctamente`);
-        } catch (err) {
-          console.error('Error al actualizar estado de producto:', err);
-          const e: any = err;
-          const message = e?.message || e?.error || (typeof e === 'string' ? e : JSON.stringify(e));
-          showError(message || 'No se pudo actualizar el estado del producto');
-        }
-      },
-      'warning'
-    );
-  };
-
-  // Handlers para actualizar stock
-  const handleActualizarStock = async (productoId: number, cantidad: number) => {
-    try {
-      const producto = productos.find(p => p.id_producto === productoId);
-      if (!producto) return;
-
-      const nuevoStock = producto.stock + cantidad;
-
-      await actualizarStockAsync.execute(() => updateStockProducto(productoId, nuevoStock));
-      modalActualizarStock.close();  // ✅ Cerrar modal ANTES de recargar
-      await cargarDatos();  // ✅ Recargar datos
-
-      showSuccess(`Stock actualizado: ${producto.nombre} ahora tiene ${nuevoStock} unidades`);
-    } catch (err) {
-      showError('Error al actualizar el stock');
-      console.error(err);
     }
   };
 
@@ -582,7 +340,6 @@ function App() {
       setGastos(gastosData || []);
     } catch (err) {
       showError(gastoToEdit ? 'Error al actualizar el gasto' : 'Error al crear el gasto');
-      console.error(err);
     }
   };
 
@@ -601,7 +358,6 @@ function App() {
           showSuccess(`Gasto ${estadoActual ? 'desactivado' : 'activado'} correctamente`);
         } catch (err) {
           showError(`Error al ${mensaje} el gasto`);
-          console.error(err);
         }
       },
       estadoActual ? 'danger' : 'info'
@@ -639,7 +395,6 @@ function App() {
       setCategorias(categoriasData || []);
     } catch (err) {
       showError(categoriaToEdit ? 'Error al actualizar la categoría' : 'Error al crear la categoría');
-      console.error(err);
     }
   };
 
@@ -657,13 +412,11 @@ function App() {
           showSuccess(`Categoría ${estadoActual ? 'desactivada' : 'activada'} correctamente`);
         } catch (err) {
           showError(`Error al ${mensaje} la categoría`);
-          console.error(err);
         }
       },
       estadoActual ? 'danger' : 'info'
     );
   };
-
 
   if (initAsync.loading) {
     return (
@@ -689,163 +442,137 @@ function App() {
   }
 
   return (
-    <div className="app-container">
-      <Sidebar activeSection={activeSection} onSectionChange={setActiveSection} />
+    <ProductosProvider
+      showSuccess={showSuccess}
+      showError={showError}
+      showWarning={showWarning}
+      showConfirm={showConfirm}
+    >
+      <div className="app-container">
+        <Sidebar activeSection={activeSection} onSectionChange={setActiveSection} />
 
-      <main className="main-content">
-        {activeSection === 'ventas' && (
-          <VentasPage
-            ventas={ventas}
-            gastos={gastos}
-            total={ventasTotal}
-            page={ventasPageNum}
-            pageSize={VENTAS_PAGE_SIZE}
-            onPageChange={(p, opts) => loadVentasPage(p, opts)}
-            onNuevaVenta={modalNuevaVenta.open}
-            onToggleVentaFlag={handleToggleVentaFlag}
-            onSearch={handleBuscarVentas}
-          />
-        )}
+        <main className="main-content">
+          {activeSection === 'ventas' && (
+            <VentasPage
+              ventas={ventas}
+              gastos={gastos}
+              total={ventasTotal}
+              page={ventasPageNum}
+              pageSize={VENTAS_PAGE_SIZE}
+              onPageChange={(p, opts) => loadVentasPage(p, opts)}
+              onNuevaVenta={modalNuevaVenta.open}
+              onToggleVentaFlag={handleToggleVentaFlag}
+              onSearch={handleBuscarVentas}
+            />
+          )}
 
-        {activeSection === 'productos' && (
-          <ProductosPage
-            productos={productos}
-            total={productosTotal}
-            page={productosPageNum}
-            pageSize={PAGE_SIZE}
-            onPageChange={(p) => loadProductosPage(p)}
-            onNuevoProducto={modalNuevoProducto.open}
-            onEditarProducto={openEditarProducto}
-            onToggleProductoEstado={(id, estado, nombre) => handleToggleProductoEstado(id, estado, nombre)}
-            onSearch={handleBuscarProductos}
-            searchLoading={buscarProductosAsync.loading}
-          />
-        )}
+          {activeSection === 'productos' && <ProductosPage />}
 
-        {activeSection === 'stock' && (
-          <StockPage
-            productos={productosActivos}
-            onActualizarStock={modalActualizarStock.open}
-          />
-        )}
-        {activeSection === 'promociones' && (
-          <PromocionesPage
-            promociones={promociones}
-            onNuevoPromocion={modalCrearPromocion.open}
-            onEditPromocion={handleEditarPromocion}
-            onChangePromocion={handleChangePromocion}
-            onViewPromocion={handleVerPromocion}
-          />
-        )}
-        {activeSection === 'gastos' && (
-          <GastosPage
-            gastos={gastos}
-            onNuevoGasto={handleNuevoGasto}
-            onEditarGasto={handleEditarGasto}
-            onToggleEstado={handleToggleGastoEstado}
-          />
-        )}
-        {activeSection === 'categorias' && (
-          <CategoriasPage
-            categorias={categorias}
-            onNuevaCategoria={handleNuevaCategoria}
-            onEditarCategoria={handleEditarCategoria}
-            onToggleEstado={handleToggleCategoriaEstado}
-          />
-        )}
-      </main>
+          {activeSection === 'stock' && <StockPage />}
 
-      {/* Modales */}
-      <ModalNuevaVenta
-        isOpen={modalNuevaVenta.isOpen}
-        onClose={modalNuevaVenta.close}
-        productos={productosActivos}
-        promociones={promocionesActivas}
-        onSubmit={handleNuevaVenta}
-        // Pasa las funciones de toast y confirm a los modales
-        showToast={showSuccess}
-        showError={showError}
-        showWarning={showWarning}
-        showConfirm={showConfirm}
-        loading={crearVentaAsync.loading}
-      />
+          {activeSection === 'promociones' && (
+            <PromocionesPage
+              promociones={promociones}
+              onNuevoPromocion={modalCrearPromocion.open}
+              onEditPromocion={handleEditarPromocion}
+              onChangePromocion={handleChangePromocion}
+              onViewPromocion={handleVerPromocion}
+            />
+          )}
+          {activeSection === 'gastos' && (
+            <GastosPage
+              gastos={gastos}
+              onNuevoGasto={handleNuevoGasto}
+              onEditarGasto={handleEditarGasto}
+              onToggleEstado={handleToggleGastoEstado}
+            />
+          )}
+          {activeSection === 'categorias' && (
+            <CategoriasPage
+              categorias={categorias}
+              onNuevaCategoria={handleNuevaCategoria}
+              onEditarCategoria={handleEditarCategoria}
+              onToggleEstado={handleToggleCategoriaEstado}
+            />
+          )}
+        </main>
 
-      <ModalCrearPromocion
-        isOpen={modalCrearPromocion.isOpen}
-        onClose={modalCrearPromocion.close}
-        productos={productosActivos}
-        initialPromotion={promocionToEdit ? { ...promocionToEdit, productos: promocionToEdit.productos ?? [] } : undefined}
-        onSubmit={handleCrearPromocion}
-        showError={showError}
-        showWarning={showWarning}
-        loading={crearPromocionAsync.loading}
-      />
+        {/* Modales */}
+        <ModalNuevaVenta
+          isOpen={modalNuevaVenta.isOpen}
+          onClose={modalNuevaVenta.close}
+          productos={productosActivos}
+          promociones={promocionesActivas}
+          onSubmit={handleNuevaVenta}
+          // Pasa las funciones de toast y confirm a los modales
+          showToast={showSuccess}
+          showError={showError}
+          showWarning={showWarning}
+          showConfirm={showConfirm}
+          loading={crearVentaAsync.loading}
+        />
 
-      <ModalVerPromocion
-        isOpen={modalVerPromocion.isOpen}
-        onClose={() => { modalVerPromocion.close(); setPromocionVista(null); setPromocionVistaDetalles([]); }}
-        promocion={promocionVista}
-        detalles={promocionVistaDetalles}
-        productosCatalogo={productos}
-      />
+        <ModalCrearPromocion
+          isOpen={modalCrearPromocion.isOpen}
+          onClose={modalCrearPromocion.close}
+          productos={productosActivos}
+          initialPromotion={promocionToEdit ? { ...promocionToEdit, productos: promocionToEdit.productos ?? [] } : undefined}
+          onSubmit={handleCrearPromocion}
+          showError={showError}
+          showWarning={showWarning}
+          loading={crearPromocionAsync.loading}
+        />
 
-      <ModalNuevoProducto
-        isOpen={modalNuevoProducto.isOpen}
-        unidadesMedida={unidadesMedida}
-        categorias={categorias}
-        onClose={() => { modalNuevoProducto.close(); setProductToEdit(null); setCategoriasDeProducto([]); }}
-        onSubmit={productToEdit ? handleEditarProducto : handleNuevoProducto}
-        initialProduct={productToEdit}
-        categoriasIniciales={categoriasDeProducto}
-        showError={showError}
-        showWarning={showWarning}
-        loading={productToEdit ? editarProductoAsync.loading : crearProductoAsync.loading}
-      />
+        <ModalVerPromocion
+          isOpen={modalVerPromocion.isOpen}
+          onClose={() => { modalVerPromocion.close(); setPromocionVista(null); setPromocionVistaDetalles([]); }}
+          promocion={promocionVista}
+          detalles={promocionVistaDetalles}
+          productosCatalogo={productosActivos}
+        />
 
-      <ModalActualizarStock
-        isOpen={modalActualizarStock.isOpen}
-        onClose={modalActualizarStock.close}
-        productos={productos}
-        onSubmit={handleActualizarStock}
-        showError={showError}
-        showWarning={showWarning}
-        loading={actualizarStockAsync.loading}
-      />
+        <ModalNuevoProducto
+          categorias={categorias}
+          unidadesMedida={unidadesMedida}
+        />
 
-      <ModalGasto
-        isOpen={modalGasto.isOpen}
-        onClose={() => { modalGasto.close(); setGastoToEdit(null); }}
-        onSubmit={handleSubmitGasto}
-        initialGasto={gastoToEdit}
-        loading={gastoToEdit ? actualizarGastoAsync.loading : crearGastoAsync.loading}
-      />
+        <ModalActualizarStock />
 
-      <ModalCategoria
-        isOpen={modalCategoria.isOpen}
-        onClose={() => { modalCategoria.close(); setCategoriaToEdit(null); }}
-        onSubmit={handleSubmitCategoria}
-        initialCategoria={categoriaToEdit}
-        loading={categoriaToEdit ? actualizarCategoriaAsync.loading : crearCategoriaAsync.loading}
-      />
+        <ModalGasto
+          isOpen={modalGasto.isOpen}
+          onClose={() => { modalGasto.close(); setGastoToEdit(null); }}
+          onSubmit={handleSubmitGasto}
+          initialGasto={gastoToEdit}
+          loading={gastoToEdit ? actualizarGastoAsync.loading : crearGastoAsync.loading}
+        />
 
-      {/* Toast Notification */}
-      <Toast
-        isOpen={toast.isOpen}
-        message={toast.message}
-        type={toast.type}
-        onClose={hideToast}
-      />
+        <ModalCategoria
+          isOpen={modalCategoria.isOpen}
+          onClose={() => { modalCategoria.close(); setCategoriaToEdit(null); }}
+          onSubmit={handleSubmitCategoria}
+          initialCategoria={categoriaToEdit}
+          loading={categoriaToEdit ? actualizarCategoriaAsync.loading : crearCategoriaAsync.loading}
+        />
 
-      {/* Confirm Modal */}
-      <ConfirmModal
-        isOpen={confirm.isOpen}
-        onClose={hideConfirm}
-        onConfirm={confirm.onConfirm}
-        title={confirm.title}
-        message={confirm.message}
-        type={confirm.type}
-      />
-    </div>
+        {/* Toast Notification */}
+        <Toast
+          isOpen={toast.isOpen}
+          message={toast.message}
+          type={toast.type}
+          onClose={hideToast}
+        />
+
+        {/* Confirm Modal */}
+        <ConfirmModal
+          isOpen={confirm.isOpen}
+          onClose={hideConfirm}
+          onConfirm={confirm.onConfirm}
+          title={confirm.title}
+          message={confirm.message}
+          type={confirm.type}
+        />
+      </div>
+    </ProductosProvider>
   );
 }
 

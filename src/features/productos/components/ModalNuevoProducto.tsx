@@ -3,55 +3,33 @@ import Cropper from 'react-easy-crop';
 import 'react-easy-crop/react-easy-crop.css';
 import { UnidadMedida, Categoria } from '../../../core/types';
 import { getProductImageUrl } from '../../../shared/services/storageService';
+import { useProductos } from '../context/ProductosContext';
 
 interface ModalNuevoProductoProps {
-  isOpen: boolean;
-  onClose: () => void;
   unidadesMedida: UnidadMedida[];
   categorias: Categoria[];
-  onSubmit: (producto: { 
-    nombre: string; 
-    descripcion: string; 
-    stock: number; 
-    costo: number; 
-    precioventa: number; 
-    unidadMedida: number; 
-    estado: boolean; 
-    vencimiento?: Date | null;
-    promocionActiva?: boolean;
-    precioPromocion?: number | null;
-  }, imageFile?: File | null, categoriasIds?: number[]) => void;
-  initialProduct?: {
-    id_producto: number;
-    nombre: string;
-    descripcion: string | null;
-    stock: number;
-    costo: number;
-    precioventa: number;
-    id_unidad_medida: number;
-    estado: boolean;
-    vencimiento?: Date | null;
-    imagen_path?: string | null;
-    promocion_activa?: boolean;
-    precio_promocion?: number | null;
-  } | null;
-  showError?: (message: string) => void;
-  showWarning?: (message: string) => void;
-  loading?: boolean;
-  categoriasIniciales?: number[];
 }
 
 export const ModalNuevoProducto: React.FC<ModalNuevoProductoProps> = ({ 
-  isOpen, 
-  onClose, 
   unidadesMedida,
   categorias,
-  onSubmit,
-  showWarning,
-  initialProduct = null,
-  loading = false,
-  categoriasIniciales = [],
 }) => {
+  const { 
+    modalNuevoProducto, 
+    productToEdit,
+    categoriasDeProducto,
+    handleNuevoProducto,
+    handleEditarProducto,
+    crearProductoAsync,
+    editarProductoAsync,
+  } = useProductos();
+
+  const isOpen = modalNuevoProducto.isOpen;
+  const onClose = modalNuevoProducto.close;
+  const initialProduct = productToEdit;
+  const loading = productToEdit ? editarProductoAsync.loading : crearProductoAsync.loading;
+  const categoriasIniciales = categoriasDeProducto;
+
   const [nombre, setNombre] = useState(initialProduct?.nombre ?? '');
   const [descripcion, setDescripcion] = useState(initialProduct?.descripcion ?? '');
   const [stock, setStock] = useState(initialProduct ? String(initialProduct.stock) : '');
@@ -147,12 +125,10 @@ export const ModalNuevoProducto: React.FC<ModalNuevoProductoProps> = ({
     if (file) {
       // Validar que sea una imagen
       if (!file.type.startsWith('image/')) {
-        showWarning?.('Por favor selecciona un archivo de imagen válido');
         return;
       }
       // Validar tamaño (max 5MB)
       if (file.size > 5 * 1024 * 1024) {
-        showWarning?.('La imagen debe ser menor a 5MB');
         return;
       }
       // Cargar imagen para recorte
@@ -235,8 +211,7 @@ export const ModalNuevoProducto: React.FC<ModalNuevoProductoProps> = ({
         setImageToCrop(null);
       }
     } catch (error) {
-      console.error('Error al recortar la imagen:', error);
-      showWarning?.('Error al procesar la imagen');
+      // Error processing image
     }
   };
 
@@ -249,9 +224,8 @@ export const ModalNuevoProducto: React.FC<ModalNuevoProductoProps> = ({
 
   if (!isOpen) return null;
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     if (!nombre.trim() || !stock) {
-      showWarning?.('Complete los campos requeridos');
       return;
     }
 
@@ -259,7 +233,7 @@ export const ModalNuevoProducto: React.FC<ModalNuevoProductoProps> = ({
       ? (unidadMedida === '1' ? parseFloat(precioPromocion) / 100 : parseFloat(precioPromocion))
       : null;
 
-    onSubmit({
+    const productoData = {
       nombre: nombre.trim(),
       descripcion: descripcion.trim(),
       stock: parseInt(stock),
@@ -270,8 +244,15 @@ export const ModalNuevoProducto: React.FC<ModalNuevoProductoProps> = ({
       vencimiento: vencimiento ? new Date(vencimiento) : null,
       promocionActiva: promocionActiva,
       precioPromocion: precioPromocionFinal,
-    }, imageFile, categoriasSeleccionadas);
+    };
 
+    if (initialProduct) {
+      await handleEditarProducto(productoData, imageFile, categoriasSeleccionadas);
+    } else {
+      await handleNuevoProducto(productoData, imageFile, categoriasSeleccionadas);
+    }
+
+    // Reset form
     setNombre('');
     setDescripcion('');
     setStock('');

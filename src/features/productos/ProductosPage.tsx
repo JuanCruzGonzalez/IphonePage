@@ -1,34 +1,43 @@
 import React from 'react';
 import { useDebounce } from '../../shared/hooks/useDebounce';
-import { Producto } from '../../core/types';
 import { getProductImageUrl } from '../../shared/services/storageService';
+import { useProductos } from './context/ProductosContext';
 
-interface ProductosPageProps {
-  productos: Producto[];
-  total?: number;
-  page?: number;
-  pageSize?: number;
-  onPageChange?: (page: number) => void;
-  onNuevoProducto: () => void;
-  onEditarProducto?: (producto: Producto) => void;
-  onToggleProductoEstado?: (id_producto: number, currentEstado: boolean, nombre?: string) => void;
-  onSearch?: (texto: string) => void;
-  searchLoading?: boolean;
-}
+export const ProductosPage: React.FC = () => {
+  const {
+    productos,
+    productosTotal,
+    productosPageNum,
+    productosSearchQuery,
+    PAGE_SIZE,
+    loadProductosPage,
+    handleBuscarProductos,
+    modalNuevoProducto,
+    openEditarProducto,
+    handleToggleProductoEstado,
+    buscarProductosAsync,
+  } = useProductos();
 
-export const ProductosPage: React.FC<ProductosPageProps> = ({ productos, total = 0, page = 1, pageSize = 5, onPageChange, onNuevoProducto, onEditarProducto, onToggleProductoEstado, onSearch, searchLoading = false }) => {
   const [searchTerm, setSearchTerm] = React.useState('');
   const [statusFilter, setStatusFilter] = React.useState<'all' | 'active' | 'inactive'>('all');
 
-  const debounced = useDebounce(searchTerm, 300);
-  // Only trigger search when the debounced term changes. Avoid including
-  // `onSearch` in the deps because the parent's handler may be recreated every
-  // render and would cause an unnecessary reset to page 1.
+  // Sincronizar el searchTerm local con el del contexto
   React.useEffect(() => {
-    onSearch?.(debounced);
+    if (productosSearchQuery !== searchTerm) {
+      setSearchTerm(productosSearchQuery);
+    }
+  }, [productosSearchQuery]);
+
+  const debounced = useDebounce(searchTerm, 300);
+  
+  React.useEffect(() => {
+    if (debounced !== productosSearchQuery) {
+      handleBuscarProductos(debounced);
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [debounced]);
-  const totalProductos = total ?? productos.length;
+
+  const totalProductos = productosTotal ?? productos.length;
   const stockBajo = productos.filter(p => p.stock < 10).length;
 
   const displayedProducts = React.useMemo(() => {
@@ -39,9 +48,9 @@ export const ProductosPage: React.FC<ProductosPageProps> = ({ productos, total =
     });
   }, [productos, statusFilter]);
 
-  const totalPages = Math.max(1, Math.ceil((total || 0) / pageSize));
-  const showingFrom = Math.min(((page - 1) * pageSize) + 1, total || 0);
-  const showingTo = Math.min(page * pageSize, total || 0);
+  const totalPages = Math.max(1, Math.ceil(productosTotal / PAGE_SIZE));
+  const showingFrom = Math.min(((productosPageNum - 1) * PAGE_SIZE) + 1, productosTotal);
+  const showingTo = Math.min(productosPageNum * PAGE_SIZE, productosTotal);
 
   return (
     <div className="page">
@@ -50,7 +59,7 @@ export const ProductosPage: React.FC<ProductosPageProps> = ({ productos, total =
           <h1 className="page-title">Productos</h1>
           <p className="page-subtitle">Administra tu catálogo de productos</p>
         </div>
-        <button className="btn-primary" onClick={onNuevoProducto}>
+        <button className="btn-primary" onClick={() => modalNuevoProducto.open()}>
           + Nuevo Producto
         </button>
       </div>
@@ -76,9 +85,9 @@ export const ProductosPage: React.FC<ProductosPageProps> = ({ productos, total =
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
             style={{ padding: '12px', width: '100%', backgroundColor: '#f9f9f9', border: '1px solid #ddd', borderRadius: '4px', color: '#333' }}
-            disabled={searchLoading}
+            disabled={buscarProductosAsync.loading}
           />
-          {searchLoading && (
+          {buscarProductosAsync.loading && (
             <div style={{ position: 'absolute', right: 12, top: '50%', transform: 'translateY(-50%)', fontSize: 12, color: '#666' }}>
               Buscando...
             </div>
@@ -92,12 +101,12 @@ export const ProductosPage: React.FC<ProductosPageProps> = ({ productos, total =
       </div>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 12, marginBottom: 12 }}>
         <div>
-          Mostrando {total === 0 ? 0 : showingFrom} - {total === 0 ? 0 : showingTo} de {total}
+          Mostrando {productosTotal === 0 ? 0 : showingFrom} - {productosTotal === 0 ? 0 : showingTo} de {productosTotal}
         </div>
         <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-          <button className="btn-sm" onClick={() => onPageChange?.(Math.max(1, page - 1))} disabled={page <= 1}>◀︎</button>
-          <div style={{ padding: '6px 10px' }}>{page} / {totalPages}</div>
-          <button className="btn-sm" onClick={() => onPageChange?.(Math.min(totalPages, page + 1))} disabled={page >= totalPages}>▶︎</button>
+          <button className="btn-sm" onClick={() => loadProductosPage(Math.max(1, productosPageNum - 1))} disabled={productosPageNum <= 1}>◀︎</button>
+          <div style={{ padding: '6px 10px' }}>{productosPageNum} / {totalPages}</div>
+          <button className="btn-sm" onClick={() => loadProductosPage(Math.min(totalPages, productosPageNum + 1))} disabled={productosPageNum >= totalPages}>▶︎</button>
         </div>
       </div>
       <div className="card">
@@ -150,7 +159,7 @@ export const ProductosPage: React.FC<ProductosPageProps> = ({ productos, total =
                       <button
                         className="btn-sm btn-secondary mr-2"
                         aria-label="Editar"
-                        onClick={() => onEditarProducto?.(producto)}
+                        onClick={() => openEditarProducto(producto)}
                       >
                         <svg
                           xmlns="http://www.w3.org/2000/svg"
@@ -168,35 +177,33 @@ export const ProductosPage: React.FC<ProductosPageProps> = ({ productos, total =
                           <path d="M20.71 7.04a1.003 1.003 0 0 0 0-1.41l-2.34-2.34a1.003 1.003 0 0 0-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z" />
                         </svg>
                       </button>
-                      {onToggleProductoEstado && (
-                        producto.estado ? (
-                          <button
-                            className="btn-sm btn-danger"
-                            aria-label="Dar de baja"
-                            onClick={() => onToggleProductoEstado?.(producto.id_producto, producto.estado, producto.nombre)}
-                            style={{ width: '40px', display: 'flex', justifyContent: 'center', height: '40px', border: '1px solid #ddd', padding: 10 }}
-                          >
-                            {/* Trash icon */}
-                            <svg xmlns="http://www.w3.org/2000/svg" width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                              <polyline points="3 6 5 6 21 6"></polyline>
-                              <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"></path>
-                              <path d="M10 11v6"></path>
-                              <path d="M14 11v6"></path>
-                            </svg>
-                          </button>
-                        ) : (
-                          <button
-                            className="btn-sm btn-primary"
-                            aria-label="Dar de alta"
-                            onClick={() => onToggleProductoEstado?.(producto.id_producto, producto.estado, producto.nombre)}
-                            style={{ width: '40px', display: 'flex', height: '40px', border: '1px solid #ddd', padding: 10 }}
-                          >
-                            {/* Arrow up icon */}
-                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none">
-                              <path fillRule="evenodd" clipRule="evenodd" d="M12 3C12.2652 3 12.5196 3.10536 12.7071 3.29289L19.7071 10.2929C20.0976 10.6834 20.0976 11.3166 19.7071 11.7071C19.3166 12.0976 18.6834 12.0976 18.2929 11.7071L13 6.41421V20C13 20.5523 12.5523 21 12 21C11.4477 21 11 20.5523 11 20V6.41421L5.70711 11.7071C5.31658 12.0976 4.68342 12.0976 4.29289 11.7071C3.90237 11.3166 3.90237 10.6834 4.29289 10.2929L11.2929 3.29289C11.4804 3.10536 11.7348 3 12 3Z" fill="#fff" />
-                            </svg>
-                          </button>
-                        )
+                      {producto.estado ? (
+                        <button
+                          className="btn-sm btn-danger"
+                          aria-label="Dar de baja"
+                          onClick={() => handleToggleProductoEstado(producto.id_producto, producto.estado, producto.nombre)}
+                          style={{ width: '40px', display: 'flex', justifyContent: 'center', height: '40px', border: '1px solid #ddd', padding: 10 }}
+                        >
+                          {/* Trash icon */}
+                          <svg xmlns="http://www.w3.org/2000/svg" width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                            <polyline points="3 6 5 6 21 6"></polyline>
+                            <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"></path>
+                            <path d="M10 11v6"></path>
+                            <path d="M14 11v6"></path>
+                          </svg>
+                        </button>
+                      ) : (
+                        <button
+                          className="btn-sm btn-primary"
+                          aria-label="Dar de alta"
+                          onClick={() => handleToggleProductoEstado(producto.id_producto, producto.estado, producto.nombre)}
+                          style={{ width: '40px', display: 'flex', height: '40px', border: '1px solid #ddd', padding: 10 }}
+                        >
+                          {/* Arrow up icon */}
+                          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none">
+                            <path fillRule="evenodd" clipRule="evenodd" d="M12 3C12.2652 3 12.5196 3.10536 12.7071 3.29289L19.7071 10.2929C20.0976 10.6834 20.0976 11.3166 19.7071 11.7071C19.3166 12.0976 18.6834 12.0976 18.2929 11.7071L13 6.41421V20C13 20.5523 12.5523 21 12 21C11.4477 21 11 20.5523 11 20V6.41421L5.70711 11.7071C5.31658 12.0976 4.68342 12.0976 4.29289 11.7071C3.90237 11.3166 3.90237 10.6834 4.29289 10.2929L11.2929 3.29289C11.4804 3.10536 11.7348 3 12 3Z" fill="#fff" />
+                          </svg>
+                        </button>
                       )}
                     </td>
                   </tr>
@@ -208,12 +215,12 @@ export const ProductosPage: React.FC<ProductosPageProps> = ({ productos, total =
       </div>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 12 }}>
         <div>
-          Mostrando {total === 0 ? 0 : showingFrom} - {total === 0 ? 0 : showingTo} de {total}
+          Mostrando {productosTotal === 0 ? 0 : showingFrom} - {productosTotal === 0 ? 0 : showingTo} de {productosTotal}
         </div>
         <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-          <button className="btn-sm" onClick={() => onPageChange?.(Math.max(1, page - 1))} disabled={page <= 1}>◀︎</button>
-          <div style={{ padding: '6px 10px' }}>{page} / {totalPages}</div>
-          <button className="btn-sm" onClick={() => onPageChange?.(Math.min(totalPages, page + 1))} disabled={page >= totalPages}>▶︎</button>
+          <button className="btn-sm" onClick={() => loadProductosPage(Math.max(1, productosPageNum - 1))} disabled={productosPageNum <= 1}>◀︎</button>
+          <div style={{ padding: '6px 10px' }}>{productosPageNum} / {totalPages}</div>
+          <button className="btn-sm" onClick={() => loadProductosPage(Math.min(totalPages, productosPageNum + 1))} disabled={productosPageNum >= totalPages}>▶︎</button>
         </div>
       </div>
     </div>

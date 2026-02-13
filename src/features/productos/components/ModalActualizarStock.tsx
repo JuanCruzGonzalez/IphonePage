@@ -1,17 +1,20 @@
 import React, { useState } from 'react';
-import { Producto } from '../../../core/types';
+import { useProductos } from '../context/ProductosContext';
 
-interface ModalActualizarStockProps {
-  isOpen: boolean;
-  onClose: () => void;
-  productos: Producto[];
-  onSubmit: (productoId: number, cantidad: number) => void;
-  showError?: (message: string) => void;
-  showWarning?: (message: string) => void;
-  loading?: boolean;
-}
+interface ModalActualizarStockProps {}
 
-export const ModalActualizarStock: React.FC<ModalActualizarStockProps> = ({ isOpen, onClose, onSubmit, productos = [], showWarning, loading = false }) => {
+export const ModalActualizarStock: React.FC<ModalActualizarStockProps> = () => {
+  const {
+    modalActualizarStock,
+    productos,
+    handleActualizarStock,
+    actualizarStockAsync,
+  } = useProductos();
+
+  const isOpen = modalActualizarStock.isOpen;
+  const onClose = modalActualizarStock.close;
+  const loading = actualizarStockAsync.loading;
+
   const [productoId, setProductoId] = useState('');
   const [cantidad, setCantidad] = useState('');
 
@@ -21,14 +24,12 @@ export const ModalActualizarStock: React.FC<ModalActualizarStockProps> = ({ isOp
 
   const handleSubmit = () => {
     if (!productoId || !cantidad) {
-      showWarning?.('Complete todos los campos');
       return;
     }
 
-    onSubmit(parseInt(productoId), parseInt(cantidad));
+    handleActualizarStock(parseInt(productoId), parseInt(cantidad));
     setProductoId('');
     setCantidad('');
-    onClose();
   };
 
   return (

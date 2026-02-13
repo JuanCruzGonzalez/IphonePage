@@ -4,6 +4,7 @@ import { getProductosActivos } from '../../productos/services/productoService';
 import { getProductImageUrl } from '../../../shared/services/storageService';
 import { getCategoriasActivas } from '../../categorias/services/categoriaService';
 import { supabase } from '../../../core/config/supabase';
+import { formatPrice, formatPrecioParaMostrar } from '../../../shared/utils';
 import { ItemCarrito } from './CarritoPanel';
 
 interface ClienteProductosProps {
@@ -146,21 +147,13 @@ export const ClienteProductos: React.FC<ClienteProductosProps> = ({
     setCurrentPage(1);
   }, [busqueda, priceFilter, sortBy]);
 
-  const formatearPrecio = (precio: number) => `$${precio.toFixed(2)}`;
-
   const getPrecioDisplay = (producto: Producto) => {
-    if (producto.id_unidad_medida === 1) {
-      return producto.precioventa * 100;
-    }
-    return producto.precioventa;
+    return formatPrecioParaMostrar(producto.precioventa, producto.id_unidad_medida);
   };
 
   const getPrecioPromoDisplay = (producto: Producto) => {
     if (producto.precio_promocion == null) return 0;
-    if (producto.id_unidad_medida === 1) {
-      return producto.precio_promocion * 100;
-    }
-    return producto.precio_promocion;
+    return formatPrecioParaMostrar(producto.precio_promocion, producto.id_unidad_medida);
   };
 
   const obtenerItemEnCarrito = (id_producto: number): ItemCarrito | undefined =>
@@ -344,15 +337,15 @@ export const ClienteProductos: React.FC<ClienteProductosProps> = ({
                         {tienePromo ? (
                           <div className="home-product-price-promo">
                             <span className="home-product-price-original">
-                              {formatearPrecio(getPrecioDisplay(producto))}
+                              {formatPrice(getPrecioDisplay(producto))}
                             </span>
                             <span className="home-product-price-sale">
-                              {formatearPrecio(getPrecioPromoDisplay(producto))}
+                              {formatPrice(getPrecioPromoDisplay(producto))}
                             </span>
                           </div>
                         ) : (
                           <span className="home-product-price">
-                            {formatearPrecio(getPrecioDisplay(producto))}
+                            {formatPrice(getPrecioDisplay(producto))}
                           </span>
                         )}
                       </div>
@@ -449,7 +442,7 @@ export const ClienteProductos: React.FC<ClienteProductosProps> = ({
           <div className="home-modal-content" onClick={(e) => e.stopPropagation()}>
             <h2 className="home-modal-title">{modalCantidad.producto.nombre}</h2>
             <p className="home-modal-subtitle">
-              Precio: {formatearPrecio(modalCantidad.producto.precioventa * 100)} x 100gr
+              Precio: {formatPrice(modalCantidad.producto.precioventa * 100)} x 100gr
             </p>
             <label className="home-modal-label">Cantidad en gramos:</label>
             <input
@@ -465,7 +458,7 @@ export const ClienteProductos: React.FC<ClienteProductosProps> = ({
               <div className="home-modal-total">
                 <span className="home-modal-total-label">Total:</span>
                 <span className="home-modal-total-value">
-                  {formatearPrecio(parseFloat(cantidadGramos) * modalCantidad.producto.precioventa)}
+                  {formatPrice(parseFloat(cantidadGramos) * modalCantidad.producto.precioventa)}
                 </span>
               </div>
             )}

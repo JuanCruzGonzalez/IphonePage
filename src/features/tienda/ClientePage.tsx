@@ -1,37 +1,41 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { Producto, Categoria, Promocion } from '../../core/types';
+import { Producto, Categoria } from '../../core/types';
 import { getProductosActivos } from '../productos/services/productoService';
 import { getProductImageUrl } from '../../shared/services/storageService';
 import { getCategoriasActivas } from '../categorias/services/categoriaService';
 import { ClientePromociones } from '../promociones/components/ClientePromociones';
 import { supabase } from '../../core/config/supabase';
+import { formatPrice } from '../../shared/utils';
+import { useCarrito } from './context/CarritoContext';
 import './ClientePage.css';
 
 type VistaActiva = 'productos' | 'promociones';
 
-interface ItemCarrito {
-  id: string;
-  tipo: 'producto' | 'promocion';
-  id_referencia: number;
-  nombre: string;
-  precio: number;
-  cantidad: number;
-  unidadMedidaId?: number;
-  unidadMedidaNombre?: string;
-}
-
 export const ClientePage: React.FC = () => {
+  const {
+    carrito,
+    mostrarCarrito,
+    modalCantidad,
+    cantidadGramos,
+    setCantidadGramos,
+    manejarAgregarProducto,
+    agregarPromocionAlCarrito,
+    eliminarDelCarrito,
+    actualizarCantidad,
+    vaciarCarrito,
+    calcularTotal,
+    enviarPedidoWhatsApp,
+    toggleMostrarCarrito,
+    cerrarCarrito,
+    cerrarModalCantidad,
+    confirmarCantidadGramos,
+    obtenerItemEnCarrito,
+  } = useCarrito();
+
   const [vistaActiva, setVistaActiva] = useState<VistaActiva>('productos');
   const [productos, setProductos] = useState<Producto[]>([]);
-  const [carrito, setCarrito] = useState<ItemCarrito[]>([]);
   const [loading, setLoading] = useState(true);
   const [busqueda, setBusqueda] = useState('');
-  const [modalCantidad, setModalCantidad] = useState<{
-    isOpen: boolean;
-    producto: Producto | null;
-  }>({ isOpen: false, producto: null });
-  const [cantidadGramos, setCantidadGramos] = useState('');
-  const [mostrarCarrito, setMostrarCarrito] = useState(false);
 
   // Estados para filtros
   const [categorias, setCategorias] = useState<Categoria[]>([]);
@@ -133,148 +137,6 @@ export const ClientePage: React.FC = () => {
     setCategoriasSeleccionadas([]);
   };
 
-  const abrirModalCantidad = (producto: Producto) => {
-    setModalCantidad({ isOpen: true, producto });
-    setCantidadGramos('');
-  };
-
-  const cerrarModalCantidad = () => {
-    setModalCantidad({ isOpen: false, producto: null });
-    setCantidadGramos('');
-  };
-
-  const agregarAlCarrito = (producto: Producto, cantidad: number = 1) => {
-    const id = `producto-${producto.id_producto}`;
-    const itemExistente = carrito.find(item => item.id === id);
-
-    // Usar precio promocional si está activo, sino precio normal
-    const precioUsar = (producto.promocion_activa && producto.precio_promocion != null)
-      ? producto.precio_promocion
-      : producto.precioventa;
-
-    if (itemExistente) {
-      setCarrito(carrito.map(item =>
-        item.id === id
-          ? { ...item, cantidad: item.cantidad + cantidad }
-          : item
-      ));
-    } else {
-      setCarrito([...carrito, {
-        id,
-        tipo: 'producto' as const,
-        id_referencia: producto.id_producto,
-        nombre: producto.nombre,
-        precio: precioUsar,
-        cantidad,
-        unidadMedidaId: producto.id_unidad_medida,
-        unidadMedidaNombre: producto.unidad_medida?.abreviacion || '',
-      }]);
-    }
-  };
-
-  const agregarPromocionAlCarrito = (promocion: Promocion, cantidad: number = 1) => {
-    const id = `promocion-${promocion.id_promocion}`;
-    const itemExistente = carrito.find(item => item.id === id);
-    const precio = promocion.precio || 0;
-
-    if (itemExistente) {
-      setCarrito(carrito.map(item =>
-        item.id === id
-          ? { ...item, cantidad: item.cantidad + cantidad }
-          : item
-      ));
-    } else {
-      setCarrito([...carrito, {
-        id,
-        tipo: 'promocion' as const,
-        id_referencia: promocion.id_promocion,
-        nombre: promocion.name,
-        precio,
-        cantidad,
-      }]);
-    }
-  };
-
-  const manejarAgregarProducto = (producto: Producto) => {
-    if (producto.id_unidad_medida === 1) {
-      abrirModalCantidad(producto);
-    } else {
-      agregarAlCarrito(producto, 1);
-    }
-  };
-
-  const confirmarCantidadGramos = () => {
-    if (!modalCantidad.producto) return;
-
-    const gramos = parseFloat(cantidadGramos);
-    if (isNaN(gramos) || gramos <= 0) {
-      alert('Ingrese una cantidad válida');
-      return;
-    }
-
-    agregarAlCarrito(modalCantidad.producto, gramos);
-    cerrarModalCantidad();
-  };
-
-  const eliminarDelCarrito = (id: string) => {
-    setCarrito(carrito.filter(item => item.id !== id));
-  };
-
-  const actualizarCantidad = (id: string, nuevaCantidad: number) => {
-    if (nuevaCantidad <= 0) {
-      eliminarDelCarrito(id);
-      return;
-    }
-
-    setCarrito(carrito.map(item =>
-      item.id === id
-        ? { ...item, cantidad: nuevaCantidad }
-        : item
-    ));
-  };
-
-  const calcularTotal = () => {
-    return carrito.reduce((total, item) => total + (item.precio * item.cantidad), 0);
-  };
-
-  const vaciarCarrito = () => {
-    setCarrito([]);
-  };
-
-  const formatearPrecio = (precio: number) => {
-    return `$${precio.toFixed(2)}`;
-  };
-
-  const obtenerItemEnCarrito = (id_producto: number): ItemCarrito | undefined => {
-    return carrito.find(item => item.id === `producto-${id_producto}`);
-  };
-
-  const enviarPedidoWhatsApp = () => {
-    const numeroWhatsApp = '5492616166624';
-
-    let mensaje = 'Hola Chañar, quería hacer el siguiente pedido:\n\n';
-
-    carrito.forEach(item => {
-      let cantidad = '';
-      if (item.tipo === 'promocion') {
-        cantidad = `${item.cantidad} un`;
-      } else if (item.unidadMedidaId === 1) {
-        cantidad = `${Math.round(item.cantidad)}gr`;
-      } else {
-        cantidad = `${item.cantidad} ${item.unidadMedidaNombre || 'un'}`;
-      }
-      const tipo = item.tipo === 'promocion' ? '🎁 ' : '';
-      mensaje += `${tipo}• ${item.nombre}: ${cantidad} - ${formatearPrecio(item.precio * item.cantidad)}\n`;
-    });
-
-    mensaje += `\n*Total: ${formatearPrecio(calcularTotal())}*`;
-
-    const mensajeCodificado = encodeURIComponent(mensaje);
-    const urlWhatsApp = `https://wa.me/${numeroWhatsApp}?text=${mensajeCodificado}`;
-
-    window.open(urlWhatsApp, '_blank');
-  };
-
   return (
     <div className="cliente-page">
       {/* Header moderno */}
@@ -320,7 +182,7 @@ export const ClientePage: React.FC = () => {
           </div>
 
           <button
-            onClick={() => setMostrarCarrito(!mostrarCarrito)}
+            onClick={toggleMostrarCarrito}
             className="cliente-header-cart-btn"
           >
             <span className="cliente-header-cart-icon">🛒</span>
@@ -494,15 +356,15 @@ export const ClientePage: React.FC = () => {
                                   textDecoration: 'line-through'
                                 }}>
                                   {producto.id_unidad_medida === 1
-                                    ? `${formatearPrecio(producto.precioventa * 100)}`
-                                    : formatearPrecio(producto.precioventa)
+                                    ? `${formatPrice(producto.precioventa * 100)}`
+                                    : formatPrice(producto.precioventa)
                                   }
                                 </div>
                                 <div style={{ display: 'flex', alignItems: 'baseline', gap: '6px' }}>
                                   <div className="cliente-product-price" style={{ color: '#e74c3c' }}>
                                     {producto.id_unidad_medida === 1
-                                      ? `${formatearPrecio(producto.precio_promocion * 100)}`
-                                      : formatearPrecio(producto.precio_promocion)
+                                      ? `${formatPrice(producto.precio_promocion * 100)}`
+                                      : formatPrice(producto.precio_promocion)
                                     }
                                   </div>
                                   {producto.id_unidad_medida === 1 && (
@@ -516,8 +378,8 @@ export const ClientePage: React.FC = () => {
                               <>
                                 <div className="cliente-product-price">
                                   {producto.id_unidad_medida === 1
-                                    ? `${formatearPrecio(producto.precioventa * 100)}`
-                                    : formatearPrecio(producto.precioventa)
+                                    ? `${formatPrice(producto.precioventa * 100)}`
+                                    : formatPrice(producto.precioventa)
                                   }
                                 </div>
                                 {producto.id_unidad_medida === 1 && (
@@ -573,15 +435,15 @@ export const ClientePage: React.FC = () => {
                                     textDecoration: 'line-through'
                                   }}>
                                     {producto.id_unidad_medida === 1
-                                      ? `${formatearPrecio(producto.precioventa * 100)}`
-                                      : formatearPrecio(producto.precioventa)
+                                      ? `${formatPrice(producto.precioventa * 100)}`
+                                      : formatPrice(producto.precioventa)
                                     }
                                   </div>
                                   <div style={{ display: 'flex', alignItems: 'baseline', gap: '6px' }}>
                                     <div className="cliente-product-price" style={{ color: '#e74c3c' }}>
                                       {producto.id_unidad_medida === 1
-                                        ? `${formatearPrecio(producto.precio_promocion * 100)}`
-                                        : formatearPrecio(producto.precio_promocion)
+                                        ? `${formatPrice(producto.precio_promocion * 100)}`
+                                        : formatPrice(producto.precio_promocion)
                                       }
                                     </div>
                                     {producto.id_unidad_medida === 1 && (
@@ -595,8 +457,8 @@ export const ClientePage: React.FC = () => {
                                 <>
                                   <div className="cliente-product-price">
                                     {producto.id_unidad_medida === 1
-                                      ? `${formatearPrecio(producto.precioventa * 100)}`
-                                      : formatearPrecio(producto.precioventa)
+                                      ? `${formatPrice(producto.precioventa * 100)}`
+                                      : formatPrice(producto.precioventa)
                                     }
                                   </div>
                                   {producto.id_unidad_medida === 1 && (
@@ -653,7 +515,7 @@ export const ClientePage: React.FC = () => {
             </h2>
 
             <p className="cliente-modal-subtitle">
-              Precio: {formatearPrecio(modalCantidad.producto.precioventa * 100)} x 100gr
+              Precio: {formatPrice(modalCantidad.producto.precioventa * 100)} x 100gr
             </p>
 
             <div className="cliente-modal-form-group">
@@ -677,7 +539,7 @@ export const ClientePage: React.FC = () => {
                   Total:
                 </span>
                 <span className="cliente-modal-total-value">
-                  {formatearPrecio(parseFloat(cantidadGramos) * modalCantidad.producto.precioventa)}
+                  {formatPrice(parseFloat(cantidadGramos) * modalCantidad.producto.precioventa)}
                 </span>
               </div>
             )}
@@ -698,7 +560,7 @@ export const ClientePage: React.FC = () => {
       {mostrarCarrito && (
         <>
           {/* Overlay */}
-          <div onClick={() => setMostrarCarrito(false)} className="cliente-cart-overlay" />
+          <div onClick={cerrarCarrito} className="cliente-cart-overlay" />
 
           {/* Panel del carrito */}
           <div className="cliente-cart-panel">
@@ -710,7 +572,7 @@ export const ClientePage: React.FC = () => {
                   {carrito.length} {carrito.length === 1 ? 'producto' : 'productos'}
                 </p>
               </div>
-              <button onClick={() => setMostrarCarrito(false)} className="cliente-cart-close-btn">
+              <button onClick={cerrarCarrito} className="cliente-cart-close-btn">
                 <span>x</span>
               </button>
             </div>
@@ -771,7 +633,7 @@ export const ClientePage: React.FC = () => {
 
                         {/* Precio */}
                         <div className="cliente-cart-item-price">
-                          {formatearPrecio(item.precio * item.cantidad)}
+                          {formatPrice(item.precio * item.cantidad)}
                         </div>
                       </div>
                     </div>
@@ -786,7 +648,7 @@ export const ClientePage: React.FC = () => {
                       Total:
                     </span>
                     <span className="cliente-cart-total-value">
-                      {formatearPrecio(calcularTotal())}
+                      {formatPrice(calcularTotal())}
                     </span>
                   </div>
 

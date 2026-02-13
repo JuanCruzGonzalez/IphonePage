@@ -1,12 +1,13 @@
 import React, { useState } from 'react';
-import { Producto } from '../../core/types';
+import { useProductos } from '../productos/context/ProductosContext';
 
-interface StockPageProps {
-  productos: Producto[];
-  onActualizarStock: () => void;
-}
+interface StockPageProps {}
 
-export const StockPage: React.FC<StockPageProps> = ({ productos, onActualizarStock }) => {
+export const StockPage: React.FC<StockPageProps> = () => {
+  const { productosActivos, modalActualizarStock } = useProductos();
+  const productos = productosActivos;
+  const onActualizarStock = modalActualizarStock.open;
+
   const [currentPage, setCurrentPage] = useState(1);
   const pageSize = 15;
 

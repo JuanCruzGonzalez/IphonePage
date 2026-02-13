@@ -1,4 +1,5 @@
 import React from 'react';
+import { formatPrice, calculateCartTotal, formatCantidadConUnidad, getIncremento } from '../../../shared/utils';
 
 export interface ItemCarrito {
   id: string; // Identificador único: "producto-{id}" o "promocion-{id}"
@@ -30,10 +31,7 @@ export const CarritoPanel: React.FC<CarritoPanelProps> = ({
   onVaciar,
   onEnviarWhatsApp,
 }) => {
-  const formatearPrecio = (precio: number) => `$${precio.toFixed(2)}`;
-
-  const calcularTotal = () =>
-    carrito.reduce((total, item) => total + (item.precio * item.cantidad), 0);
+  const total = calculateCartTotal(carrito);
 
   if (!mostrarCarrito) return null;
 
@@ -57,8 +55,7 @@ export const CarritoPanel: React.FC<CarritoPanelProps> = ({
             </div>
           ) : (
             carrito.map(item => {
-              const esProductoPorPeso = item.unidadMedidaId === 1;
-              const incremento = esProductoPorPeso ? 10 : 1;
+              const incremento = getIncremento(item.unidadMedidaId);
               
               return (
                 <div key={item.id} className="home-cart-item">
@@ -87,14 +84,7 @@ export const CarritoPanel: React.FC<CarritoPanelProps> = ({
                         −
                       </button>
                       <span className="home-cart-item-quantity">
-                        {esProductoPorPeso
-                          ? `${Math.round(item.cantidad)}gr`
-                          : item.tipo === 'promocion'
-                          ? `${item.cantidad} un`
-                          : item.unidadMedidaNombre
-                          ? `${item.cantidad} ${item.unidadMedidaNombre}`
-                          : `${item.cantidad} un`
-                        }
+                        {formatCantidadConUnidad(item.cantidad, item.unidadMedidaId, item.unidadMedidaNombre, item.tipo)}
                       </span>
                       <button
                         className="home-cart-item-btn"
@@ -104,7 +94,7 @@ export const CarritoPanel: React.FC<CarritoPanelProps> = ({
                       </button>
                     </div>
                     <div className="home-cart-item-price">
-                      {formatearPrecio(item.precio * item.cantidad)}
+                      {formatPrice(item.precio * item.cantidad)}
                     </div>
                   </div>
                 </div>
@@ -117,7 +107,7 @@ export const CarritoPanel: React.FC<CarritoPanelProps> = ({
           <div className="home-cart-footer">
             <div className="home-cart-total">
               <span className="home-cart-total-label">Total:</span>
-              <span className="home-cart-total-value">{formatearPrecio(calcularTotal())}</span>
+              <span className="home-cart-total-value">{formatPrice(total)}</span>
             </div>
             <div className="home-cart-actions">
               <button className="home-cart-checkout-btn" onClick={onEnviarWhatsApp}>

@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Promocion, PromocionConDetallesCompletos } from '../../../core/types';
 import { getPromocionesActivasConDetalles } from '../services/promocionService';
 import { getPromocionImageUrl } from '../../../shared/services/storageService';
+import { formatPriceLocale } from '../../../shared/utils';
 
 interface ClientePromocionesProps {
   busqueda: string;
@@ -30,9 +31,9 @@ export const ClientePromociones: React.FC<ClientePromocionesProps> = ({
     }
   };
 
-  const formatearPrecio = (precio: number | null) => {
+  const formatearPrecioPromocion = (precio: number | null) => {
     if (precio === null) return 'Consultar';
-    return `$${precio.toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+    return formatPriceLocale(precio);
   };
 
   const promocionesFiltradas = promociones.filter(promo =>
@@ -107,7 +108,7 @@ export const ClientePromociones: React.FC<ClientePromocionesProps> = ({
 
                   {/* Precio */}
                   <div className="promocion-card-price">
-                    {formatearPrecio(promocion.precio)}
+                    {formatearPrecioPromocion(promocion.precio)}
                   </div>
 
                   {/* Botón agregar */}
