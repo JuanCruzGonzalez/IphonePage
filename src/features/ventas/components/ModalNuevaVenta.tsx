@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Producto, Promocion, DetalleVentaInput, UnidadMedida } from '../../../core/types';
+import { Producto, Promocion, UnidadMedida } from '../../../core/types';
 import { updateProducto } from '../../productos/services/productoService';
+import { useVentas } from '../context/VentasContext';
 
 // Small row component for product items (editable unit price)
 const ProductRow: React.FC<{
@@ -127,29 +128,19 @@ const PromoRow: React.FC<{
 };
 
 interface ModalNuevaVentaProps {
-    isOpen: boolean;
-    onClose: () => void;
     productos: Producto[];
     promociones?: Promocion[];
-    onSubmit: (items: DetalleVentaInput[], pagada: boolean) => void;
-    showToast?: (message: string) => void;
     showError?: (message: string) => void;
     showWarning?: (message: string) => void;
-    showConfirm?: (title: string, message: string, onConfirm: () => void, type?: 'danger' | 'warning' | 'info') => void;
-    loading?: boolean;
 }
 
 export const ModalNuevaVenta: React.FC<ModalNuevaVentaProps> = ({
-    isOpen,
-    onClose,
     productos,
     promociones = [],
-    onSubmit,
     showError,
     showWarning,
-    showToast,
-    loading = false,
 }) => {
+    const { modalNuevaVenta, handleNuevaVenta, crearVentaAsync } = useVentas();
     const [items, setItems] = useState<{ id_producto: number; cantidad: number; nombre: string; precioventa: number; unidadMedida: UnidadMedida }[]>([]);
     const [productoSeleccionado, setProductoSeleccionado] = useState('');
     const [busquedaProducto, setBusquedaProducto] = useState('');
@@ -180,7 +171,7 @@ export const ModalNuevaVenta: React.FC<ModalNuevaVentaProps> = ({
         return () => document.removeEventListener('mousedown', handleClickOutside);
     }, []);
 
-    if (!isOpen) return null;
+    if (!modalNuevaVenta.isOpen) return null;
 
     // Filtrar productos basado en la búsqueda
     const productosFiltrados = productos.filter(p =>
@@ -260,7 +251,7 @@ export const ModalNuevaVenta: React.FC<ModalNuevaVentaProps> = ({
         const productosDetalles = items.map(i => ({ id_producto: i.id_producto, cantidad: i.cantidad, precioUnitario: i.precioventa }));
         const promocionesDetalles = promosAdded.map(p => ({ id_promocion: p.id_promocion, cantidad: p.cantidad, precioUnitario: p.precio ?? undefined }));
 
-        onSubmit([...productosDetalles, ...promocionesDetalles], pagada);
+        handleNuevaVenta([...productosDetalles, ...promocionesDetalles], pagada);
         setItems([]);
         setProductoSeleccionado('');
         setBusquedaProducto('');
@@ -298,7 +289,7 @@ export const ModalNuevaVenta: React.FC<ModalNuevaVentaProps> = ({
 
         try {
             await updateProducto(id_producto, { precioventa: newPrice });
-            showToast?.('Precio actualizado en la base de datos');
+            // Precio actualizado silenciosamente en la base de datos
         } catch (error) {
             showError?.('Error al actualizar el precio en la base de datos');
             console.error('Error updating price:', error);
@@ -318,11 +309,11 @@ export const ModalNuevaVenta: React.FC<ModalNuevaVentaProps> = ({
     };
 
     return (
-        <div className="modal-overlay" onClick={onClose}>
+        <div className="modal-overlay" onClick={modalNuevaVenta.close}>
             <div className="modal-minimal" onClick={(e) => e.stopPropagation()}>
                 <div className="modal-minimal-header">
                     <h2>Nueva Venta</h2>
-                    <button className="btn-close" onClick={onClose}>×</button>
+                    <button className="btn-close" onClick={modalNuevaVenta.close}>×</button>
                 </div>
                 <div className="modal-minimal-body">
                     <div className="form-group" style={{ position: 'relative' }} ref={productSearchRef}>
@@ -384,7 +375,7 @@ export const ModalNuevaVenta: React.FC<ModalNuevaVentaProps> = ({
                                 placeholder="0"
                             />
                         </div>
-                        <button className="btn-secondary" onClick={agregarItem} style={{ width: '50%' }} disabled={loading}>
+                        <button className="btn-secondary" onClick={agregarItem} style={{ width: '50%' }} disabled={crearVentaAsync.loading}>
                             + Agregar
                         </button>
                     </div>
@@ -454,7 +445,7 @@ export const ModalNuevaVenta: React.FC<ModalNuevaVentaProps> = ({
                                 min="1"
                             />
                         </div>
-                        <button className="btn-secondary" onClick={agregarPromocion} style={{ width: '50%' }} disabled={loading}>
+                        <button className="btn-secondary" onClick={agregarPromocion} style={{ width: '50%' }} disabled={crearVentaAsync.loading}>
                             + Agregar
                         </button>
                     </div>
@@ -491,9 +482,9 @@ export const ModalNuevaVenta: React.FC<ModalNuevaVentaProps> = ({
                 </div>
 
                 <div className="modal-minimal-footer">
-                    <button className="btn-secondary" onClick={onClose} disabled={loading}>Cancelar</button>
-                    <button className="btn-primary" onClick={handleSubmit} disabled={loading}>
-                        {loading ? 'Registrando...' : 'Registrar Venta'}
+                    <button className="btn-secondary" onClick={modalNuevaVenta.close} disabled={crearVentaAsync.loading}>Cancelar</button>
+                    <button className="btn-primary" onClick={handleSubmit} disabled={crearVentaAsync.loading}>
+                        {crearVentaAsync.loading ? 'Registrando...' : 'Registrar Venta'}
                     </button>
                 </div>
 

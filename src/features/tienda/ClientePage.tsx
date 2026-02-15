@@ -153,13 +153,13 @@ export const ClientePage: React.FC = () => {
 
           {/* Navegación de vistas (desktop) */}
           <nav className="cliente-header-nav">
-            <button 
+            <button
               className={`cliente-header-nav-link ${vistaActiva === 'productos' ? 'active' : ''}`}
               onClick={() => setVistaActiva('productos')}
             >
               Productos
             </button>
-            <button 
+            <button
               className={`cliente-header-nav-link ${vistaActiva === 'promociones' ? 'active' : ''}`}
               onClick={() => setVistaActiva('promociones')}
             >
@@ -170,7 +170,9 @@ export const ClientePage: React.FC = () => {
           {/* Buscador en header */}
           <div className="cliente-header-search-container">
             <div className="cliente-header-search-icon">
-              🔍
+              <svg xmlns="http://www.w3.org/2000/svg" width="20px" height="20px" viewBox="0 0 24 24" fill="none">
+                <path d="M15.7955 15.8111L21 21M18 10.5C18 14.6421 14.6421 18 10.5 18C6.35786 18 3 14.6421 3 10.5C3 6.35786 6.35786 3 10.5 3C14.6421 3 18 6.35786 18 10.5Z" stroke="#a8a7a7" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+              </svg>
             </div>
             <input
               type="text"
@@ -185,7 +187,14 @@ export const ClientePage: React.FC = () => {
             onClick={toggleMostrarCarrito}
             className="cliente-header-cart-btn"
           >
-            <span className="cliente-header-cart-icon">🛒</span>
+            <span className="cliente-header-cart-icon">
+              <svg xmlns="http://www.w3.org/2000/svg" width="20px" height="20px" viewBox="0 0 24 24" fill="none">
+                <path d="M2 3L2.26491 3.0883C3.58495 3.52832 4.24497 3.74832 4.62248 4.2721C5 4.79587 5 5.49159 5 6.88304V9.5C5 12.3284 5 13.7426 5.87868 14.6213C6.75736 15.5 8.17157 15.5 11 15.5H19" stroke="#fff" stroke-width="1.5" stroke-linecap="round" />
+                <path d="M7.5 18C8.32843 18 9 18.6716 9 19.5C9 20.3284 8.32843 21 7.5 21C6.67157 21 6 20.3284 6 19.5C6 18.6716 6.67157 18 7.5 18Z" stroke="#fff" stroke-width="1.5" />
+                <path d="M16.5 18.0001C17.3284 18.0001 18 18.6716 18 19.5001C18 20.3285 17.3284 21.0001 16.5 21.0001C15.6716 21.0001 15 20.3285 15 19.5001C15 18.6716 15.6716 18.0001 16.5 18.0001Z" stroke="#fff" stroke-width="1.5" />
+                <path d="M5 6H16.4504C18.5054 6 19.5328 6 19.9775 6.67426C20.4221 7.34853 20.0173 8.29294 19.2078 10.1818L18.7792 11.1818C18.4013 12.0636 18.2123 12.5045 17.8366 12.7523C17.4609 13 16.9812 13 16.0218 13H5" stroke="#fff" stroke-width="1.5" />
+              </svg>
+            </span>
             {carrito.length > 0 && (
               <span className="cliente-header-cart-badge">
                 {carrito.length}
@@ -197,13 +206,13 @@ export const ClientePage: React.FC = () => {
 
       {/* Navegación de vistas (mobile) */}
       <nav className="cliente-header-nav-container">
-        <button 
+        <button
           className={`cliente-header-nav-link ${vistaActiva === 'productos' ? 'active' : ''}`}
           onClick={() => setVistaActiva('productos')}
         >
           Productos
         </button>
-        <button 
+        <button
           className={`cliente-header-nav-link ${vistaActiva === 'promociones' ? 'active' : ''}`}
           onClick={() => setVistaActiva('promociones')}
         >
@@ -291,213 +300,213 @@ export const ClientePage: React.FC = () => {
 
                   {/* Grid de productos */}
                   <div className="cliente-products-grid">
-            {productosFiltrados.map(producto => (
-              <div key={producto.id_producto} className="cliente-product-card">
-                {/* Imagen del producto con overlay */}
-                <div className="cliente-product-image-container">
-                  {producto.imagen_path ? (
-                    <img
-                      src={getProductImageUrl(producto.imagen_path) || undefined}
-                      alt={producto.nombre}
-                      className="cliente-product-image"
-                    />
-                  ) : (
-                    <div className="cliente-product-image-placeholder">
-                      📦
-                    </div>
-                  )}
-                  {producto.promocion_activa && producto.precio_promocion != null && (
-                    <span style={{
-                      position: 'absolute',
-                      top: '12px',
-                      right: '12px',
-                      backgroundColor: '#e74c3c',
-                      color: 'white',
-                      padding: '6px 10px',
-                      borderRadius: '6px',
-                      fontSize: '12px',
-                      fontWeight: 700,
-                      boxShadow: '0 2px 8px rgba(231, 76, 60, 0.4)',
-                      zIndex: 10,
-                    }}>
-                      OFERTA
-                    </span>
-                  )}
-                </div>
+                    {productosFiltrados.map(producto => (
+                      <div key={producto.id_producto} className="cliente-product-card">
+                        {/* Imagen del producto con overlay */}
+                        <div className="cliente-product-image-container">
+                          {producto.imagen_path ? (
+                            <img
+                              src={getProductImageUrl(producto.imagen_path) || undefined}
+                              alt={producto.nombre}
+                              className="cliente-product-image"
+                            />
+                          ) : (
+                            <div className="cliente-product-image-placeholder">
+                              📦
+                            </div>
+                          )}
+                          {producto.promocion_activa && producto.precio_promocion != null && (
+                            <span style={{
+                              position: 'absolute',
+                              top: '12px',
+                              right: '12px',
+                              backgroundColor: '#e74c3c',
+                              color: 'white',
+                              padding: '6px 10px',
+                              borderRadius: '6px',
+                              fontSize: '12px',
+                              fontWeight: 700,
+                              boxShadow: '0 2px 8px rgba(231, 76, 60, 0.4)',
+                              zIndex: 10,
+                            }}>
+                              OFERTA
+                            </span>
+                          )}
+                        </div>
 
-                {/* Contenido */}
-                <div className="cliente-product-content">
-                  <div className="cliente-product-info">
-                    <h3 className="cliente-product-title">
-                      {producto.nombre}
-                    </h3>
+                        {/* Contenido */}
+                        <div className="cliente-product-content">
+                          <div className="cliente-product-info">
+                            <h3 className="cliente-product-title">
+                              {producto.nombre}
+                            </h3>
 
-                    {producto.descripcion && (
-                      <p className="cliente-product-description">
-                        {producto.descripcion}
-                      </p>
-                    )}
-                  </div>
-
-                  {/* Botón de agregar o controles de cantidad */}
-                  {(() => {
-                    const itemEnCarrito = obtenerItemEnCarrito(producto.id_producto);
-
-                    if (itemEnCarrito) {
-                      // Mostrar controles + y -
-                      return (
-                        <div style={{ display: 'flex', flexDirection: 'column' }}>
-                          <div className="cliente-product-price-container">
-                            {producto.promocion_activa && producto.precio_promocion != null ? (
-                              <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                                <div style={{
-                                  fontSize: '14px',
-                                  color: '#999',
-                                  textDecoration: 'line-through'
-                                }}>
-                                  {producto.id_unidad_medida === 1
-                                    ? `${formatPrice(producto.precioventa * 100)}`
-                                    : formatPrice(producto.precioventa)
-                                  }
-                                </div>
-                                <div style={{ display: 'flex', alignItems: 'baseline', gap: '6px' }}>
-                                  <div className="cliente-product-price" style={{ color: '#e74c3c' }}>
-                                    {producto.id_unidad_medida === 1
-                                      ? `${formatPrice(producto.precio_promocion * 100)}`
-                                      : formatPrice(producto.precio_promocion)
-                                    }
-                                  </div>
-                                  {producto.id_unidad_medida === 1 && (
-                                    <span className="cliente-product-price-unit" style={{ fontWeight: 700 }}>
-                                      x 100gr
-                                    </span>
-                                  )}
-                                </div>
-                              </div>
-                            ) : (
-                              <>
-                                <div className="cliente-product-price">
-                                  {producto.id_unidad_medida === 1
-                                    ? `${formatPrice(producto.precioventa * 100)}`
-                                    : formatPrice(producto.precioventa)
-                                  }
-                                </div>
-                                {producto.id_unidad_medida === 1 && (
-                                  <span className="cliente-product-price-unit" style={{ fontWeight: 700 }}>
-                                    x 100gr
-                                  </span>
-                                )}
-                              </>
+                            {producto.descripcion && (
+                              <p className="cliente-product-description">
+                                {producto.descripcion}
+                              </p>
                             )}
                           </div>
-                          <div className="cliente-product-quantity-controls">
 
-                            <button
-                              onClick={() => actualizarCantidad(
-                                `producto-${producto.id_producto}`,
-                                itemEnCarrito.cantidad - (producto.id_unidad_medida === 1 ? 10 : 1)
-                              )}
-                              className="cliente-product-quantity-btn"
-                            >
-                              −
-                            </button>
+                          {/* Botón de agregar o controles de cantidad */}
+                          {(() => {
+                            const itemEnCarrito = obtenerItemEnCarrito(producto.id_producto);
 
-                            <span className="cliente-product-quantity-display">
-                              {producto.id_unidad_medida === 1
-                                ? `${Math.round(itemEnCarrito.cantidad)}gr`
-                                : `${itemEnCarrito.cantidad}`
-                              }
-                            </span>
-
-                            <button
-                              onClick={() => actualizarCantidad(
-                                `producto-${producto.id_producto}`,
-                                itemEnCarrito.cantidad + (producto.id_unidad_medida === 1 ? 10 : 1)
-                              )}
-                              className="cliente-product-quantity-btn"
-                            >
-                              +
-                            </button>
-                          </div>
-                        </div>
-                      );
-                    } else {
-                      // Mostrar botón de agregar
-                      return (
-                        <>
-                          <div>
-                            <div className="cliente-product-price-container">
-                              {producto.promocion_activa && producto.precio_promocion != null ? (
-                                <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                                  <div style={{
-                                    fontSize: '14px',
-                                    color: '#999',
-                                    textDecoration: 'line-through'
-                                  }}>
-                                    {producto.id_unidad_medida === 1
-                                      ? `${formatPrice(producto.precioventa * 100)}`
-                                      : formatPrice(producto.precioventa)
-                                    }
-                                  </div>
-                                  <div style={{ display: 'flex', alignItems: 'baseline', gap: '6px' }}>
-                                    <div className="cliente-product-price" style={{ color: '#e74c3c' }}>
-                                      {producto.id_unidad_medida === 1
-                                        ? `${formatPrice(producto.precio_promocion * 100)}`
-                                        : formatPrice(producto.precio_promocion)
-                                      }
-                                    </div>
-                                    {producto.id_unidad_medida === 1 && (
-                                      <span className="cliente-product-price-unit" style={{ fontWeight: 700 }}>
-                                        x 100gr
-                                      </span>
+                            if (itemEnCarrito) {
+                              // Mostrar controles + y -
+                              return (
+                                <div style={{ display: 'flex', flexDirection: 'column' }}>
+                                  <div className="cliente-product-price-container">
+                                    {producto.promocion_activa && producto.precio_promocion != null ? (
+                                      <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                                        <div style={{
+                                          fontSize: '14px',
+                                          color: '#999',
+                                          textDecoration: 'line-through'
+                                        }}>
+                                          {producto.id_unidad_medida === 1
+                                            ? `${formatPrice(producto.precioventa * 100)}`
+                                            : formatPrice(producto.precioventa)
+                                          }
+                                        </div>
+                                        <div style={{ display: 'flex', alignItems: 'baseline', gap: '6px' }}>
+                                          <div className="cliente-product-price" style={{ color: '#e74c3c' }}>
+                                            {producto.id_unidad_medida === 1
+                                              ? `${formatPrice(producto.precio_promocion * 100)}`
+                                              : formatPrice(producto.precio_promocion)
+                                            }
+                                          </div>
+                                          {producto.id_unidad_medida === 1 && (
+                                            <span className="cliente-product-price-unit" style={{ fontWeight: 700 }}>
+                                              x 100gr
+                                            </span>
+                                          )}
+                                        </div>
+                                      </div>
+                                    ) : (
+                                      <>
+                                        <div className="cliente-product-price">
+                                          {producto.id_unidad_medida === 1
+                                            ? `${formatPrice(producto.precioventa * 100)}`
+                                            : formatPrice(producto.precioventa)
+                                          }
+                                        </div>
+                                        {producto.id_unidad_medida === 1 && (
+                                          <span className="cliente-product-price-unit" style={{ fontWeight: 700 }}>
+                                            x 100gr
+                                          </span>
+                                        )}
+                                      </>
                                     )}
                                   </div>
-                                </div>
-                              ) : (
-                                <>
-                                  <div className="cliente-product-price">
-                                    {producto.id_unidad_medida === 1
-                                      ? `${formatPrice(producto.precioventa * 100)}`
-                                      : formatPrice(producto.precioventa)
-                                    }
-                                  </div>
-                                  {producto.id_unidad_medida === 1 && (
-                                    <span className="cliente-product-price-unit" style={{ fontWeight: 700 }}>
-                                      x 100gr
-                                    </span>
-                                  )}
-                                </>
-                              )}
-                            </div>
-                            <button
-                              onClick={() => manejarAgregarProducto(producto)}
-                              disabled={producto.stock <= 0}
-                              className={`cliente-product-add-btn ${producto.stock > 0 ? 'available' : 'unavailable'}`}
-                            >
-                              {producto.stock > 0 ? '+ Agregar al carrito' : 'Sin stock'}
-                            </button>
-                          </div>
-                        </>
-                      );
-                    }
-                  })()}
-                </div>
-              </div>
-            ))}
+                                  <div className="cliente-product-quantity-controls">
 
-            {productosFiltrados.length === 0 && (
-              <div className="cliente-empty-state">
-                <div className="cliente-empty-state-icon">🔍</div>
-                <p className="cliente-empty-state-text">
-                  No se encontraron productos
-                </p>
-              </div>
-            )}
+                                    <button
+                                      onClick={() => actualizarCantidad(
+                                        `producto-${producto.id_producto}`,
+                                        itemEnCarrito.cantidad - (producto.id_unidad_medida === 1 ? 10 : 1)
+                                      )}
+                                      className="cliente-product-quantity-btn"
+                                    >
+                                      −
+                                    </button>
+
+                                    <span className="cliente-product-quantity-display">
+                                      {producto.id_unidad_medida === 1
+                                        ? `${Math.round(itemEnCarrito.cantidad)}gr`
+                                        : `${itemEnCarrito.cantidad}`
+                                      }
+                                    </span>
+
+                                    <button
+                                      onClick={() => actualizarCantidad(
+                                        `producto-${producto.id_producto}`,
+                                        itemEnCarrito.cantidad + (producto.id_unidad_medida === 1 ? 10 : 1)
+                                      )}
+                                      className="cliente-product-quantity-btn"
+                                    >
+                                      +
+                                    </button>
+                                  </div>
+                                </div>
+                              );
+                            } else {
+                              // Mostrar botón de agregar
+                              return (
+                                <>
+                                  <div>
+                                    <div className="cliente-product-price-container">
+                                      {producto.promocion_activa && producto.precio_promocion != null ? (
+                                        <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                                          <div style={{
+                                            fontSize: '14px',
+                                            color: '#999',
+                                            textDecoration: 'line-through'
+                                          }}>
+                                            {producto.id_unidad_medida === 1
+                                              ? `${formatPrice(producto.precioventa * 100)}`
+                                              : formatPrice(producto.precioventa)
+                                            }
+                                          </div>
+                                          <div style={{ display: 'flex', alignItems: 'baseline', gap: '6px' }}>
+                                            <div className="cliente-product-price" style={{ color: '#e74c3c' }}>
+                                              {producto.id_unidad_medida === 1
+                                                ? `${formatPrice(producto.precio_promocion * 100)}`
+                                                : formatPrice(producto.precio_promocion)
+                                              }
+                                            </div>
+                                            {producto.id_unidad_medida === 1 && (
+                                              <span className="cliente-product-price-unit" style={{ fontWeight: 700 }}>
+                                                x 100gr
+                                              </span>
+                                            )}
+                                          </div>
+                                        </div>
+                                      ) : (
+                                        <>
+                                          <div className="cliente-product-price">
+                                            {producto.id_unidad_medida === 1
+                                              ? `${formatPrice(producto.precioventa * 100)}`
+                                              : formatPrice(producto.precioventa)
+                                            }
+                                          </div>
+                                          {producto.id_unidad_medida === 1 && (
+                                            <span className="cliente-product-price-unit" style={{ fontWeight: 700 }}>
+                                              x 100gr
+                                            </span>
+                                          )}
+                                        </>
+                                      )}
+                                    </div>
+                                    <button
+                                      onClick={() => manejarAgregarProducto(producto)}
+                                      disabled={producto.stock <= 0}
+                                      className={`cliente-product-add-btn ${producto.stock > 0 ? 'available' : 'unavailable'}`}
+                                    >
+                                      {producto.stock > 0 ? '+ Agregar al carrito' : 'Sin stock'}
+                                    </button>
+                                  </div>
+                                </>
+                              );
+                            }
+                          })()}
+                        </div>
+                      </div>
+                    ))}
+
+                    {productosFiltrados.length === 0 && (
+                      <div className="cliente-empty-state">
+                        <div className="cliente-empty-state-icon">🔍</div>
+                        <p className="cliente-empty-state-text">
+                          No se encontraron productos
+                        </p>
+                      </div>
+                    )}
                   </div>
                 </div>
               </div>
-              </>
-            )}
+            </>
+          )}
         </>
       ) : (
         <ClientePromociones
@@ -581,7 +590,14 @@ export const ClientePage: React.FC = () => {
             <div className="cliente-cart-items">
               {carrito.length === 0 ? (
                 <div className="cliente-cart-empty">
-                  <div className="cliente-cart-empty-icon">🛒</div>
+                  <div className="cliente-cart-empty-icon">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="70px" height="70px" viewBox="0 0 24 24" fill="none">
+                      <path d="M2 3L2.26491 3.0883C3.58495 3.52832 4.24497 3.74832 4.62248 4.2721C5 4.79587 5 5.49159 5 6.88304V9.5C5 12.3284 5 13.7426 5.87868 14.6213C6.75736 15.5 8.17157 15.5 11 15.5H19" stroke="#222223" stroke-width="1.5" stroke-linecap="round" />
+                      <path d="M7.5 18C8.32843 18 9 18.6716 9 19.5C9 20.3284 8.32843 21 7.5 21C6.67157 21 6 20.3284 6 19.5C6 18.6716 6.67157 18 7.5 18Z" stroke="#222223" stroke-width="1.5" />
+                      <path d="M16.5 18.0001C17.3284 18.0001 18 18.6716 18 19.5001C18 20.3285 17.3284 21.0001 16.5 21.0001C15.6716 21.0001 15 20.3285 15 19.5001C15 18.6716 15.6716 18.0001 16.5 18.0001Z" stroke="#222223" stroke-width="1.5" />
+                      <path d="M5 6H16.4504C18.5054 6 19.5328 6 19.9775 6.67426C20.4221 7.34853 20.0173 8.29294 19.2078 10.1818L18.7792 11.1818C18.4013 12.0636 18.2123 12.5045 17.8366 12.7523C17.4609 13 16.9812 13 16.0218 13H5" stroke="#222223" stroke-width="1.5" />
+                    </svg>
+                  </div>
                   <p className="cliente-cart-empty-text">
                     Tu carrito está vacío
                   </p>
@@ -618,8 +634,8 @@ export const ClientePage: React.FC = () => {
                             {item.unidadMedidaId === 1
                               ? `${Math.round(item.cantidad)}gr`
                               : item.tipo === 'promocion'
-                              ? `${item.cantidad} un`
-                              : `${item.cantidad} un`
+                                ? `${item.cantidad} un`
+                                : `${item.cantidad} un`
                             }
                           </span>
 

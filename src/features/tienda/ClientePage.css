@@ -181,6 +181,7 @@
 
 .cliente-header-cart-icon {
   font-size: 20px;
+  height: 22px;
 }
 
 /* --- Buscador en Header --- */
@@ -199,6 +200,7 @@
   font-size: 18px;
   color: #9ca3af;
   pointer-events: none;
+  height: 24px;
 }
 
 .cliente-header-search-input {
