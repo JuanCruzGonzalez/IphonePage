@@ -21,13 +21,6 @@ export const ProductosPage: React.FC = () => {
   const [searchTerm, setSearchTerm] = React.useState('');
   const [statusFilter, setStatusFilter] = React.useState<'all' | 'active' | 'inactive'>('all');
 
-  // Sincronizar el searchTerm local con el del contexto
-  React.useEffect(() => {
-    if (productosSearchQuery !== searchTerm) {
-      setSearchTerm(productosSearchQuery);
-    }
-  }, [productosSearchQuery]);
-
   const debounced = useDebounce(searchTerm, 300);
   
   React.useEffect(() => {
