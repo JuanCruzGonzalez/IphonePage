@@ -1,15 +1,16 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { Producto, Promocion, UnidadMedida } from '../../../core/types';
 import { updateProducto } from '../../productos/services/productoService';
 import { useVentas } from '../context/VentasContext';
 
 // Small row component for product items (editable unit price)
-const ProductRow: React.FC<{
+// Memoized to prevent unnecessary re-renders when parent updates
+const ProductRow = React.memo<{
     item: { id_producto: number; cantidad: number; nombre: string; precioventa: number; unidadMedida: UnidadMedida };
     onUpdatePrice: (id_producto: number, newPrice: number) => void;
     onRemove: (id_producto: number) => void;
     onChangeCantidad: (id_producto: number, cantidad: number) => void;
-}> = ({ item, onUpdatePrice, onRemove, onChangeCantidad }) => {
+}>(({ item, onUpdatePrice, onRemove, onChangeCantidad }) => {
     return (
         <div key={item.id_producto} className="item-row">
             <div>
@@ -72,15 +73,16 @@ const ProductRow: React.FC<{
             </div>
         </div>
     );
-};
+});
 
 // Small row component for promotion items (editable quantity and unit price)
-const PromoRow: React.FC<{
+// Memoized to prevent unnecessary re-renders when parent updates
+const PromoRow = React.memo<{
     promo: { id_promocion: number; name: string; precio: number | null; cantidad: number };
     onChangeCantidad: (id_promocion: number, cantidad: number) => void;
     onChangePrecio: (id_promocion: number, precio: number | null) => void;
     onRemove: (id_promocion: number) => void;
-}> = ({ promo, onChangeCantidad, onChangePrecio, onRemove }) => {
+}>(({ promo, onChangeCantidad, onChangePrecio, onRemove }) => {
     return (
         <div key={promo.id_promocion} className="item-row">
             <div style={{ display: 'flex', alignItems: 'center', gap: 12, justifyContent: 'space-between', width: '100%' }}>
@@ -125,7 +127,7 @@ const PromoRow: React.FC<{
             </div>
         </div>
     );
-};
+});
 
 interface ModalNuevaVentaProps {
     productos: Producto[];
@@ -134,7 +136,7 @@ interface ModalNuevaVentaProps {
     showWarning?: (message: string) => void;
 }
 
-export const ModalNuevaVenta: React.FC<ModalNuevaVentaProps> = ({
+export const ModalNuevaVenta = React.memo<ModalNuevaVentaProps>(({
     productos,
     promociones = [],
     showError,
@@ -236,11 +238,11 @@ export const ModalNuevaVenta: React.FC<ModalNuevaVentaProps> = ({
         setCantidad('');
     };
 
-    const calcularTotal = () => {
+    const calcularTotal = useMemo(() => {
         const productosTotal = items.reduce((total, item) => total + (item.cantidad * item.precioventa), 0);
         const promosTotal = promosAdded.reduce((total, p) => total + (p.cantidad * (p.precio ?? 0)), 0);
         return productosTotal + promosTotal;
-    };
+    }, [items, promosAdded]);
 
     const handleSubmit = () => {
         if (items.length === 0 && promosAdded.length === 0) {
@@ -477,7 +479,7 @@ export const ModalNuevaVenta: React.FC<ModalNuevaVentaProps> = ({
                         fontWeight: 'bold'
                     }}>
                         <span>Total:</span>
-                        <span>${calcularTotal()}</span>
+                        <span>${calcularTotal}</span>
                     </div>
                 </div>
 
@@ -491,4 +493,4 @@ export const ModalNuevaVenta: React.FC<ModalNuevaVentaProps> = ({
             </div>
         </div>
     );
-};
+});

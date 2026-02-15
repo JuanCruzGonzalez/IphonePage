@@ -18,7 +18,7 @@ interface ClienteProductosProps {
 type SortOption = 'featured' | 'name-asc' | 'name-desc' | 'price-asc' | 'price-desc';
 const ITEMS_PER_PAGE = 15;
 
-export const ClienteProductos: React.FC<ClienteProductosProps> = ({
+export const ClienteProductos = React.memo<ClienteProductosProps>(({
   carrito,
   agregarAlCarrito,
   actualizarCantidad,
@@ -471,4 +471,4 @@ export const ClienteProductos: React.FC<ClienteProductosProps> = ({
       )}
     </>
   );
-};
+});

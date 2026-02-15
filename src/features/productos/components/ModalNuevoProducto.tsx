@@ -10,7 +10,7 @@ interface ModalNuevoProductoProps {
   categorias: Categoria[];
 }
 
-export const ModalNuevoProducto: React.FC<ModalNuevoProductoProps> = ({ 
+export const ModalNuevoProducto = React.memo<ModalNuevoProductoProps>(({ 
   unidadesMedida,
   categorias,
 }) => {
@@ -20,14 +20,14 @@ export const ModalNuevoProducto: React.FC<ModalNuevoProductoProps> = ({
     categoriasDeProducto,
     handleNuevoProducto,
     handleEditarProducto,
-    crearProductoAsync,
-    editarProductoAsync,
+    isCreatingProducto,
+    isEditingProducto,
   } = useProductos();
 
   const isOpen = modalNuevoProducto.isOpen;
   const onClose = modalNuevoProducto.close;
   const initialProduct = productToEdit;
-  const loading = productToEdit ? editarProductoAsync.loading : crearProductoAsync.loading;
+  const loading = productToEdit ? isEditingProducto : isCreatingProducto;
   const categoriasIniciales = categoriasDeProducto;
 
   const [nombre, setNombre] = useState(initialProduct?.nombre ?? '');
@@ -647,4 +647,4 @@ export const ModalNuevoProducto: React.FC<ModalNuevoProductoProps> = ({
       )}
     </div>
   );
-};
+});

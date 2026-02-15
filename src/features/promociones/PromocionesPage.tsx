@@ -1,15 +1,14 @@
 import React from 'react';
-import { Promocion } from '../../core/types';
+import { usePromociones } from './context/PromocionesContext';
 
-interface PromocionesPageProps {
-    promociones: Promocion[];
-    onNuevoPromocion: () => void;
-    onEditPromocion?: (promocion: Promocion) => void;
-    onChangePromocion?: (id_promocion: number, estado: boolean) => void;
-    onViewPromocion?: (promocion: Promocion) => void;
-}
-
-export const PromocionesPage: React.FC<PromocionesPageProps> = ({ promociones, onNuevoPromocion, onEditPromocion, onChangePromocion, onViewPromocion }) => {
+export const PromocionesPage: React.FC = () => {
+    const {
+        promociones,
+        modalCrearPromocion,
+        handleEditarPromocion,
+        handleChangePromocion,
+        handleVerPromocion,
+    } = usePromociones();
     return (
         <div className="page">
             <div className="page-header">
@@ -17,7 +16,7 @@ export const PromocionesPage: React.FC<PromocionesPageProps> = ({ promociones, o
                     <h1 className="page-title">Promociones</h1>
                     <p className="page-subtitle">Crea y administra promociones</p>
                 </div>
-                <button className="btn-primary" onClick={onNuevoPromocion}>+ Nueva Promoción</button>
+                <button className="btn-primary" onClick={modalCrearPromocion.open}>+ Nueva Promoción</button>
             </div>
 
             <div className="card">
@@ -46,13 +45,13 @@ export const PromocionesPage: React.FC<PromocionesPageProps> = ({ promociones, o
                                         </td>
                                         <td>
                                             <div style={{ display: 'flex', gap: 8 }}>
-                                                <button style={{ width: '40px', display: 'flex', justifyContent: 'center', height: '40px', border: '1px solid #ddd', padding: 10, backgroundColor: '#f0f0f0' }} className="btn-sm btn-secondary mr-2" onClick={() => onViewPromocion?.(p)}>
+                                                <button style={{ width: '40px', display: 'flex', justifyContent: 'center', height: '40px', border: '1px solid #ddd', padding: 10, backgroundColor: '#f0f0f0' }} className="btn-sm btn-secondary mr-2" onClick={() => handleVerPromocion(p)}>
                                                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden>
                                                         <path d="M1.5 12S5.5 5 12 5s10.5 7 10.5 7-4 7-10.5 7S1.5 12 1.5 12z" stroke="#2563eb" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
                                                         <path d="M12 9a3 3 0 100 6 3 3 0 000-6z" stroke="#2563eb" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
                                                     </svg>
                                                 </button>
-                                                <button style={{ width: '40px', display: 'flex', justifyContent: 'center', height: '40px', border: '1px solid #ddd', padding: 10, backgroundColor: '#f0f0f0' }} className="btn-sm btn-secondary mr-2" onClick={() => onEditPromocion?.(p)}>
+                                                <button style={{ width: '40px', display: 'flex', justifyContent: 'center', height: '40px', border: '1px solid #ddd', padding: 10, backgroundColor: '#f0f0f0' }} className="btn-sm btn-secondary mr-2" onClick={() => handleEditarPromocion(p)}>
                                                     <svg
                                                         xmlns="http://www.w3.org/2000/svg"
                                                         width="16"
@@ -70,7 +69,7 @@ export const PromocionesPage: React.FC<PromocionesPageProps> = ({ promociones, o
                                                     </svg>
                                                 </button>
                                                 {p.estado ? (
-                                                    <button className="btn-sm btn-danger" style={{ width: '40px', display: 'flex', justifyContent: 'center', height: '40px', border: '1px solid #ddd', padding: 10 }} onClick={() => onChangePromocion?.(p.id_promocion, false)}>
+                                                    <button className="btn-sm btn-danger" style={{ width: '40px', display: 'flex', justifyContent: 'center', height: '40px', border: '1px solid #ddd', padding: 10 }} onClick={() => handleChangePromocion(p.id_promocion, false)}>
                                                         <svg xmlns="http://www.w3.org/2000/svg" width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                                                             <polyline points="3 6 5 6 21 6"></polyline>
                                                             <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"></path>
@@ -79,7 +78,7 @@ export const PromocionesPage: React.FC<PromocionesPageProps> = ({ promociones, o
                                                         </svg>
                                                     </button>
                                                 ) : (
-                                                    <button className="btn-sm btn-primary" style={{ width: '40px', display: 'flex', justifyContent: 'center', height: '40px', border: '1px solid #ddd', padding: 10 }} onClick={() => onChangePromocion?.(p.id_promocion, true)}>
+                                                    <button className="btn-sm btn-primary" style={{ width: '40px', display: 'flex', justifyContent: 'center', height: '40px', border: '1px solid #ddd', padding: 10 }} onClick={() => handleChangePromocion(p.id_promocion, true)}>
                                                         <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none">
                                                             <path fill-rule="evenodd" clip-rule="evenodd" d="M12 3C12.2652 3 12.5196 3.10536 12.7071 3.29289L19.7071 10.2929C20.0976 10.6834 20.0976 11.3166 19.7071 11.7071C19.3166 12.0976 18.6834 12.0976 18.2929 11.7071L13 6.41421V20C13 20.5523 12.5523 21 12 21C11.4477 21 11 20.5523 11 20V6.41421L5.70711 11.7071C5.31658 12.0976 4.68342 12.0976 4.29289 11.7071C3.90237 11.3166 3.90237 10.6834 4.29289 10.2929L11.2929 3.29289C11.4804 3.10536 11.7348 3 12 3Z" fill="#fff" />
                                                         </svg>

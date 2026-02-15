@@ -8,7 +8,7 @@
  * - Integración con WhatsApp para pedidos
  */
 
-import React, { createContext, useContext, useState, ReactNode } from 'react';
+import React, { createContext, useContext, useState, useCallback, useMemo, ReactNode } from 'react';
 import { Producto, Promocion } from '../../../core/types';
 import { calculateCartTotal } from '../../../shared/utils/calculations';
 import { formatPrice } from '../../../shared/utils';
@@ -67,7 +67,7 @@ interface CarritoContextType {
   
   // Utilidades
   obtenerItemEnCarrito: (id_producto: number) => ItemCarrito | undefined;
-  calcularTotal: () => number;
+  calcularTotal: number; // Ahora es un valor calculado con useMemo
   enviarPedidoWhatsApp: () => void;
 }
 
@@ -89,126 +89,130 @@ export const CarritoProvider: React.FC<{ children: ReactNode }> = ({ children })
    * Agrega un producto al carrito
    * Si el producto ya existe, incrementa su cantidad
    */
-  const agregarAlCarrito = (producto: Producto, cantidad: number) => {
-    const id = `producto-${producto.id_producto}`;
-    const itemExistente = carrito.find(item => item.id === id);
+  const agregarAlCarrito = useCallback((producto: Producto, cantidad: number) => {
+    setCarrito(prevCarrito => {
+      const id = `producto-${producto.id_producto}`;
+      const itemExistente = prevCarrito.find(item => item.id === id);
 
-    // Determinar precio correcto (usar precio de promoción si está activa)
-    const precio = producto.promocion_activa && producto.precio_promocion
-      ? producto.precio_promocion
-      : producto.precioventa;
+      // Determinar precio correcto (usar precio de promoción si está activa)
+      const precio = producto.promocion_activa && producto.precio_promocion
+        ? producto.precio_promocion
+        : producto.precioventa;
 
-    if (itemExistente) {
-      setCarrito(carrito.map(item =>
-        item.id === id
-          ? { ...item, cantidad: item.cantidad + cantidad }
-          : item
-      ));
-    } else {
-      setCarrito([...carrito, {
-        id,
-        tipo: 'producto',
-        id_referencia: producto.id_producto,
-        nombre: producto.nombre,
-        precio,
-        cantidad,
-        unidadMedidaId: producto.id_unidad_medida,
-        unidadMedidaNombre: producto.unidad_medida?.abreviacion || '',
-      }]);
-    }
-  };
+      if (itemExistente) {
+        return prevCarrito.map(item =>
+          item.id === id
+            ? { ...item, cantidad: item.cantidad + cantidad }
+            : item
+        );
+      } else {
+        return [...prevCarrito, {
+          id,
+          tipo: 'producto' as const,
+          id_referencia: producto.id_producto,
+          nombre: producto.nombre,
+          precio,
+          cantidad,
+          unidadMedidaId: producto.id_unidad_medida,
+          unidadMedidaNombre: producto.unidad_medida?.abreviacion || '',
+        }];
+      }
+    });
+  }, []);
 
   /**
    * Agrega una promoción al carrito
    */
-  const agregarPromocionAlCarrito = (promocion: Promocion, cantidad: number = 1) => {
-    const id = `promocion-${promocion.id_promocion}`;
-    const itemExistente = carrito.find(item => item.id === id);
-    const precio = promocion.precio || 0;
+  const agregarPromocionAlCarrito = useCallback((promocion: Promocion, cantidad: number = 1) => {
+    setCarrito(prevCarrito => {
+      const id = `promocion-${promocion.id_promocion}`;
+      const itemExistente = prevCarrito.find(item => item.id === id);
+      const precio = promocion.precio || 0;
 
-    if (itemExistente) {
-      setCarrito(carrito.map(item =>
-        item.id === id
-          ? { ...item, cantidad: item.cantidad + cantidad }
-          : item
-      ));
-    } else {
-      setCarrito([...carrito, {
-        id,
-        tipo: 'promocion',
-        id_referencia: promocion.id_promocion,
-        nombre: promocion.name,
-        precio,
-        cantidad,
-      }]);
-    }
-  };
+      if (itemExistente) {
+        return prevCarrito.map(item =>
+          item.id === id
+            ? { ...item, cantidad: item.cantidad + cantidad }
+            : item
+        );
+      } else {
+        return [...prevCarrito, {
+          id,
+          tipo: 'promocion' as const,
+          id_referencia: promocion.id_promocion,
+          nombre: promocion.name,
+          precio,
+          cantidad,
+        }];
+      }
+    });
+  }, []);
 
   /**
    * Elimina un item del carrito
    */
-  const eliminarDelCarrito = (id: string) => {
-    setCarrito(carrito.filter(item => item.id !== id));
-  };
+  const eliminarDelCarrito = useCallback((id: string) => {
+    setCarrito(prevCarrito => prevCarrito.filter(item => item.id !== id));
+  }, []);
 
   /**
    * Actualiza la cantidad de un item
    * Si la cantidad es <= 0, elimina el item
    */
-  const actualizarCantidad = (id: string, nuevaCantidad: number) => {
+  const actualizarCantidad = useCallback((id: string, nuevaCantidad: number) => {
     if (nuevaCantidad <= 0) {
-      eliminarDelCarrito(id);
+      setCarrito(prevCarrito => prevCarrito.filter(item => item.id !== id));
       return;
     }
 
-    setCarrito(carrito.map(item =>
+    setCarrito(prevCarrito => prevCarrito.map(item =>
       item.id === id
         ? { ...item, cantidad: nuevaCantidad }
         : item
     ));
-  };
+  }, []);
 
   /**
    * Vacía todo el carrito
    */
-  const vaciarCarrito = () => {
+  const vaciarCarrito = useCallback(() => {
     setCarrito([]);
-  };
+  }, []);
 
   /**
    * Toggle para mostrar/ocultar panel del carrito
    */
-  const toggleMostrarCarrito = () => {
-    setMostrarCarrito(!mostrarCarrito);
-  };
+  const toggleMostrarCarrito = useCallback(() => {
+    setMostrarCarrito(prev => !prev);
+  }, []);
 
   /**
    * Cierra el panel del carrito
    */
-  const cerrarCarrito = () => {
+  const cerrarCarrito = useCallback(() => {
     setMostrarCarrito(false);
-  };
+  }, []);
 
   /**
    * Abre el modal para ingresar cantidad de gramos
    */
-  const abrirModalCantidad = (producto: Producto) => {
+  const abrirModalCantidad = useCallback((producto: Producto) => {
     setModalCantidad({ isOpen: true, producto });
     setCantidadGramos('');
-  };
+  }, []);
 
   /**
    * Cierra el modal de cantidad
    */
-  const cerrarModalCantidad = () => {
+  const cerrarModalCantidad = useCallback(() => {
     setModalCantidad({ isOpen: false, producto: null });
     setCantidadGramos('');
-  };
+  }, []);
 
   /**
    * Confirma la cantidad de gramos ingresada y agrega al carrito
    */
-  const confirmarCantidadGramos = () => {
+  const confirmarCantidadGramos = useCallback(() => {
     if (!modalCantidad.producto) return;
 
     const gramos = parseFloat(cantidadGramos);
@@ -218,37 +222,39 @@ export const CarritoProvider: React.FC<{ children: ReactNode }> = ({ children })
     }
 
     agregarAlCarrito(modalCantidad.producto, gramos);
-    cerrarModalCantidad();
-  };
+    setModalCantidad({ isOpen: false, producto: null });
+    setCantidadGramos('');
+  }, [modalCantidad.producto, cantidadGramos, agregarAlCarrito]);
 
   /**
    * Maneja el click en "Agregar" de un producto
    * Si es por peso (gramos), abre el modal; sino agrega directamente
    */
-  const manejarAgregarProducto = (producto: Producto) => {
+  const manejarAgregarProducto = useCallback((producto: Producto) => {
     if (producto.id_unidad_medida === 1) {
-      abrirModalCantidad(producto);
+      setModalCantidad({ isOpen: true, producto });
+      setCantidadGramos('');
     } else {
       agregarAlCarrito(producto, 1);
     }
-  };
+  }, [agregarAlCarrito]);
 
   /**
    * Obtiene un item del carrito por su id_producto
    */
-  const obtenerItemEnCarrito = (id_producto: number): ItemCarrito | undefined => {
+  const obtenerItemEnCarrito = useCallback((id_producto: number): ItemCarrito | undefined => {
     return carrito.find(item => item.id === `producto-${id_producto}`);
-  };
+  }, [carrito]);
 
   /**
-   * Calcula el total del carrito
+   * Calcula el total del carrito (usando useMemo para evitar cálculos innecesarios)
    */
-  const calcularTotal = () => calculateCartTotal(carrito);
+  const calcularTotal = useMemo(() => calculateCartTotal(carrito), [carrito]);
 
   /**
    * Genera mensaje y abre WhatsApp con el pedido
    */
-  const enviarPedidoWhatsApp = () => {
+  const enviarPedidoWhatsApp = useCallback(() => {
     const numeroWhatsApp = '5492616166624';
 
     let mensaje = 'Hola Chañar, quería hacer el siguiente pedido:\n\n';
@@ -266,13 +272,13 @@ export const CarritoProvider: React.FC<{ children: ReactNode }> = ({ children })
       mensaje += `${tipo}• ${item.nombre}: ${cantidad} - ${formatPrice(item.precio * item.cantidad)}\n`;
     });
 
-    mensaje += `\n*Total: ${formatPrice(calcularTotal())}*`;
+    mensaje += `\n*Total: ${formatPrice(calcularTotal)}*`;
 
     const mensajeCodificado = encodeURIComponent(mensaje);
     const urlWhatsApp = `https://wa.me/${numeroWhatsApp}?text=${mensajeCodificado}`;
 
     window.open(urlWhatsApp, '_blank');
-  };
+  }, [carrito, calcularTotal]);
 
   const value: CarritoContextType = {
     // Estado

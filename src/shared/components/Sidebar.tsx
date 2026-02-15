@@ -7,7 +7,7 @@ interface SidebarProps {
   onSectionChange: (section: 'ventas' | 'productos' | 'stock' | 'promociones' | 'gastos' | 'categorias') => void;
 }
 
-export const Sidebar: React.FC<SidebarProps> = ({ activeSection, onSectionChange }) => {
+export const Sidebar = React.memo<SidebarProps>(({ activeSection, onSectionChange }) => {
   const { signOut } = useAuth();
   const navigate = useNavigate();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
@@ -106,4 +106,4 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeSection, onSectionChange
       </aside>
     </>
   );
-};
+});

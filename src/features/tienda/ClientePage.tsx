@@ -664,7 +664,7 @@ export const ClientePage: React.FC = () => {
                       Total:
                     </span>
                     <span className="cliente-cart-total-value">
-                      {formatPrice(calcularTotal())}
+                      {formatPrice(calcularTotal)}
                     </span>
                   </div>
 

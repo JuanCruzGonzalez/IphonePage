@@ -1,21 +1,24 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
-import { Producto, PromocionDetalleInput } from '../../../core/types';
+import { Producto } from '../../../core/types';
 import Cropper from 'react-easy-crop';
 import { getPromocionImageUrl } from '../../../shared/services/storageService';
+import { usePromociones } from '../context/PromocionesContext';
 
 interface ModalCrearPromocionProps {
-  isOpen: boolean;
-  onClose: () => void;
   productos: Producto[];
-  // initialPromotion used for editing
-  initialPromotion?: { id_promocion: number; name: string; precio: number | null; productos: PromocionDetalleInput[]; estado: boolean; imagen_path?: string | null } | null;
-  onSubmit: (payload: { name: string; precio: number | null; productos: PromocionDetalleInput[]; estado: boolean }, imageFile?: File | null) => void;
-  showError?: (message: string) => void;
   showWarning?: (message: string) => void;
-  loading?: boolean;
 }
 
-export const ModalCrearPromocion: React.FC<ModalCrearPromocionProps> = ({ isOpen, onClose, productos, initialPromotion = null, onSubmit, showWarning, loading = false }) => {
+export const ModalCrearPromocion = React.memo<ModalCrearPromocionProps>(({ productos, showWarning }) => {
+  const {
+    modalCrearPromocion,
+    promocionToEdit,
+    handleCrearPromocion,
+    crearPromocionAsync,
+    editarPromocionAsync,
+  } = usePromociones();
+
+  const loading = crearPromocionAsync.loading || editarPromocionAsync.loading;
   const [name, setName] = useState('');
   const [precio, setPrecio] = useState('');
   // items: productos agregados a la promoción (incluye nombre para mostrar)
@@ -38,7 +41,7 @@ export const ModalCrearPromocion: React.FC<ModalCrearPromocionProps> = ({ isOpen
   const [showCropper, setShowCropper] = useState(false);
 
   useEffect(() => {
-    if (!isOpen) {
+    if (!modalCrearPromocion.isOpen) {
       setName('');
       setPrecio('');
       setItems([]);
@@ -51,11 +54,11 @@ export const ModalCrearPromocion: React.FC<ModalCrearPromocionProps> = ({ isOpen
       setShowProductosDropdown(false);
     } else {
       // populate when opening for edit
-      if (initialPromotion) {
-        setName(initialPromotion.name ?? '');
-        setPrecio(initialPromotion.precio != null ? String(initialPromotion.precio) : '');
-        setItems(Array.isArray(initialPromotion.productos) ? initialPromotion.productos.map(p => ({ id_producto: p.id_producto, cantidad: p.cantidad, nombre: productos.find(x => x.id_producto === p.id_producto)?.nombre })) : []);
-        setEstado(initialPromotion.estado ? '1' : '2');
+      if (promocionToEdit) {
+        setName(promocionToEdit.name ?? '');
+        setPrecio(promocionToEdit.precio != null ? String(promocionToEdit.precio) : '');
+        setItems(Array.isArray(promocionToEdit.productos) ? promocionToEdit.productos.map(p => ({ id_producto: p.id_producto, cantidad: p.cantidad, nombre: productos.find(x => x.id_producto === p.id_producto)?.nombre })) : []);
+        setEstado(promocionToEdit.estado ? '1' : '2');
       } else {
         // creating new
         setName('');
@@ -66,7 +69,7 @@ export const ModalCrearPromocion: React.FC<ModalCrearPromocionProps> = ({ isOpen
         setImagePreview(null);
       }
     }
-  }, [isOpen]);
+  }, [modalCrearPromocion.isOpen, promocionToEdit, productos]);
 
   // Cerrar dropdowns cuando se hace clic fuera
   useEffect(() => {
@@ -198,7 +201,7 @@ export const ModalCrearPromocion: React.FC<ModalCrearPromocionProps> = ({ isOpen
     setZoom(1);
   };
 
-  if (!isOpen) return null;
+  if (!modalCrearPromocion.isOpen) return null;
 
   const agregarItem = () => {
     if (!productoSeleccionado) {
@@ -247,18 +250,18 @@ export const ModalCrearPromocion: React.FC<ModalCrearPromocionProps> = ({ isOpen
 
     const precioNum = precio === '' ? null : (isNaN(Number(precio)) ? null : Number(precio));
 
-    onSubmit(
+    handleCrearPromocion(
       { name: name.trim(), precio: precioNum, productos: items.map(i => ({ id_producto: i.id_producto, cantidad: i.cantidad })), estado: estado === '1' },
       imageFile
     );
   };
 
   return (
-    <div className="modal-overlay" onClick={onClose}>
+    <div className="modal-overlay" onClick={modalCrearPromocion.close}>
       <div className="modal-minimal" onClick={(e) => e.stopPropagation()}>
         <div className="modal-minimal-header">
           <h2>Nueva Promoción</h2>
-          <button className="btn-close" onClick={onClose}>×</button>
+          <button className="btn-close" onClick={modalCrearPromocion.close}>×</button>
         </div>
         <div className="modal-minimal-body">
           <div className="form-group">
@@ -403,10 +406,10 @@ export const ModalCrearPromocion: React.FC<ModalCrearPromocionProps> = ({ isOpen
                 </button>
               </div>
             )}
-            {!imagePreview && initialPromotion?.imagen_path && (
+            {!imagePreview && promocionToEdit?.imagen_path && (
               <div style={{ marginTop: '0.5rem' }}>
                 <img 
-                  src={getPromocionImageUrl(initialPromotion.imagen_path) || undefined} 
+                  src={getPromocionImageUrl(promocionToEdit.imagen_path) || undefined} 
                   alt="Imagen actual" 
                   style={{ maxWidth: '200px', maxHeight: '200px', borderRadius: '4px', border: '1px solid #ddd' }}
                 />
@@ -416,8 +419,8 @@ export const ModalCrearPromocion: React.FC<ModalCrearPromocionProps> = ({ isOpen
           </div>
         </div>
           <div className="modal-minimal-footer">
-          <button className="btn-secondary" onClick={onClose} disabled={loading}>Cancelar</button>
-          <button className="btn-primary" onClick={handleSubmit} disabled={loading}>{loading ? (initialPromotion ? 'Actualizando...' : 'Guardando...') : (initialPromotion ? 'Actualizar Promoción' : 'Crear Promoción')}</button>
+          <button className="btn-secondary" onClick={modalCrearPromocion.close} disabled={loading}>Cancelar</button>
+          <button className="btn-primary" onClick={handleSubmit} disabled={loading}>{loading ? (promocionToEdit ? 'Actualizando...' : 'Guardando...') : (promocionToEdit ? 'Actualizar Promoción' : 'Crear Promoción')}</button>
         </div>
       </div>
 
@@ -473,6 +476,6 @@ export const ModalCrearPromocion: React.FC<ModalCrearPromocionProps> = ({ isOpen
       )}
     </div>
   );
-};
+});
 
 export default ModalCrearPromocion;

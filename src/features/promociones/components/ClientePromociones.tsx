@@ -9,7 +9,7 @@ interface ClientePromocionesProps {
   agregarPromocionAlCarrito: (promocion: Promocion, cantidad: number) => void;
 }
 
-export const ClientePromociones: React.FC<ClientePromocionesProps> = ({
+export const ClientePromociones = React.memo<ClientePromocionesProps>(({
   busqueda,
   agregarPromocionAlCarrito,
 }) => {
@@ -139,4 +139,4 @@ export const ClientePromociones: React.FC<ClientePromocionesProps> = ({
       </div>
     </>
   );
-};
+});

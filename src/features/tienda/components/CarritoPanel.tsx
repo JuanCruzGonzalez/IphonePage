@@ -22,7 +22,7 @@ interface CarritoPanelProps {
   onEnviarWhatsApp: () => void;
 }
 
-export const CarritoPanel: React.FC<CarritoPanelProps> = ({
+export const CarritoPanel = React.memo<CarritoPanelProps>(({
   carrito,
   mostrarCarrito,
   onClose,
@@ -125,4 +125,4 @@ export const CarritoPanel: React.FC<CarritoPanelProps> = ({
       </div>
     </>
   );
-};
+});

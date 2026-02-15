@@ -1,20 +1,23 @@
 import { useState, useEffect } from 'react';
+import { QueryClientProvider } from '@tanstack/react-query';
+import { ReactQueryDevtools } from '@tanstack/react-query-devtools';
+import { queryClient } from './lib/queryClient';
 import './core/styles/app.css';
 import './core/styles/toast.css';
-import { UnidadMedida, Promocion, PromocionConDetalles, Gasto, Categoria } from './core/types';
+import { UnidadMedida, Gasto, Categoria } from './core/types';
 import {
   getProductosActivos,
   getUnidadesMedidas,
 } from './features/productos/services/productoService';
-import { getPromocionesActivas, getPromociones,updatePromocion, deletePromocion, getDetallePromocion } from './features/promociones/services/promocionService';
+import { getPromocionesActivas } from './features/promociones/services/promocionService';
 import { getGastos, createGasto, updateGasto, updateGastoEstado } from './features/gastos/services/gastoService';
 import { getCategorias, createCategoria, updateCategoria, updateCategoriaEstado } from './features/categorias/services/categoriaService';
-import ModalVerPromocion from './features/promociones/components/ModalVerPromocion';
 import { Sidebar } from './shared/components/Sidebar';
 import { VentasPage } from './features/ventas/VentasPage';
 import { ProductosPage } from './features/productos/ProductosPage';
 import { ProductosProvider } from './features/productos/context/ProductosContext';
 import { VentasProvider } from './features/ventas/context/VentasContext';
+import { PromocionesProvider } from './features/promociones/context/PromocionesContext';
 import { StockPage } from './features/stock/StockPage';
 import { PromocionesPage } from './features/promociones/PromocionesPage';
 import { GastosPage } from './features/gastos/GastosPage';
@@ -23,6 +26,7 @@ import { ModalNuevaVenta } from './features/ventas/components/ModalNuevaVenta';
 import { ModalNuevoProducto } from './features/productos/components/ModalNuevoProducto';
 import { ModalActualizarStock } from './features/productos/components/ModalActualizarStock';
 import { ModalCrearPromocion } from './features/promociones/components/ModalCrearPromocion';
+import ModalVerPromocion from './features/promociones/components/ModalVerPromocion';
 import { ModalGasto } from './features/gastos/components/ModalGasto';
 import { ModalCategoria } from './features/categorias/components/ModalCategoria';
 import { Toast, ConfirmModal } from './shared/components/ToastModal';
@@ -30,20 +34,16 @@ import { useToast, useConfirm } from './shared/hooks/useToast';
 import { useDisableWheelOnNumberInputs } from './shared/hooks/useDisableWheelOnNumberInputs';
 import { useModal } from './shared/hooks/useModal';
 import { useAsync } from './shared/hooks/useAsync';
-import { createPromocion } from './features/promociones/services/promocionService';
 
 function App() {
   const [activeSection, setActiveSection] = useState<'ventas' | 'productos' | 'stock' | 'promociones' | 'gastos' | 'categorias'>('ventas');
   const [productosActivos, setProductosActivos] = useState<any[]>([]); // Para modales
-  const [promocionesActivas, setPromocionesActivas] = useState<Promocion[]>([]);
-  const [promociones, setPromociones] = useState<Promocion[]>([]);
-  const [promocionToEdit, setPromocionToEdit] = useState<PromocionConDetalles | null>(null);
+  const [promocionesActivas, setPromocionesActivas] = useState<any[]>([]);
   const [unidadesMedida, setUnidadesMedida] = useState<UnidadMedida[]>([]);
   const [gastos, setGastos] = useState<Gasto[]>([]);
   const [gastoToEdit, setGastoToEdit] = useState<Gasto | null>(null);
   const [categorias, setCategorias] = useState<Categoria[]>([]);
   const [categoriaToEdit, setCategoriaToEdit] = useState<Categoria | null>(null);
-  const modalCrearPromocion = useModal(false);
   const [error, setError] = useState<string | null>(null);
 
   // Estados para modales
@@ -62,13 +62,6 @@ function App() {
   }, []);
 
   const initAsync = useAsync<void>();
-  const crearPromocionAsync = useAsync<any>();
-  const editarPromocionAsync = useAsync<any>();
-  const eliminarPromocionAsync = useAsync<any>();
-  const verPromocionAsync = useAsync<any>();
-  const modalVerPromocion = useModal(false);
-  const [promocionVista, setPromocionVista] = useState<Promocion | null>(null);
-  const [promocionVistaDetalles, setPromocionVistaDetalles] = useState<any[]>([]);
 
   const cargarDatos = async () => {
     try {
@@ -82,12 +75,11 @@ function App() {
       }, 15000);
 
       await initAsync.execute(async () => {
-        // Load initial data (ventas handled by VentasContext, productos handled by ProductosContext)
-        const [productosActivosData, unidadesData, promocionesActivasData, promocionesData, gastosData, categoriasData] = await Promise.all([
+        // Load initial data (ventas handled by VentasContext, productos handled by ProductosContext, promociones handled by PromocionesContext)
+        const [productosActivosData, unidadesData, promocionesActivasData, gastosData, categoriasData] = await Promise.all([
           getProductosActivos(),
           getUnidadesMedidas(),
           getPromocionesActivas(),
-          getPromociones(),
           getGastos(),
           getCategorias(),
         ]);
@@ -95,7 +87,6 @@ function App() {
         setProductosActivos(productosActivosData || []); // Para modales
         setUnidadesMedida(unidadesData || []);
         setPromocionesActivas(promocionesActivasData || []);
-        setPromociones(promocionesData || []);
         setGastos(gastosData || []);
         setCategorias(categoriasData || []);
         setError(null);
@@ -106,78 +97,6 @@ function App() {
       }
     } catch (err) {
       setError('Error al cargar los datos: ' + (err as Error).message);
-    }
-  };
-
-  const handleCrearPromocion = async (
-    payload: { name: string; precio: number | null; productos: { id_producto: number; cantidad: number }[]; estado: boolean },
-    imageFile?: File | null
-  ) => {
-    try {
-      if (promocionToEdit) {
-        // Edit flow
-        await editarPromocionAsync.execute(() => 
-          updatePromocion(
-            promocionToEdit.id_promocion, 
-            payload.name, 
-            payload.precio, 
-            payload.productos, 
-            payload.estado,
-            imageFile,
-            promocionToEdit.imagen_path
-          )
-        );
-        setPromocionToEdit(null);
-        showSuccess('Promoción actualizada correctamente');
-      } else {
-        await crearPromocionAsync.execute(() => 
-          createPromocion(payload.name, payload.precio, payload.productos, payload.estado, imageFile)
-        );
-        showSuccess('Promoción creada correctamente');
-      }
-      await cargarDatos();
-      modalCrearPromocion.close();
-    } catch (err) {
-      showError('Error al crear o actualizar la promoción');
-    }
-  };
-
-  const handleEditarPromocion = async (promocion: Promocion) => {
-    try {
-      const detalles = await getDetallePromocion(promocion.id_promocion);
-      const productosConCantidad = (detalles || []).map((d: any) => ({ id_producto: d.id_producto, cantidad: d.cantidad }));
-      setPromocionToEdit({ ...promocion, productos: productosConCantidad });
-      modalCrearPromocion.open();
-    } catch (err) {
-      showError('No se pudo cargar los detalles de la promoción');
-    }
-  };
-
-  const handleChangePromocion = async (id_promocion: number, estado: boolean) => {
-    showConfirm(
-      estado ? 'Dar de alta promoción' : 'Dar de baja promoción',
-      `¿Seguro que quieres ${estado ? 'dar de alta' : 'dar de baja'} la promoción #${id_promocion}?`,
-      async () => {
-        try {
-          await eliminarPromocionAsync.execute(() => deletePromocion(id_promocion, estado));
-          await cargarDatos();
-          showSuccess(`Promoción ${estado ? 'dada de alta' : 'dada de baja'} correctamente`);
-        } catch (err) {
-          showError('No se pudo eliminar la promoción');
-        }
-      },
-      estado ? 'info' : 'danger'
-    );
-  };
-
-  const handleVerPromocion = async (promocion: Promocion) => {
-    try {
-      const detalles = await verPromocionAsync.execute(() => getDetallePromocion(promocion.id_promocion));
-      setPromocionVista(promocion);
-      setPromocionVistaDetalles(detalles || []);
-      modalVerPromocion.open();
-    } catch (err) {
-      showError('No se pudieron cargar los detalles de la promoción');
     }
   };
 
@@ -314,38 +233,37 @@ function App() {
   }
 
   return (
-    <VentasProvider
-      showSuccess={showSuccess}
-      showError={showError}
-      showConfirm={showConfirm}
-    >
-      <ProductosProvider
+    <QueryClientProvider client={queryClient}>
+      <VentasProvider
         showSuccess={showSuccess}
         showError={showError}
-        showWarning={showWarning}
         showConfirm={showConfirm}
       >
-        <div className="app-container">
-          <Sidebar activeSection={activeSection} onSectionChange={setActiveSection} />
+        <ProductosProvider
+          showSuccess={showSuccess}
+          showError={showError}
+          showWarning={showWarning}
+          showConfirm={showConfirm}
+        >
+          <PromocionesProvider
+            showSuccess={showSuccess}
+            showError={showError}
+            showWarning={showWarning}
+            showConfirm={showConfirm}
+          >
+          <div className="app-container">
+            <Sidebar activeSection={activeSection} onSectionChange={setActiveSection} />
 
-          <main className="main-content">
-            {activeSection === 'ventas' && (
-              <VentasPage gastos={gastos} />
-            )}
+            <main className="main-content">
+              {activeSection === 'ventas' && (
+                <VentasPage gastos={gastos} />
+              )}
 
-            {activeSection === 'productos' && <ProductosPage />}
+              {activeSection === 'productos' && <ProductosPage />}
 
-            {activeSection === 'stock' && <StockPage />}
+              {activeSection === 'stock' && <StockPage />}
 
-            {activeSection === 'promociones' && (
-              <PromocionesPage
-                promociones={promociones}
-                onNuevoPromocion={modalCrearPromocion.open}
-                onEditPromocion={handleEditarPromocion}
-                onChangePromocion={handleChangePromocion}
-                onViewPromocion={handleVerPromocion}
-              />
-            )}
+              {activeSection === 'promociones' && <PromocionesPage />}
             {activeSection === 'gastos' && (
               <GastosPage
                 gastos={gastos}
@@ -373,21 +291,11 @@ function App() {
           />
 
         <ModalCrearPromocion
-          isOpen={modalCrearPromocion.isOpen}
-          onClose={modalCrearPromocion.close}
           productos={productosActivos}
-          initialPromotion={promocionToEdit ? { ...promocionToEdit, productos: promocionToEdit.productos ?? [] } : undefined}
-          onSubmit={handleCrearPromocion}
-          showError={showError}
           showWarning={showWarning}
-          loading={crearPromocionAsync.loading}
         />
 
         <ModalVerPromocion
-          isOpen={modalVerPromocion.isOpen}
-          onClose={() => { modalVerPromocion.close(); setPromocionVista(null); setPromocionVistaDetalles([]); }}
-          promocion={promocionVista}
-          detalles={promocionVistaDetalles}
           productosCatalogo={productosActivos}
         />
 
@@ -422,18 +330,23 @@ function App() {
           onClose={hideToast}
         />
 
-        {/* Confirm Modal */}
-        <ConfirmModal
-          isOpen={confirm.isOpen}
-          onClose={hideConfirm}
-          onConfirm={confirm.onConfirm}
-          title={confirm.title}
-          message={confirm.message}
-          type={confirm.type}
-        />
-      </div>
-    </ProductosProvider>
-    </VentasProvider>
+          {/* Confirm Modal */}
+          <ConfirmModal
+            isOpen={confirm.isOpen}
+            onClose={hideConfirm}
+            onConfirm={confirm.onConfirm}
+            title={confirm.title}
+            message={confirm.message}
+            type={confirm.type}
+          />
+        </div>
+        </PromocionesProvider>
+      </ProductosProvider>
+      </VentasProvider>
+      
+      {/* React Query Devtools - Solo en desarrollo, se elimina automáticamente en producción */}
+      {import.meta.env.DEV && <ReactQueryDevtools initialIsOpen={false} />}
+    </QueryClientProvider>
   );
 }
 

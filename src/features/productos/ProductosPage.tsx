@@ -16,7 +16,6 @@ export const ProductosPage: React.FC = () => {
     modalNuevoProducto,
     openEditarProducto,
     handleToggleProductoEstado,
-    buscarProductosAsync,
   } = useProductos();
 
   const [searchTerm, setSearchTerm] = React.useState('');
@@ -75,13 +74,7 @@ export const ProductosPage: React.FC = () => {
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
             style={{ padding: '12px', width: '100%', backgroundColor: '#f9f9f9', border: '1px solid #ddd', borderRadius: '4px', color: '#333' }}
-            disabled={buscarProductosAsync.loading}
           />
-          {buscarProductosAsync.loading && (
-            <div style={{ position: 'absolute', right: 12, top: '50%', transform: 'translateY(-50%)', fontSize: 12, color: '#666' }}>
-              Buscando...
-            </div>
-          )}
         </div>
         <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value as any)} style={{ padding: '10px', backgroundColor: '#f9f9f9', border: '1px solid #ddd', borderRadius: '4px', color: '#333' }}>
           <option value="all">Todos</option>

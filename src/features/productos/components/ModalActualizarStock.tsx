@@ -3,17 +3,17 @@ import { useProductos } from '../context/ProductosContext';
 
 interface ModalActualizarStockProps {}
 
-export const ModalActualizarStock: React.FC<ModalActualizarStockProps> = () => {
+export const ModalActualizarStock = React.memo<ModalActualizarStockProps>(() => {
   const {
     modalActualizarStock,
     productos,
     handleActualizarStock,
-    actualizarStockAsync,
+    isUpdatingStock,
   } = useProductos();
 
   const isOpen = modalActualizarStock.isOpen;
   const onClose = modalActualizarStock.close;
-  const loading = actualizarStockAsync.loading;
+  const loading = isUpdatingStock;
 
   const [productoId, setProductoId] = useState('');
   const [cantidad, setCantidad] = useState('');
@@ -81,4 +81,4 @@ export const ModalActualizarStock: React.FC<ModalActualizarStockProps> = () => {
       </div>
     </div>
   );
-};
+});

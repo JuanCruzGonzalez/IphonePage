@@ -1,4 +1,6 @@
-import React, { createContext, useContext, useState, useCallback, useEffect, ReactNode } from 'react';
+import React, { createContext, useContext, useState, useCallback, ReactNode } from 'react';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { queryKeys } from '../../../lib/queryClient';
 import { Producto } from '../../../core/types';
 import {
   getProductosPage,
@@ -10,7 +12,6 @@ import {
 } from '../services/productoService';
 import { uploadProductImage, updateProductImage } from '../../../shared/services/storageService';
 import { asignarCategoriasAProducto, getCategoriasDeProducto } from '../../categorias/services/categoriaService';
-import { useAsync } from '../../../shared/hooks/useAsync';
 import { useModal } from '../../../shared/hooks/useModal';
 
 /** ======================
@@ -77,11 +78,10 @@ interface ProductosContextValue {
   ) => Promise<void>;
   handleActualizarStock: (productoId: number, cantidad: number) => Promise<void>;
 
-  // Estados de loading (useAsync)
-  crearProductoAsync: ReturnType<typeof useAsync<Producto>>;
-  editarProductoAsync: ReturnType<typeof useAsync<Producto | null>>;
-  actualizarStockAsync: ReturnType<typeof useAsync<Producto>>;
-  buscarProductosAsync: ReturnType<typeof useAsync<Producto[]>>;
+  // Estados de loading (React Query mutations)
+  isCreatingProducto: boolean;
+  isEditingProducto: boolean;
+  isUpdatingStock: boolean;
 
   // Setters internos (si otros componentes necesitan actualizar estado)
   setProductToEdit: (producto: Producto | null) => void;
@@ -116,10 +116,8 @@ export const ProductosProvider: React.FC<ProductosProviderProps> = ({
 }) => {
   // ============= ESTADO =============
   const PAGE_SIZE = 8;
-  const [productos, setProductos] = useState<Producto[]>([]);
-  const [productosActivos, setProductosActivos] = useState<Producto[]>([]);
+  const queryClient = useQueryClient();
   const [productosPageNum, setProductosPageNum] = useState(1);
-  const [productosTotal, setProductosTotal] = useState(0);
   const [productosSearchQuery, setProductosSearchQuery] = useState('');
   const [productToEdit, setProductToEdit] = useState<Producto | null>(null);
   const [categoriasDeProducto, setCategoriasDeProducto] = useState<number[]>([]);
@@ -128,37 +126,208 @@ export const ProductosProvider: React.FC<ProductosProviderProps> = ({
   const modalNuevoProducto = useModal(false);
   const modalActualizarStock = useModal(false);
 
-  // useAsync hooks
-  const crearProductoAsync = useAsync<Producto>();
-  const editarProductoAsync = useAsync<Producto | null>();
-  const actualizarStockAsync = useAsync<Producto>();
-  const buscarProductosAsync = useAsync<Producto[]>();
+  // ============= QUERIES =============
 
-  // ============= INICIALIZACIÓN =============
-  
   /**
-   * Carga la primera página de productos al montar el componente
+   * Query para productos paginados
    */
-  useEffect(() => {
-    const initProductos = async () => {
-      try {
-        const [productosPageResult, productosActivosData] = await Promise.all([
-          getProductosPage(1, PAGE_SIZE, ''),
-          getProductosActivos(),
-        ]);
-        
-        setProductos(productosPageResult.productos || []);
-        setProductosTotal(productosPageResult.total || 0);
-        setProductosPageNum(1);
-        setProductosSearchQuery('');
-        setProductosActivos(productosActivosData || []);
-      } catch (err) {
-        showError('Error cargando productos iniciales');
-      }
-    };
+  const productosQuery = useQuery({
+    queryKey: [...queryKeys.productos, 'page', productosPageNum, productosSearchQuery],
+    queryFn: async () => {
+      const result = await getProductosPage(productosPageNum, PAGE_SIZE, productosSearchQuery);
+      return result;
+    },
+    staleTime: 2 * 60 * 1000, // 2 minutos
+  });
 
-    initProductos();
-  }, [PAGE_SIZE, showError]);
+  /**
+   * Query para productos activos (usado en modales)
+   */
+  const productosActivosQuery = useQuery({
+    queryKey: queryKeys.productosActivos,
+    queryFn: () => getProductosActivos(),
+    staleTime: 5 * 60 * 1000, // 5 minutos
+  });
+
+  // ============= MUTATIONS =============
+
+  /**
+   * Mutation para crear producto
+   */
+  const crearProductoMutation = useMutation({
+    mutationFn: async ({
+      producto,
+      imageFile,
+      categoriasIds,
+    }: {
+      producto: ProductoFormData;
+      imageFile?: File | null;
+      categoriasIds?: number[];
+    }) => {
+      const createdProduct = await createProducto({
+        nombre: producto.nombre,
+        descripcion: producto.descripcion || null,
+        stock: producto.stock,
+        costo: producto.costo,
+        precioventa: producto.precioventa,
+        precio_promocion: producto.precioPromocion || null,
+        promocion_activa: producto.promocionActiva || false,
+        id_unidad_medida: producto.unidadMedida,
+        estado: producto.estado,
+        vencimiento: producto.vencimiento || undefined,
+      });
+
+      // Si hay una imagen, subirla y actualizar el producto
+      if (imageFile && createdProduct) {
+        try {
+          const imagePath = await uploadProductImage(imageFile, createdProduct.id_producto);
+          await updateProducto(createdProduct.id_producto, { imagen_path: imagePath });
+        } catch (imgErr) {
+          showWarning('Producto creado pero no se pudo subir la imagen');
+        }
+      }
+
+      // Asignar categorías si hay
+      if (createdProduct && categoriasIds && categoriasIds.length > 0) {
+        try {
+          await asignarCategoriasAProducto(createdProduct.id_producto, categoriasIds);
+        } catch (catErr) {
+          showWarning('Producto creado pero no se pudieron asignar las categorías');
+        }
+      }
+
+      return createdProduct;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.productos });
+      queryClient.invalidateQueries({ queryKey: queryKeys.productosActivos });
+      modalNuevoProducto.close();
+      setProductToEdit(null);
+      setCategoriasDeProducto([]);
+      showSuccess('Producto agregado exitosamente');
+    },
+    onError: () => {
+      showError('Error al agregar el producto');
+    },
+  });
+
+  /**
+   * Mutation para editar producto
+   */
+  const editarProductoMutation = useMutation({
+    mutationFn: async ({
+      producto,
+      imageFile,
+      categoriasIds,
+    }: {
+      producto: ProductoFormData;
+      imageFile?: File | null;
+      categoriasIds?: number[];
+    }) => {
+      if (!productToEdit) throw new Error('No hay producto para editar');
+
+      // Si hay una nueva imagen, subirla
+      let imagenPath = productToEdit.imagen_path;
+      if (imageFile) {
+        try {
+          imagenPath = await updateProductImage(
+            imageFile,
+            productToEdit.id_producto,
+            productToEdit.imagen_path || undefined
+          );
+        } catch (imgErr) {
+          showWarning('Se actualizará el producto sin cambiar la imagen');
+        }
+      }
+
+      const updated = await updateProducto(productToEdit.id_producto, {
+        nombre: producto.nombre,
+        descripcion: producto.descripcion || null,
+        stock: producto.stock,
+        costo: producto.costo,
+        precioventa: producto.precioventa,
+        precio_promocion: producto.precioPromocion || null,
+        promocion_activa: producto.promocionActiva || false,
+        id_unidad_medida: producto.unidadMedida,
+        estado: producto.estado,
+        vencimiento: producto.vencimiento || undefined,
+        imagen_path: imagenPath,
+      });
+
+      if (!updated) {
+        throw new Error('No se pudo actualizar el producto');
+      }
+
+      // Actualizar categorías
+      if (categoriasIds !== undefined) {
+        try {
+          await asignarCategoriasAProducto(productToEdit.id_producto, categoriasIds);
+        } catch (catErr) {
+          showWarning('Producto actualizado pero no se pudieron actualizar las categorías');
+        }
+      }
+
+      return updated;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.productos });
+      queryClient.invalidateQueries({ queryKey: queryKeys.productosActivos });
+      modalNuevoProducto.close();
+      setProductToEdit(null);
+      setCategoriasDeProducto([]);
+      showSuccess('Producto actualizado exitosamente');
+    },
+    onError: () => {
+      showError('Error al actualizar el producto');
+    },
+  });
+
+  /**
+   * Mutation para actualizar stock
+   */
+  const actualizarStockMutation = useMutation({
+    mutationFn: async ({ productoId, cantidad }: { productoId: number; cantidad: number }) => {
+      const producto = productosQuery.data?.productos.find((p) => p.id_producto === productoId);
+      if (!producto) throw new Error('Producto no encontrado');
+
+      const nuevoStock = producto.stock + cantidad;
+      const updated = await updateStockProducto(productoId, nuevoStock);
+
+      return { updated, producto, nuevoStock };
+    },
+    onSuccess: ({ producto, nuevoStock }) => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.productos });
+      queryClient.invalidateQueries({ queryKey: queryKeys.productosActivos });
+      modalActualizarStock.close();
+      showSuccess(
+        `Stock actualizado: ${producto.nombre} ahora tiene ${nuevoStock} unidades`
+      );
+    },
+    onError: () => {
+      showError('Error al actualizar el stock');
+    },
+  });
+
+  /**
+   * Mutation para toggle estado de producto
+   */
+  const toggleEstadoMutation = useMutation({
+    mutationFn: async ({ id_producto, newEstado }: { id_producto: number; newEstado: boolean }) => {
+      return await updateProductoEstado(id_producto, newEstado);
+    },
+    onSuccess: (updated) => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.productos });
+      queryClient.invalidateQueries({ queryKey: queryKeys.productosActivos });
+      if (updated) {
+        showSuccess(`Producto ${updated.nombre} actualizado correctamente`);
+      }
+    },
+    onError: (err: any) => {
+      const message =
+        err?.message || err?.error || (typeof err === 'string' ? err : JSON.stringify(err));
+      showError(message || 'No se pudo actualizar el estado del producto');
+    },
+  });
 
   // ============= OPERACIONES DE CARGA =============
 
@@ -167,33 +336,20 @@ export const ProductosProvider: React.FC<ProductosProviderProps> = ({
    */
   const loadProductosPage = useCallback(
     async (page = 1, q = '') => {
-      try {
-        const { productos: pageRows, total } = await getProductosPage(page, PAGE_SIZE, q);
-        setProductos(pageRows || []);
-        setProductosTotal(total || 0);
-        setProductosPageNum(page);
-        setProductosSearchQuery(q);
-      } catch (err) {
-        showError('Error cargando productos');
-      }
+      setProductosPageNum(page);
+      setProductosSearchQuery(q);
+      // React Query se encargará de recargar automáticamente
     },
-    [PAGE_SIZE, showError]
+    []
   );
 
   /**
    * Recarga la página actual de productos manteniendo paginación y búsqueda
    */
   const recargarProductosActuales = useCallback(async () => {
-    try {
-      // Recargar la página actual con la búsqueda actual
-      await loadProductosPage(productosPageNum, productosSearchQuery);
-      // También recargar productosActivos que se usa en otros componentes
-      const productosActivosData = await getProductosActivos();
-      setProductosActivos(productosActivosData);
-    } catch (err) {
-      showError('Error recargando productos');
-    }
-  }, [productosPageNum, productosSearchQuery, loadProductosPage, showError]);
+    await queryClient.invalidateQueries({ queryKey: queryKeys.productos });
+    await queryClient.invalidateQueries({ queryKey: queryKeys.productosActivos });
+  }, [queryClient]);
 
   // ============= OPERACIONES CRUD =============
 
@@ -206,57 +362,9 @@ export const ProductosProvider: React.FC<ProductosProviderProps> = ({
       imageFile?: File | null,
       categoriasIds?: number[]
     ) => {
-      try {
-        const createdProduct = await crearProductoAsync.execute(() =>
-          createProducto({
-            nombre: producto.nombre,
-            descripcion: producto.descripcion || null,
-            stock: producto.stock,
-            costo: producto.costo,
-            precioventa: producto.precioventa,
-            precio_promocion: producto.precioPromocion || null,
-            promocion_activa: producto.promocionActiva || false,
-            id_unidad_medida: producto.unidadMedida,
-            estado: producto.estado,
-            vencimiento: producto.vencimiento || undefined,
-          })
-        );
-
-        // Si hay una imagen, subirla y actualizar el producto
-        if (imageFile && createdProduct) {
-          try {
-            const imagePath = await uploadProductImage(imageFile, createdProduct.id_producto);
-            await updateProducto(createdProduct.id_producto, { imagen_path: imagePath });
-          } catch (imgErr) {
-            showWarning('Producto creado pero no se pudo subir la imagen');
-          }
-        }
-
-        // Asignar categorías si hay
-        if (createdProduct && categoriasIds && categoriasIds.length > 0) {
-          try {
-            await asignarCategoriasAProducto(createdProduct.id_producto, categoriasIds);
-          } catch (catErr) {
-            showWarning('Producto creado pero no se pudieron asignar las categorías');
-          }
-        }
-
-        await recargarProductosActuales();
-        modalNuevoProducto.close();
-        setCategoriasDeProducto([]);
-        showSuccess('Producto agregado exitosamente');
-      } catch (err) {
-        showError('Error al agregar el producto');
-      }
+      await crearProductoMutation.mutateAsync({ producto, imageFile, categoriasIds });
     },
-    [
-      crearProductoAsync,
-      recargarProductosActuales,
-      modalNuevoProducto,
-      showSuccess,
-      showError,
-      showWarning,
-    ]
+    [crearProductoMutation]
   );
 
   /**
@@ -264,21 +372,11 @@ export const ProductosProvider: React.FC<ProductosProviderProps> = ({
    */
   const handleBuscarProductos = useCallback(
     async (texto: string) => {
-      try {
-        // Use paginated API for searches as well (reset to page 1)
-        const { productos: pageRows, total } = await getProductosPage(1, PAGE_SIZE, texto);
-        setProductos(pageRows || []);
-        setProductosTotal(total || 0);
-        setProductosPageNum(1);
-        setProductosSearchQuery(texto);
-      } catch (err) {
-        const e: any = err;
-        const message =
-          e?.message || e?.error || (typeof e === 'string' ? e : JSON.stringify(e));
-        showError(message || 'Error buscando productos');
-      }
+      setProductosPageNum(1);
+      setProductosSearchQuery(texto);
+      // React Query se encarga del refetch automático
     },
-    [PAGE_SIZE, showError]
+    []
   );
 
   /**
@@ -290,69 +388,9 @@ export const ProductosProvider: React.FC<ProductosProviderProps> = ({
       imageFile?: File | null,
       categoriasIds?: number[]
     ) => {
-      if (!productToEdit) return;
-      try {
-        // Si hay una nueva imagen, subirla (esto reemplazará la anterior automáticamente)
-        let imagenPath = productToEdit.imagen_path;
-        if (imageFile) {
-          try {
-            imagenPath = await updateProductImage(
-              imageFile,
-              productToEdit.id_producto,
-              productToEdit.imagen_path || undefined
-            );
-          } catch (imgErr) {
-            showWarning('Se actualizará el producto sin cambiar la imagen');
-          }
-        }
-
-        const updated = await editarProductoAsync.execute(() =>
-          updateProducto(productToEdit.id_producto, {
-            nombre: producto.nombre,
-            descripcion: producto.descripcion || null,
-            stock: producto.stock,
-            costo: producto.costo,
-            precioventa: producto.precioventa,
-            precio_promocion: producto.precioPromocion || null,
-            promocion_activa: producto.promocionActiva || false,
-            id_unidad_medida: producto.unidadMedida,
-            estado: producto.estado,
-            vencimiento: producto.vencimiento || undefined,
-            imagen_path: imagenPath,
-          })
-        );
-        if (!updated) {
-          showError('No se pudo actualizar el producto');
-          return;
-        }
-
-        // Actualizar categorías
-        if (categoriasIds !== undefined) {
-          try {
-            await asignarCategoriasAProducto(productToEdit.id_producto, categoriasIds);
-          } catch (catErr) {
-            showWarning('Producto actualizado pero no se pudieron actualizar las categorías');
-          }
-        }
-
-        await recargarProductosActuales();
-        modalNuevoProducto.close();
-        setProductToEdit(null);
-        setCategoriasDeProducto([]);
-        showSuccess('Producto actualizado exitosamente');
-      } catch (err) {
-        showError('Error al actualizar el producto');
-      }
+      await editarProductoMutation.mutateAsync({ producto, imageFile, categoriasIds });
     },
-    [
-      productToEdit,
-      editarProductoAsync,
-      recargarProductosActuales,
-      modalNuevoProducto,
-      showSuccess,
-      showError,
-      showWarning,
-    ]
+    [editarProductoMutation]
   );
 
   /**
@@ -374,6 +412,15 @@ export const ProductosProvider: React.FC<ProductosProviderProps> = ({
   );
 
   /**
+   * Cierra el modal de nuevo/editar producto y limpia el estado
+   */
+  const closeModalNuevoProducto = useCallback(() => {
+    setProductToEdit(null);
+    setCategoriasDeProducto([]);
+    modalNuevoProducto.close();
+  }, [modalNuevoProducto]);
+
+  /**
    * Activa/desactiva un producto con confirmación
    */
   const handleToggleProductoEstado = useCallback(
@@ -384,25 +431,18 @@ export const ProductosProvider: React.FC<ProductosProviderProps> = ({
           nombre ?? '#' + id_producto
         }?`,
         async () => {
-          try {
-            const updated = await updateProductoEstado(id_producto, !currentEstado);
-            if (!updated) {
-              showError(`No se encontró el producto #${id_producto}`);
-              return;
-            }
-            await recargarProductosActuales();
-            showSuccess(`Producto ${updated.nombre} actualizado correctamente`);
-          } catch (err) {
-            const e: any = err;
-            const message =
-              e?.message || e?.error || (typeof e === 'string' ? e : JSON.stringify(e));
-            showError(message || 'No se pudo actualizar el estado del producto');
+          const updated = await toggleEstadoMutation.mutateAsync({
+            id_producto,
+            newEstado: !currentEstado,
+          });
+          if (!updated) {
+            showError(`No se encontró el producto #${id_producto}`);
           }
         },
         'warning'
       );
     },
-    [showConfirm, showError, showSuccess, recargarProductosActuales]
+    [showConfirm, showError, toggleEstadoMutation]
   );
 
   /**
@@ -410,48 +450,30 @@ export const ProductosProvider: React.FC<ProductosProviderProps> = ({
    */
   const handleActualizarStock = useCallback(
     async (productoId: number, cantidad: number) => {
-      try {
-        const producto = productos.find((p) => p.id_producto === productoId);
-        if (!producto) return;
-
-        const nuevoStock = producto.stock + cantidad;
-
-        await actualizarStockAsync.execute(() => updateStockProducto(productoId, nuevoStock));
-        modalActualizarStock.close(); // Cerrar modal ANTES de recargar
-        await recargarProductosActuales(); // Recargar datos
-
-        showSuccess(
-          `Stock actualizado: ${producto.nombre} ahora tiene ${nuevoStock} unidades`
-        );
-      } catch (err) {
-        showError('Error al actualizar el stock');
-      }
+      await actualizarStockMutation.mutateAsync({ productoId, cantidad });
     },
-    [
-      productos,
-      actualizarStockAsync,
-      modalActualizarStock,
-      recargarProductosActuales,
-      showSuccess,
-      showError,
-    ]
+    [actualizarStockMutation]
   );
 
   // ============= VALOR DEL CONTEXTO =============
 
   const value: ProductosContextValue = {
-    // Estado
-    productos,
-    productosActivos,
+    // Estado (de React Query)
+    productos: productosQuery.data?.productos || [],
+    productosActivos: productosActivosQuery.data || [],
     productosPageNum,
-    productosTotal,
+    productosTotal: productosQuery.data?.total || 0,
     productosSearchQuery,
     PAGE_SIZE,
     productToEdit,
     categoriasDeProducto,
 
-    // Modales
-    modalNuevoProducto,
+    // Modales (con reset de estado en el close)
+    modalNuevoProducto: {
+      isOpen: modalNuevoProducto.isOpen,
+      open: modalNuevoProducto.open,
+      close: closeModalNuevoProducto,
+    },
     modalActualizarStock,
 
     // Operaciones de carga
@@ -466,11 +488,10 @@ export const ProductosProvider: React.FC<ProductosProviderProps> = ({
     handleToggleProductoEstado,
     handleActualizarStock,
 
-    // Estados de loading
-    crearProductoAsync,
-    editarProductoAsync,
-    actualizarStockAsync,
-    buscarProductosAsync,
+    // Estados de loading (React Query)
+    isCreatingProducto: crearProductoMutation.isPending,
+    isEditingProducto: editarProductoMutation.isPending,
+    isUpdatingStock: actualizarStockMutation.isPending,
 
     // Setters
     setProductToEdit,
