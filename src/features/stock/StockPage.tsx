@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
 import { useProductos } from '../productos/context/ProductosContext';
+import { Pagination } from '../../shared/components/Pagination';
 
-interface StockPageProps {}
+interface StockPageProps { }
 
 export const StockPage: React.FC<StockPageProps> = () => {
   const { productosActivos, modalActualizarStock } = useProductos();
@@ -17,7 +18,6 @@ export const StockPage: React.FC<StockPageProps> = () => {
   const stockAlto = productos.filter(p => p.stock >= 30);
 
   // Paginación
-  const totalPages = Math.max(1, Math.ceil(productosOrdenados.length / pageSize));
   const startIndex = (currentPage - 1) * pageSize;
   const endIndex = startIndex + pageSize;
   const productosPaginados = productosOrdenados.slice(startIndex, endIndex);
@@ -48,19 +48,15 @@ export const StockPage: React.FC<StockPageProps> = () => {
         </div>
       </div>
 
+      <Pagination
+        currentPage={currentPage}
+        totalItems={productosOrdenados.length}
+        pageSize={pageSize}
+        onPageChange={setCurrentPage}
+      />
       <div className="card">
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
           <h2 className="card-title">Inventario por Stock</h2>
-          <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-            <button className="btn-sm" onClick={() => setCurrentPage(Math.max(1, currentPage - 1))} disabled={currentPage <= 1}>◀︎</button>
-            <div style={{ padding: '6px 10px', fontSize: '14px' }}>
-              {currentPage} / {totalPages} 
-              <span style={{ color: '#666', marginLeft: 8 }}>
-                ({startIndex + 1}-{Math.min(endIndex, productosOrdenados.length)} de {productosOrdenados.length})
-              </span>
-            </div>
-            <button className="btn-sm" onClick={() => setCurrentPage(Math.min(totalPages, currentPage + 1))} disabled={currentPage >= totalPages}>▶︎</button>
-          </div>
         </div>
         <div className="table-wrapper">
           <table className="table">
@@ -105,7 +101,12 @@ export const StockPage: React.FC<StockPageProps> = () => {
           </table>
         </div>
       </div>
-
+      <Pagination
+        currentPage={currentPage}
+        totalItems={productosOrdenados.length}
+        pageSize={pageSize}
+        onPageChange={setCurrentPage}
+      />
       {/* Alerta de stock bajo */}
       {stockBajo.length > 0 && (
         <div className="alert alert-warning">

@@ -115,6 +115,7 @@ input {
 
 .nav-icon {
   font-size: 18px;
+  height: 20px;
 }
 
 .nav-label {
@@ -316,6 +317,12 @@ input {
 
 .btn-danger:hover {
   background: #dc2626;
+}
+
+.btn-pager {
+  background: var(--color-bg);
+  border: 1px solid var(--color-border);
+  color: var(--color-text);
 }
 
 /* ============================================

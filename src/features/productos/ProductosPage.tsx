@@ -2,6 +2,7 @@ import React from 'react';
 import { useDebounce } from '../../shared/hooks/useDebounce';
 import { getProductImageUrl } from '../../shared/services/storageService';
 import { useProductos } from './context/ProductosContext';
+import { Pagination } from '../../shared/components/Pagination';
 
 export const ProductosPage: React.FC = () => {
   const {
@@ -22,7 +23,7 @@ export const ProductosPage: React.FC = () => {
   const [statusFilter, setStatusFilter] = React.useState<'all' | 'active' | 'inactive'>('all');
 
   const debounced = useDebounce(searchTerm, 300);
-  
+
   React.useEffect(() => {
     if (debounced !== productosSearchQuery) {
       handleBuscarProductos(debounced);
@@ -40,10 +41,6 @@ export const ProductosPage: React.FC = () => {
       return true;
     });
   }, [productos, statusFilter]);
-
-  const totalPages = Math.max(1, Math.ceil(productosTotal / PAGE_SIZE));
-  const showingFrom = Math.min(((productosPageNum - 1) * PAGE_SIZE) + 1, productosTotal);
-  const showingTo = Math.min(productosPageNum * PAGE_SIZE, productosTotal);
 
   return (
     <div className="page">
@@ -92,16 +89,12 @@ export const ProductosPage: React.FC = () => {
           <option value="inactive">Inactivos</option>
         </select>
       </div>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 12, marginBottom: 12 }}>
-        <div>
-          Mostrando {productosTotal === 0 ? 0 : showingFrom} - {productosTotal === 0 ? 0 : showingTo} de {productosTotal}
-        </div>
-        <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-          <button className="btn-sm" onClick={() => loadProductosPage(Math.max(1, productosPageNum - 1))} disabled={productosPageNum <= 1}>◀︎</button>
-          <div style={{ padding: '6px 10px' }}>{productosPageNum} / {totalPages}</div>
-          <button className="btn-sm" onClick={() => loadProductosPage(Math.min(totalPages, productosPageNum + 1))} disabled={productosPageNum >= totalPages}>▶︎</button>
-        </div>
-      </div>
+      <Pagination
+        currentPage={productosPageNum}
+        totalItems={productosTotal}
+        pageSize={PAGE_SIZE}
+        onPageChange={loadProductosPage}
+      />
       <div className="card">
         <div className="table-wrapper">
           <table className="table">
@@ -128,8 +121,8 @@ export const ProductosPage: React.FC = () => {
                   <tr key={producto.id_producto}>
                     <td>
                       {producto.imagen_path ? (
-                        <img 
-                          src={getProductImageUrl(producto.imagen_path) || undefined} 
+                        <img
+                          src={getProductImageUrl(producto.imagen_path) || undefined}
                           alt={producto.nombre}
                           style={{ width: '50px', height: '50px', objectFit: 'cover', borderRadius: '4px' }}
                         />
@@ -147,7 +140,7 @@ export const ProductosPage: React.FC = () => {
                       <span className={`status-badge ${producto.estado ? 'active' : 'inactive'}`}>
                         {producto.estado ? 'Activo' : 'Inactivo'}
                       </span>
-                    </td> 
+                    </td>
                     <td style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
                       <button
                         className="btn-sm btn-secondary mr-2"
@@ -206,16 +199,12 @@ export const ProductosPage: React.FC = () => {
           </table>
         </div>
       </div>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 12 }}>
-        <div>
-          Mostrando {productosTotal === 0 ? 0 : showingFrom} - {productosTotal === 0 ? 0 : showingTo} de {productosTotal}
-        </div>
-        <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-          <button className="btn-sm" onClick={() => loadProductosPage(Math.max(1, productosPageNum - 1))} disabled={productosPageNum <= 1}>◀︎</button>
-          <div style={{ padding: '6px 10px' }}>{productosPageNum} / {totalPages}</div>
-          <button className="btn-sm" onClick={() => loadProductosPage(Math.min(totalPages, productosPageNum + 1))} disabled={productosPageNum >= totalPages}>▶︎</button>
-        </div>
-      </div>
+      <Pagination
+        currentPage={productosPageNum}
+        totalItems={productosTotal}
+        pageSize={PAGE_SIZE}
+        onPageChange={loadProductosPage}
+      />
     </div>
   );
 };
