@@ -173,6 +173,13 @@ export const ModalNuevaVenta = React.memo<ModalNuevaVentaProps>(({
         return () => document.removeEventListener('mousedown', handleClickOutside);
     }, []);
 
+    // Mover useMemo ANTES del early return para cumplir las reglas de hooks
+    const calcularTotal = useMemo(() => {
+        const productosTotal = items.reduce((total, item) => total + (item.cantidad * item.precioventa), 0);
+        const promosTotal = promosAdded.reduce((total, p) => total + (p.cantidad * (p.precio ?? 0)), 0);
+        return productosTotal + promosTotal;
+    }, [items, promosAdded]);
+
     if (!modalNuevaVenta.isOpen) return null;
 
     // Filtrar productos basado en la búsqueda
@@ -237,12 +244,6 @@ export const ModalNuevaVenta = React.memo<ModalNuevaVentaProps>(({
         setBusquedaProducto('');
         setCantidad('');
     };
-
-    const calcularTotal = useMemo(() => {
-        const productosTotal = items.reduce((total, item) => total + (item.cantidad * item.precioventa), 0);
-        const promosTotal = promosAdded.reduce((total, p) => total + (p.cantidad * (p.precio ?? 0)), 0);
-        return productosTotal + promosTotal;
-    }, [items, promosAdded]);
 
     const handleSubmit = () => {
         if (items.length === 0 && promosAdded.length === 0) {
