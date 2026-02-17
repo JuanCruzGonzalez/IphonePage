@@ -21,6 +21,7 @@ export interface ItemCarrito {
   tipo: 'producto' | 'promocion';
   id_referencia: number; // id_producto o id_promocion
   nombre: string;
+  descripcion?: string | null; // Descripción del producto/promoción
   precio: number;
   cantidad: number;
   unidadMedidaId?: number;
@@ -111,6 +112,7 @@ export const CarritoProvider: React.FC<{ children: ReactNode }> = ({ children })
           tipo: 'producto' as const,
           id_referencia: producto.id_producto,
           nombre: producto.nombre,
+          descripcion: producto.descripcion,
           precio,
           cantidad,
           unidadMedidaId: producto.id_unidad_medida,
@@ -270,6 +272,9 @@ export const CarritoProvider: React.FC<{ children: ReactNode }> = ({ children })
       }
       const tipo = item.tipo === 'promocion' ? '🎁 ' : '';
       mensaje += `${tipo}• ${item.nombre}: ${cantidad} - ${formatPrice(item.precio * item.cantidad)}\n`;
+      if (item.descripcion) {
+        mensaje += `  ${item.descripcion}\n`;
+      }
     });
 
     mensaje += `\n*Total: ${formatPrice(calcularTotal)}*`;
@@ -277,7 +282,14 @@ export const CarritoProvider: React.FC<{ children: ReactNode }> = ({ children })
     const mensajeCodificado = encodeURIComponent(mensaje);
     const urlWhatsApp = `https://wa.me/${numeroWhatsApp}?text=${mensajeCodificado}`;
 
-    window.open(urlWhatsApp, '_blank');
+    // Crear un enlace temporal y hacer clic en él
+    const link = document.createElement('a');
+    link.href = urlWhatsApp;
+    link.target = '_blank';
+    link.rel = 'noopener noreferrer';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
   }, [carrito, calcularTotal]);
 
   const value: CarritoContextType = {
