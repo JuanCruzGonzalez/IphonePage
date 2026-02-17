@@ -44,6 +44,7 @@ export const ClientePage: React.FC = () => {
   const [maxPrice, setMaxPrice] = useState(0);
   const [priceFilter, setPriceFilter] = useState(0);
   const [categoriasExpanded, setCategoriasExpanded] = useState(false);
+  const [mostrarFiltrosModal, setMostrarFiltrosModal] = useState(false);
 
   useEffect(() => {
     cargarProductos();
@@ -219,6 +220,34 @@ export const ClientePage: React.FC = () => {
           Promociones
         </button>
       </nav>
+ 
+      {/* Botón de filtros para móvil */}
+      {vistaActiva === 'productos' && (
+        <div className="cliente-filtros-mobile-container">
+          <button 
+            className="cliente-filtros-mobile-btn"
+            onClick={() => setMostrarFiltrosModal(true)}
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <line x1="4" y1="21" x2="4" y2="14"></line>
+              <line x1="4" y1="10" x2="4" y2="3"></line>
+              <line x1="12" y1="21" x2="12" y2="12"></line>
+              <line x1="12" y1="8" x2="12" y2="3"></line>
+              <line x1="20" y1="21" x2="20" y2="16"></line>
+              <line x1="20" y1="12" x2="20" y2="3"></line>
+              <line x1="1" y1="14" x2="7" y2="14"></line>
+              <line x1="9" y1="8" x2="15" y2="8"></line>
+              <line x1="17" y1="16" x2="23" y2="16"></line>
+            </svg>
+            Filtros
+            {categoriasSeleccionadas.length > 0 && (
+              <span className="cliente-filtros-mobile-badge">
+                {categoriasSeleccionadas.length}
+              </span>
+            )}
+          </button>
+        </div>
+      )}
 
       {/* Contenido Principal */}
       {vistaActiva === 'productos' ? (
@@ -279,7 +308,7 @@ export const ClientePage: React.FC = () => {
                     </div>
 
                     {/* Rango de Precio */}
-                    <div className="cliente-filter-group">
+                    {/* <div className="cliente-filter-group">
                       <h4 className="cliente-filter-group-title">Rango de Precio</h4>
                       <div className="cliente-filter-price-range">
                         <input
@@ -295,7 +324,7 @@ export const ClientePage: React.FC = () => {
                           <span>${priceFilter}</span>
                         </div>
                       </div>
-                    </div>
+                    </div> */}
                   </aside>
 
                   {/* Grid de productos */}
@@ -559,6 +588,76 @@ export const ClientePage: React.FC = () => {
               </button>
               <button onClick={confirmarCantidadGramos} className="cliente-modal-btn confirm">
                 Agregar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal de filtros para móvil */}
+      {mostrarFiltrosModal && (
+        <div onClick={() => setMostrarFiltrosModal(false)} className="cliente-modal-overlay">
+          <div onClick={(e) => e.stopPropagation()} className="cliente-filtros-modal-content">
+            {/* Header del modal */}
+            <div className="cliente-filtros-modal-header">
+              <h2 className="cliente-filtros-modal-title">Filtros</h2>
+              <button 
+                onClick={() => setMostrarFiltrosModal(false)} 
+                className="cliente-filtros-modal-close"
+              >
+                ✕
+              </button>
+            </div>
+
+            {/* Contenido de filtros */}
+            <div className="cliente-filtros-modal-body">
+              {/* Categorías */}
+              <div className="cliente-filter-group">
+                <h4
+                  className="cliente-filter-group-title cliente-filter-group-title-collapsible"
+                  onClick={() => setCategoriasExpanded(!categoriasExpanded)}
+                >
+                  Categorías
+                  <span className={`cliente-filter-collapse-icon ${categoriasExpanded ? 'expanded' : ''}`}>
+                    ▼
+                  </span>
+                </h4>
+                {categoriasExpanded && (
+                  <div className="cliente-filter-items">
+                    {categorias.map(cat => (
+                      <label
+                        key={cat.id_categoria}
+                        className="cliente-filter-item"
+                      >
+                        <input
+                          type="checkbox"
+                          checked={categoriasSeleccionadas.includes(cat.id_categoria)}
+                          onChange={() => toggleCategoria(cat.id_categoria)}
+                          className="cliente-filter-checkbox"
+                        />
+                        <span className="cliente-filter-label">{cat.nombre}</span>
+                      </label>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Footer del modal con acciones */}
+            <div className="cliente-filtros-modal-footer">
+              <button 
+                onClick={() => {
+                  resetFilters();
+                }} 
+                className="cliente-filtros-modal-btn secondary"
+              >
+                Limpiar filtros
+              </button>
+              <button 
+                onClick={() => setMostrarFiltrosModal(false)} 
+                className="cliente-filtros-modal-btn primary"
+              >
+                Aplicar filtros
               </button>
             </div>
           </div>
