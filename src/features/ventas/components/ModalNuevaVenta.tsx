@@ -360,6 +360,7 @@ export const ModalNuevaVenta = React.memo<ModalNuevaVentaProps>(({
                                         onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'white'}
                                     >
                                         <div style={{ fontWeight: 500 }}>{p.nombre}</div>
+                                        <div style={{ fontWeight: 500 }}>{p.descripcion}</div>
                                         <div style={{ fontSize: '12px', color: '#666' }}>
                                             Stock: {p.stock} | ${p.id_unidad_medida === 1 ? (p.precioventa * 100).toFixed(2) : p.precioventa.toFixed(2)}{p.id_unidad_medida === 1 ? ' x100gr' : ''}
                                         </div>
