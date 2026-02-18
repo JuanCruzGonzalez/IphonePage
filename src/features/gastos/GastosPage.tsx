@@ -1,21 +1,31 @@
 import React, { useState } from 'react';
-import { Gasto } from '../../core/types';
 import { formatPrice } from '../../shared/utils';
+import { useGastos } from './context/GastosContext';
+import { ModalGasto } from './components/ModalGasto';
 
-interface GastosPageProps {
-  gastos: Gasto[];
-  onNuevoGasto: () => void;
-  onEditarGasto: (gasto: Gasto) => void;
-  onToggleEstado: (id_gasto: number, estadoActual: boolean, descripcion: string | null) => void;
-}
-
-export const GastosPage: React.FC<GastosPageProps> = ({
-  gastos,
-  onNuevoGasto,
-  onEditarGasto,
-  onToggleEstado,
-}) => {
+export const GastosPage: React.FC = () => {
+  const { 
+    gastos, 
+    isLoading, 
+    gastoToEdit,
+    modalGasto,
+    handleNuevoGasto, 
+    handleEditarGasto, 
+    handleToggleGastoEstado,
+    handleSubmitGasto
+  } = useGastos();
   const [filtroEstado, setFiltroEstado] = useState<'all' | 'activo' | 'inactivo'>('all');
+
+  if (isLoading) {
+    return (
+      <div className="page">
+        <div className="loading-state">
+          <div className="loading-spinner"></div>
+          <p>Cargando gastos...</p>
+        </div>
+      </div>
+    );
+  }
 
   const gastosFiltrados = gastos.filter(g => {
     if (filtroEstado === 'activo') return g.estado === true;
@@ -33,7 +43,7 @@ export const GastosPage: React.FC<GastosPageProps> = ({
           <h1 className="page-title">Gastos</h1>
           <p className="page-subtitle">Gestiona los gastos del negocio</p>
         </div>
-        <button className="btn-primary" onClick={onNuevoGasto}>
+        <button className="btn-primary" onClick={handleNuevoGasto}>
           + Nuevo Gasto
         </button>
       </div>
@@ -102,7 +112,7 @@ export const GastosPage: React.FC<GastosPageProps> = ({
                       <button
                         className="btn-sm btn-secondary"
                         aria-label="Editar"
-                        onClick={() => onEditarGasto(gasto)}
+                        onClick={() => handleEditarGasto(gasto)}
                       >
                         <svg
                           xmlns="http://www.w3.org/2000/svg"
@@ -123,7 +133,7 @@ export const GastosPage: React.FC<GastosPageProps> = ({
                         <button
                           className="btn-sm btn-danger"
                           aria-label="Desactivar"
-                          onClick={() => onToggleEstado(gasto.id_gasto, gasto.estado, gasto.descripcion)}
+                          onClick={() => handleToggleGastoEstado(gasto.id_gasto, gasto.estado, gasto.descripcion)}
                           style={{ width: '40px', display: 'flex', justifyContent: 'center', height: '40px', border: '1px solid #ddd', padding: 10 }}
                         >
                           <svg xmlns="http://www.w3.org/2000/svg" width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -137,7 +147,7 @@ export const GastosPage: React.FC<GastosPageProps> = ({
                         <button
                           className="btn-sm btn-primary"
                           aria-label="Activar"
-                          onClick={() => onToggleEstado(gasto.id_gasto, gasto.estado, gasto.descripcion)}
+                          onClick={() => handleToggleGastoEstado(gasto.id_gasto, gasto.estado, gasto.descripcion)}
                           style={{ width: '40px', display: 'flex', justifyContent: 'center', height: '40px', border: '1px solid #ddd', padding: 10 }}
                         >
                           <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -153,6 +163,13 @@ export const GastosPage: React.FC<GastosPageProps> = ({
           </table>
         </div>
       </div>
+
+      <ModalGasto
+        isOpen={modalGasto.isOpen}
+        onClose={modalGasto.close}
+        onSubmit={handleSubmitGasto}
+        initialGasto={gastoToEdit}
+      />
     </div>
   );
 };

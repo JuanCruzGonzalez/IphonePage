@@ -1,8 +1,14 @@
 import React from 'react';
+import { useQuery } from '@tanstack/react-query';
+import { queryKeys } from '../../lib/queryClient';
 import { useDebounce } from '../../shared/hooks/useDebounce';
 import { getProductImageUrl } from '../../shared/services/storageService';
 import { useProductos } from './context/ProductosContext';
 import { Pagination } from '../../shared/components/Pagination';
+import { ModalNuevoProducto } from './components/ModalNuevoProducto';
+import { ModalActualizarStock } from './components/ModalActualizarStock';
+import { getUnidadesMedidas } from './services/productoService';
+import { useCategorias } from '../categorias/context/CategoriasContext';
 
 export const ProductosPage: React.FC = () => {
   const {
@@ -17,6 +23,13 @@ export const ProductosPage: React.FC = () => {
     openEditarProducto,
     handleToggleProductoEstado,
   } = useProductos();
+
+  const { categorias } = useCategorias();
+  const { data: unidadesMedida = [] } = useQuery({
+    queryKey: queryKeys.unidadesMedida,
+    queryFn: getUnidadesMedidas,
+    staleTime: 1000 * 60 * 10, // 10 minutos
+  });
 
   const [searchTerm, setSearchTerm] = React.useState('');
   const [statusFilter, setStatusFilter] = React.useState<'all' | 'active' | 'inactive'>('all');
@@ -205,6 +218,13 @@ export const ProductosPage: React.FC = () => {
         pageSize={PAGE_SIZE}
         onPageChange={loadProductosPage}
       />
+
+      {/* Modales */}
+      <ModalNuevoProducto 
+        unidadesMedida={unidadesMedida}
+        categorias={categorias}
+      />
+      <ModalActualizarStock />
     </div>
   );
 };

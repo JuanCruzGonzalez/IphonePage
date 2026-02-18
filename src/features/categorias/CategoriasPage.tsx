@@ -1,22 +1,32 @@
 import React, { useState, useMemo } from 'react';
-import { Categoria } from '../../core/types';
 import { construirArbolCategorias } from './services/categoriaService';
 import { ArbolCategorias } from './components/ArbolCategorias';
+import { useCategorias } from './context/CategoriasContext';
+import { ModalCategoria } from './components/ModalCategoria';
 
-interface CategoriasPageProps {
-  categorias: Categoria[];
-  onNuevaCategoria: () => void;
-  onEditarCategoria: (categoria: Categoria) => void;
-  onToggleEstado: (id_categoria: number, estadoActual: boolean, nombre: string) => void;
-}
-
-export const CategoriasPage: React.FC<CategoriasPageProps> = ({
-  categorias,
-  onNuevaCategoria,
-  onEditarCategoria,
-  onToggleEstado,
-}) => {
+export const CategoriasPage: React.FC = () => {
+  const { 
+    categorias, 
+    isLoading, 
+    categoriaToEdit,
+    modalCategoria,
+    handleNuevaCategoria, 
+    handleEditarCategoria, 
+    handleToggleCategoriaEstado,
+    handleSubmitCategoria
+  } = useCategorias();
   const [filtroEstado, setFiltroEstado] = useState<'all' | 'activo' | 'inactivo'>('all');
+
+  if (isLoading) {
+    return (
+      <div className="page">
+        <div className="loading-state">
+          <div className="loading-spinner"></div>
+          <p>Cargando categorías...</p>
+        </div>
+      </div>
+    );
+  }
 
   const categoriasFiltradas = categorias.filter(c => {
     if (filtroEstado === 'activo') return c.estado === true;
@@ -38,7 +48,7 @@ export const CategoriasPage: React.FC<CategoriasPageProps> = ({
           <h1 className="page-title">Categorías</h1>
           <p className="page-subtitle">Gestiona las categorías de productos</p>
         </div>
-        <button className="btn-primary" onClick={onNuevaCategoria}>
+        <button className="btn-primary" onClick={handleNuevaCategoria}>
           + Nueva Categoría
         </button>
       </div>
@@ -90,14 +100,22 @@ export const CategoriasPage: React.FC<CategoriasPageProps> = ({
               ) : (
                 <ArbolCategorias
                   categorias={arbolCategorias}
-                  onEditar={onEditarCategoria}
-                  onToggleEstado={onToggleEstado}
+                  onEditar={handleEditarCategoria}
+                  onToggleEstado={handleToggleCategoriaEstado}
                 />
               )}
             </tbody>
           </table>
         </div>
       </div>
+
+      <ModalCategoria
+        isOpen={modalCategoria.isOpen}
+        onClose={modalCategoria.close}
+        onSubmit={handleSubmitCategoria}
+        initialCategoria={categoriaToEdit}
+        categorias={categorias}
+      />
     </div>
   );
 };

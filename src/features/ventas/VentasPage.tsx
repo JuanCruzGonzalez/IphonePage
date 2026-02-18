@@ -1,5 +1,7 @@
 import React, { useState } from 'react';
-import { VentaConDetalles, Gasto } from '../../core/types';
+import { useQuery } from '@tanstack/react-query';
+import { queryKeys } from '../../lib/queryClient';
+import { VentaConDetalles } from '../../core/types';
 import {
   calculateVentaTotal,
   calculateMetrics,
@@ -12,12 +14,13 @@ import {
 } from '../../shared/utils';
 import { Pagination } from '../../shared/components/Pagination';
 import { useVentas } from './context/VentasContext';
+import { useGastos } from '../gastos/context/GastosContext';
+import { ModalNuevaVenta } from './components/ModalNuevaVenta';
+import { getProductosActivos } from '../productos/services/productoService';
+import { getPromocionesActivas } from '../promociones/services/promocionService';
+import { useToast } from '../../shared/hooks/useToast';
 
-interface VentasPageProps {
-  gastos?: Gasto[];
-}
-
-export const VentasPage: React.FC<VentasPageProps> = ({ gastos = [] }) => {
+export const VentasPage: React.FC = () => {
   const {
     ventas,
     ventasTotal,
@@ -28,6 +31,21 @@ export const VentasPage: React.FC<VentasPageProps> = ({ gastos = [] }) => {
     handleToggleVentaFlag,
     handleBuscarVentas,
   } = useVentas();
+
+  const { gastos } = useGastos();
+  const { showError, showWarning } = useToast();
+
+  const { data: productosActivos = [] } = useQuery({
+    queryKey: queryKeys.productosActivos,
+    queryFn: getProductosActivos,
+    staleTime: 1000 * 60 * 5,
+  });
+
+  const { data: promocionesActivas = [] } = useQuery({
+    queryKey: queryKeys.promocionesActivas,
+    queryFn: getPromocionesActivas,
+    staleTime: 1000 * 60 * 5,
+  });
 
   const [desde, setDesde] = useState<string>('');
   const [hasta, setHasta] = useState<string>('');
@@ -331,6 +349,14 @@ export const VentasPage: React.FC<VentasPageProps> = ({ gastos = [] }) => {
           </div>
         </div>
       )}
+
+      {/* Modal */}
+      <ModalNuevaVenta 
+        productos={productosActivos}
+        promociones={promocionesActivas}
+        showError={showError}
+        showWarning={showWarning}
+      />
     </div>
   );
 }; 

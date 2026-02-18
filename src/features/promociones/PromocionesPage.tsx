@@ -1,5 +1,11 @@
 import React from 'react';
+import { useQuery } from '@tanstack/react-query';
+import { queryKeys } from '../../lib/queryClient';
 import { usePromociones } from './context/PromocionesContext';
+import { ModalCrearPromocion } from './components/ModalCrearPromocion';
+import ModalVerPromocion from './components/ModalVerPromocion';
+import { getProductosActivos } from '../productos/services/productoService';
+import { useToast } from '../../shared/hooks/useToast';
 
 export const PromocionesPage: React.FC = () => {
     const {
@@ -9,6 +15,14 @@ export const PromocionesPage: React.FC = () => {
         handleChangePromocion,
         handleVerPromocion,
     } = usePromociones();
+
+    const { showWarning } = useToast();
+
+    const { data: productosActivos = [] } = useQuery({
+        queryKey: queryKeys.productosActivos,
+        queryFn: getProductosActivos,
+        staleTime: 1000 * 60 * 5,
+    });
     return (
         <div className="page">
             <div className="page-header">
@@ -93,6 +107,15 @@ export const PromocionesPage: React.FC = () => {
                     </table>
                 </div>
             </div>
+
+            {/* Modales */}
+            <ModalCrearPromocion 
+                productos={productosActivos}
+                showWarning={showWarning}
+            />
+            <ModalVerPromocion 
+                productosCatalogo={productosActivos}
+            />
         </div>
     );
 };
