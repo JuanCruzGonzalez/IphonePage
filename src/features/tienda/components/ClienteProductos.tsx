@@ -1,11 +1,11 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { Producto, Categoria } from '../../../core/types';
 import { getProductosActivos } from '../../productos/services/productoService';
-import { getProductImageUrl } from '../../../shared/services/storageService';
 import { getCategoriasActivas } from '../../categorias/services/categoriaService';
 import { supabase } from '../../../core/config/supabase';
 import { formatPrice, formatPrecioParaMostrar } from '../../../shared/utils';
 import { ItemCarrito } from './CarritoPanel';
+import { ProductImageSlider } from './ProductImageSlider';
 
 interface ClienteProductosProps {
   carrito: ItemCarrito[];
@@ -316,20 +316,11 @@ export const ClienteProductos = React.memo<ClienteProductosProps>(({
 
                 return (
                   <div key={producto.id_producto} className="home-product-card">
-                    <div className="home-product-image-wrapper">
-                      {producto.imagen_path ? (
-                        <img
-                          src={getProductImageUrl(producto.imagen_path) || undefined}
-                          alt={producto.nombre}
-                          className="home-product-image"
-                        />
-                      ) : (
-                        <div className="home-product-image-placeholder">📦</div>
-                      )}
-                      {tienePromo && (
-                        <span className="home-product-badge offer">Oferta</span>
-                      )}
-                    </div>
+                    <ProductImageSlider
+                      imagenes={producto.imagenes || []}
+                      nombreProducto={producto.nombre}
+                      hasPromo={tienePromo}
+                    />
 
                     <div className="home-product-info">
                       <div className="home-product-name-row">

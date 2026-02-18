@@ -314,6 +314,15 @@
   overflow: hidden;
 }
 
+.cliente-product-image-container .product-slider-wrapper {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  aspect-ratio: unset;
+}
+
 .cliente-product-image {
   position: absolute;
   top: 0;
@@ -1672,6 +1681,128 @@
   font-size: 48px;
   color: var(--home-text-light);
   background: var(--home-bg-light);
+}
+
+/* --- Product Image Slider --- */
+.product-slider-wrapper {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 1 / 1;
+  background: var(--home-bg-light);
+  overflow: hidden;
+}
+
+.product-slider-container {
+  position: relative;
+  width: 100%;
+  height: 100%;
+}
+
+.product-slider-image {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transition: transform 0.3s ease;
+}
+
+.home-product-card:hover .product-slider-image {
+  transform: scale(1.05);
+}
+
+.product-slider-placeholder {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 48px;
+  color: var(--home-text-light);
+  background: var(--home-bg-light);
+}
+
+.product-slider-btn {
+  position: absolute;
+  top: 50%;
+  width: 32px;
+  height: 32px;
+  border: none;
+  font-size: 24px;
+  cursor: pointer;
+  display: flex;
+  justify-content: center;
+  border-radius: 50%;
+  transition: opacity 0.3s ease, background 0.2s ease;
+  z-index: 2;
+  opacity: 0;
+  padding: 0;
+  line-height: 1;
+}
+
+.cliente-product-card:hover .product-slider-btn {
+  opacity: 1;
+}
+
+.product-slider-btn:hover {
+  background: rgba(0, 0, 0, 0.7);
+}
+
+.product-slider-btn-prev {
+  left: 8px;
+}
+
+.product-slider-btn-next {
+  right: 8px;
+}
+
+.product-slider-dots {
+  position: absolute;
+  bottom: 10px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  gap: 6px;
+  z-index: 2;
+}
+
+.product-slider-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  border: none;
+  background: rgba(255, 255, 255, 0.5);
+  cursor: pointer;
+  padding: 0;
+  transition: background 0.2s ease, transform 0.2s ease;
+}
+
+.product-slider-dot:hover {
+  background: rgba(255, 255, 255, 0.8);
+  transform: scale(1.2);
+}
+
+.product-slider-dot.active {
+  background: white;
+  transform: scale(1.2);
+}
+
+/* Badge del slider (compatible con home y cliente) */
+.product-slider-badge {
+  position: absolute;
+  top: 12px;
+  left: 12px;
+  padding: 6px 10px;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  z-index: 3;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+}
+
+.product-slider-badge.offer {
+  background: #e74c3c;
+  color: white;
 }
 
 .home-product-badge {

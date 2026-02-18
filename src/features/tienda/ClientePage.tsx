@@ -1,9 +1,9 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { Producto, Categoria } from '../../core/types';
 import { getProductosActivos } from '../productos/services/productoService';
-import { getProductImageUrl } from '../../shared/services/storageService';
 import { getCategoriasActivas } from '../categorias/services/categoriaService';
 import { ClientePromociones } from '../promociones/components/ClientePromociones';
+import { ProductImageSlider } from './components/ProductImageSlider';
 import { supabase } from '../../core/config/supabase';
 import { formatPrice } from '../../shared/utils';
 import { useCarrito } from './context/CarritoContext';
@@ -331,36 +331,13 @@ export const ClientePage: React.FC = () => {
                   <div className="cliente-products-grid">
                     {productosFiltrados.map(producto => (
                       <div key={producto.id_producto} className="cliente-product-card">
-                        {/* Imagen del producto con overlay */}
+                        {/* Slider de imágenes del producto */}
                         <div className="cliente-product-image-container">
-                          {producto.imagen_path ? (
-                            <img
-                              src={getProductImageUrl(producto.imagen_path) || undefined}
-                              alt={producto.nombre}
-                              className="cliente-product-image"
-                            />
-                          ) : (
-                            <div className="cliente-product-image-placeholder">
-                              📦
-                            </div>
-                          )}
-                          {producto.promocion_activa && producto.precio_promocion != null && (
-                            <span style={{
-                              position: 'absolute',
-                              top: '12px',
-                              right: '12px',
-                              backgroundColor: '#e74c3c',
-                              color: 'white',
-                              padding: '6px 10px',
-                              borderRadius: '6px',
-                              fontSize: '12px',
-                              fontWeight: 700,
-                              boxShadow: '0 2px 8px rgba(231, 76, 60, 0.4)',
-                              zIndex: 10,
-                            }}>
-                              OFERTA
-                            </span>
-                          )}
+                          <ProductImageSlider
+                            imagenes={producto.imagenes || []}
+                            nombreProducto={producto.nombre}
+                            hasPromo={producto.promocion_activa && producto.precio_promocion != null}
+                          />
                         </div>
 
                         {/* Contenido */}
