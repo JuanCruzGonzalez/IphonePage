@@ -110,12 +110,18 @@ export const ProductosPage: React.FC = () => {
                   </td>
                 </tr>
               ) : (
-                displayedProducts.map(producto => (
+                displayedProducts.map(producto => {
+                  // Obtener imagen principal o primera imagen disponible
+                  const imagenMostrar = producto.imagenes?.find(img => img.es_principal) 
+                    || producto.imagenes?.[0]
+                    || (producto.imagen_path ? { imagen_path: producto.imagen_path } : null);
+                  
+                  return (
                   <tr key={producto.id_producto}>
                     <td>
-                      {producto.imagen_path ? (
+                      {imagenMostrar ? (
                         <img
-                          src={getProductImageUrl(producto.imagen_path) || undefined}
+                          src={getProductImageUrl(imagenMostrar.imagen_path) || undefined}
                           alt={producto.nombre}
                           style={{ width: '50px', height: '50px', objectFit: 'cover', borderRadius: '4px' }}
                         />
@@ -186,7 +192,8 @@ export const ProductosPage: React.FC = () => {
                       )}
                     </td>
                   </tr>
-                ))
+                  );
+                })
               )}
             </tbody>
           </table>

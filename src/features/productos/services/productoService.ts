@@ -1,5 +1,5 @@
 import { supabase, handleAuthError } from '../../../core/config/supabase';
-import { Producto, UnidadMedida } from '../../../core/types';
+import { Producto, UnidadMedida, ProductoImagen } from '../../../core/types';
 
 // Helper para convertir fecha sin desplazamiento de zona horaria
 const parseDateLocal = (dateString: string | null): Date | null => {
@@ -7,6 +7,41 @@ const parseDateLocal = (dateString: string | null): Date | null => {
   const [year, month, day] = dateString.split('-').map(Number);
   return new Date(year, month - 1, day);
 };
+
+// Helper para cargar imágenes de múltiples productos de forma eficiente
+const cargarImagenesProductos = async (productos: Producto[]): Promise<Producto[]> => {
+  if (productos.length === 0) return productos;
+  
+  const ids = productos.map(p => p.id_producto);
+  
+  const { data: imagenes, error } = await supabase
+    .from('producto_imagen')
+    .select('*')
+    .in('id_producto', ids)
+    .order('orden', { ascending: true });
+  
+  if (error) {
+    console.warn('Error al cargar imágenes de productos:', error);
+    // No lanzar error, solo continuar sin imágenes
+    return productos;
+  }
+  
+  // Agrupar imágenes por producto
+  const imagenesPorProducto = new Map<number, ProductoImagen[]>();
+  (imagenes || []).forEach((img: any) => {
+    if (!imagenesPorProducto.has(img.id_producto)) {
+      imagenesPorProducto.set(img.id_producto, []);
+    }
+    imagenesPorProducto.get(img.id_producto)!.push(img as ProductoImagen);
+  });
+  
+  // Asignar imágenes a cada producto
+  return productos.map(p => ({
+    ...p,
+    imagenes: imagenesPorProducto.get(p.id_producto) || [],
+  }));
+};
+
 
 export async function getProductos() {
   const { data, error } = await supabase
@@ -60,7 +95,8 @@ export async function getProductos() {
     imagen_path: p.imagen_path,
   })) as Producto[];
 
-  return productos;
+  // Cargar imágenes de todos los productos
+  return await cargarImagenesProductos(productos);
 }
 export async function getProductosActivos() {
   const { data, error } = await supabase
@@ -113,7 +149,8 @@ export async function getProductosActivos() {
     imagen_path: p.imagen_path,
   })) as Producto[];
 
-  return productos;
+  // Cargar imágenes de todos los productos
+  return await cargarImagenesProductos(productos);
 }
 
 export async function buscarProductos(q: string) {
@@ -165,7 +202,8 @@ export async function buscarProductos(q: string) {
     unidad_medida: Array.isArray(p.unidad_medida) ? (p.unidad_medida[0] ?? null) : (p.unidad_medida ?? null),
   })) as Producto[];
 
-  return productos;
+  // Cargar imágenes de todos los productos
+  return await cargarImagenesProductos(productos);
 }
 
 // Paginado: devuelve una página de productos y el total (count exacto)
@@ -223,7 +261,10 @@ export async function getProductosPage(page = 1, pageSize = 5, q = '') {
     imagen_path: p.imagen_path,
   })) as Producto[];
 
-  return { productos, total: (count ?? 0) as number };
+  // Cargar imágenes de todos los productos
+  const productosConImagenes = await cargarImagenesProductos(productos);
+
+  return { productos: productosConImagenes, total: (count ?? 0) as number };
 }
 
 export async function createProducto(producto: Omit<Producto, 'id_producto'>) {

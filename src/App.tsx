@@ -170,15 +170,15 @@ function App() {
     modalCategoria.open();
   };
 
-  const handleSubmitCategoria = async (nombre: string) => {
+  const handleSubmitCategoria = async (nombre: string, id_categoria_padre?: number | null) => {
     try {
       if (categoriaToEdit) {
         // Editar categoría existente
-        await actualizarCategoriaAsync.execute(() => updateCategoria(categoriaToEdit.id_categoria, { nombre }));
+        await actualizarCategoriaAsync.execute(() => updateCategoria(categoriaToEdit.id_categoria, { nombre, id_categoria_padre }));
         showSuccess('Categoría actualizada correctamente');
       } else {
         // Crear nueva categoría
-        await crearCategoriaAsync.execute(() => createCategoria(nombre));
+        await crearCategoriaAsync.execute(() => createCategoria(nombre, id_categoria_padre));
         showSuccess('Categoría creada correctamente');
       }
       modalCategoria.close();
@@ -319,6 +319,7 @@ function App() {
           onClose={() => { modalCategoria.close(); setCategoriaToEdit(null); }}
           onSubmit={handleSubmitCategoria}
           initialCategoria={categoriaToEdit}
+          categorias={categorias}
           loading={categoriaToEdit ? actualizarCategoriaAsync.loading : crearCategoriaAsync.loading}
         />
 

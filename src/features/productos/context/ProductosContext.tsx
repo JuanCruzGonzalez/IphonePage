@@ -1,7 +1,7 @@
 import React, { createContext, useContext, useState, useCallback, ReactNode } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { queryKeys } from '../../../lib/queryClient';
-import { Producto } from '../../../core/types';
+import { Producto, ProductoImagen } from '../../../core/types';
 import {
   getProductosPage,
   getProductosActivos,
@@ -10,7 +10,10 @@ import {
   updateProductoEstado,
   updateStockProducto,
 } from '../services/productoService';
-import { uploadProductImage, updateProductImage } from '../../../shared/services/storageService';
+import { uploadProductImage } from '../../../shared/services/storageService';
+import { 
+  reemplazarImagenesProducto 
+} from '../services/productoImagenService';
 import { asignarCategoriasAProducto, getCategoriasDeProducto } from '../../categorias/services/categoriaService';
 import { useModal } from '../../../shared/hooks/useModal';
 
@@ -61,13 +64,13 @@ interface ProductosContextValue {
   // Operaciones CRUD
   handleNuevoProducto: (
     producto: ProductoFormData,
-    imageFile?: File | null,
+    imagenes?: ProductoImagen[],
     categoriasIds?: number[]
   ) => Promise<void>;
   handleBuscarProductos: (texto: string) => Promise<void>;
   handleEditarProducto: (
     producto: ProductoFormData,
-    imageFile?: File | null,
+    imagenes?: ProductoImagen[],
     categoriasIds?: number[]
   ) => Promise<void>;
   openEditarProducto: (producto: Producto) => Promise<void>;
@@ -157,11 +160,11 @@ export const ProductosProvider: React.FC<ProductosProviderProps> = ({
   const crearProductoMutation = useMutation({
     mutationFn: async ({
       producto,
-      imageFile,
+      imagenes,
       categoriasIds,
     }: {
       producto: ProductoFormData;
-      imageFile?: File | null;
+      imagenes?: ProductoImagen[];
       categoriasIds?: number[];
     }) => {
       const createdProduct = await createProducto({
@@ -177,13 +180,29 @@ export const ProductosProvider: React.FC<ProductosProviderProps> = ({
         vencimiento: producto.vencimiento || undefined,
       });
 
-      // Si hay una imagen, subirla y actualizar el producto
-      if (imageFile && createdProduct) {
+      // Si hay imágenes, procesarlas
+      if (imagenes && imagenes.length > 0 && createdProduct) {
         try {
-          const imagePath = await uploadProductImage(imageFile, createdProduct.id_producto);
-          await updateProducto(createdProduct.id_producto, { imagen_path: imagePath });
+          // Subir las imágenes que son base64 (nuevas)
+          const imagenesParaGuardar = await Promise.all(
+            imagenes.map(async (img, index) => {
+              // Si la imagen es base64, subirla
+              if (img.imagen_path.startsWith('data:')) {
+                // Convertir base64 a file
+                const res = await fetch(img.imagen_path);
+                const blob = await res.blob();
+                const file = new File([blob], `image-${index}.jpg`, { type: 'image/jpeg' });
+                const path = await uploadProductImage(file, createdProduct.id_producto);
+                return { imagen_path: path, es_principal: img.es_principal };
+              }
+              return { imagen_path: img.imagen_path, es_principal: img.es_principal };
+            })
+          );
+          
+          // Guardar las imágenes en la tabla producto_imagen
+          await reemplazarImagenesProducto(createdProduct.id_producto, imagenesParaGuardar);
         } catch (imgErr) {
-          showWarning('Producto creado pero no se pudo subir la imagen');
+          showWarning('Producto creado pero no se pudieron subir todas las imágenes');
         }
       }
 
@@ -217,29 +236,16 @@ export const ProductosProvider: React.FC<ProductosProviderProps> = ({
   const editarProductoMutation = useMutation({
     mutationFn: async ({
       producto,
-      imageFile,
+      imagenes,
       categoriasIds,
     }: {
       producto: ProductoFormData;
-      imageFile?: File | null;
+      imagenes?: ProductoImagen[];
       categoriasIds?: number[];
     }) => {
       if (!productToEdit) throw new Error('No hay producto para editar');
 
-      // Si hay una nueva imagen, subirla
-      let imagenPath = productToEdit.imagen_path;
-      if (imageFile) {
-        try {
-          imagenPath = await updateProductImage(
-            imageFile,
-            productToEdit.id_producto,
-            productToEdit.imagen_path || undefined
-          );
-        } catch (imgErr) {
-          showWarning('Se actualizará el producto sin cambiar la imagen');
-        }
-      }
-
+      // Actualizar datos del producto
       const updated = await updateProducto(productToEdit.id_producto, {
         nombre: producto.nombre,
         descripcion: producto.descripcion || null,
@@ -251,11 +257,35 @@ export const ProductosProvider: React.FC<ProductosProviderProps> = ({
         id_unidad_medida: producto.unidadMedida,
         estado: producto.estado,
         vencimiento: producto.vencimiento || undefined,
-        imagen_path: imagenPath,
       });
 
       if (!updated) {
         throw new Error('No se pudo actualizar el producto');
+      }
+
+      // Procesar imágenes si hay cambios
+      if (imagenes !== undefined) {
+        try {
+          // Subir las imágenes que son base64 (nuevas)
+          const imagenesParaGuardar = await Promise.all(
+            imagenes.map(async (img, index) => {
+              // Si la imagen es base64, subirla
+              if (img.imagen_path.startsWith('data:')) {
+                const res = await fetch(img.imagen_path);
+                const blob = await res.blob();
+                const file = new File([blob], `image-${index}.jpg`, { type: 'image/jpeg' });
+                const path = await uploadProductImage(file, productToEdit.id_producto);
+                return { imagen_path: path, es_principal: img.es_principal };
+              }
+              return { imagen_path: img.imagen_path, es_principal: img.es_principal };
+            })
+          );
+          
+          // Reemplazar todas las imágenes
+          await reemplazarImagenesProducto(productToEdit.id_producto, imagenesParaGuardar);
+        } catch (imgErr) {
+          showWarning('Producto actualizado pero no se pudieron procesar todas las imágenes');
+        }
       }
 
       // Actualizar categorías
@@ -354,15 +384,15 @@ export const ProductosProvider: React.FC<ProductosProviderProps> = ({
   // ============= OPERACIONES CRUD =============
 
   /**
-   * Crea un nuevo producto con imagen y categorías opcionales
+   * Crea un nuevo producto con imágenes y categorías opcionales
    */
   const handleNuevoProducto = useCallback(
     async (
       producto: ProductoFormData,
-      imageFile?: File | null,
+      imagenes?: ProductoImagen[],
       categoriasIds?: number[]
     ) => {
-      await crearProductoMutation.mutateAsync({ producto, imageFile, categoriasIds });
+      await crearProductoMutation.mutateAsync({ producto, imagenes, categoriasIds });
     },
     [crearProductoMutation]
   );
@@ -380,15 +410,15 @@ export const ProductosProvider: React.FC<ProductosProviderProps> = ({
   );
 
   /**
-   * Edita un producto existente
+   * Edita un producto existente con imágenes y categorías
    */
   const handleEditarProducto = useCallback(
     async (
       producto: ProductoFormData,
-      imageFile?: File | null,
+      imagenes?: ProductoImagen[],
       categoriasIds?: number[]
     ) => {
-      await editarProductoMutation.mutateAsync({ producto, imageFile, categoriasIds });
+      await editarProductoMutation.mutateAsync({ producto, imagenes, categoriasIds });
     },
     [editarProductoMutation]
   );

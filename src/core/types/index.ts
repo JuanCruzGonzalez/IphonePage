@@ -12,7 +12,17 @@ export interface Producto {
   unidad_medida?: UnidadMedida;
   estado: boolean;
   vencimiento?: Date;
-  imagen_path?: string | null;
+  imagen_path?: string | null; // Mantener por compatibilidad
+  imagenes?: ProductoImagen[]; // Nuevo: múltiples imágenes
+}
+
+export interface ProductoImagen {
+  id_producto_imagen: number;
+  id_producto: number;
+  imagen_path: string;
+  orden: number;
+  es_principal: boolean;
+  created_at?: string;
 }
 
 export interface UnidadMedida {
@@ -117,6 +127,11 @@ export interface Categoria {
   id_categoria: number;
   nombre: string;
   estado: boolean;
+  id_categoria_padre?: number | null;
+}
+
+export interface CategoriaConHijos extends Categoria {
+  hijos?: CategoriaConHijos[];
 }
 
 export interface CategoriaProducto {
