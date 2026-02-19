@@ -4,6 +4,7 @@ import { getProductosActivos } from '../productos/services/productoService';
 import { getCategoriasActivas } from '../categorias/services/categoriaService';
 import { ClientePromociones } from '../promociones/components/ClientePromociones';
 import { ProductImageSlider } from './components/ProductImageSlider';
+import { DatosClienteModal } from './components/DatosClienteModal';
 import { supabase } from '../../core/config/supabase';
 import { formatPrice } from '../../shared/utils';
 import { useCarrito } from './context/CarritoContext';
@@ -17,6 +18,7 @@ export const ClientePage: React.FC = () => {
     mostrarCarrito,
     modalCantidad,
     cantidadGramos,
+    modalDatosCliente,
     setCantidadGramos,
     manejarAgregarProducto,
     agregarPromocionAlCarrito,
@@ -30,6 +32,8 @@ export const ClientePage: React.FC = () => {
     cerrarModalCantidad,
     confirmarCantidadGramos,
     obtenerItemEnCarrito,
+    cerrarModalDatosCliente,
+    confirmarPedidoCliente,
   } = useCarrito();
 
   const [vistaActiva, setVistaActiva] = useState<VistaActiva>('productos');
@@ -766,6 +770,13 @@ export const ClientePage: React.FC = () => {
           </div>
         </>
       )}
+
+      {/* Modal de datos de cliente */}
+      <DatosClienteModal
+        isOpen={modalDatosCliente}
+        onClose={cerrarModalDatosCliente}
+        onConfirm={confirmarPedidoCliente}
+      />
     </div>
   );
 };

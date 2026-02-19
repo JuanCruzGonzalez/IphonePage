@@ -33,8 +33,8 @@ body {
   color: var(--color-text);
 }
 
-body .root{
-    width: 100% !important;
+body .root {
+  width: 100% !important;
 }
 
 input {
@@ -121,6 +121,21 @@ input {
 .nav-label {
   flex: 1;
   text-align: left;
+}
+
+.badge-counter {
+  background: var(--color-warning);
+  color: #fff;
+  font-size: 11px;
+  font-weight: 700;
+  padding: 2px 7px;
+  border-radius: 10px;
+  min-width: 20px;
+  text-align: center;
+}
+
+.nav-item.active .badge-counter {
+  background: var(--color-primary);
 }
 
 .sidebar-footer {
@@ -568,6 +583,28 @@ input[type="number"]::webkit-outer-spin-button {
 /* ============================================
    MODALES MINIMALISTAS
    ============================================ */
+
+.modal {
+  border-radius: 10px;
+}
+
+.modal-header,
+.modal-body {
+  background-color: #fff;
+  padding: 20px 30px;
+}
+
+.modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-radius: 10px 10px 0 0;
+}
+
+.modal-body{
+  border-radius: 0px 0px 10px 10px;
+}
+
 .modal-overlay {
   position: fixed;
   top: 0;
@@ -580,6 +617,13 @@ input[type="number"]::webkit-outer-spin-button {
   justify-content: center;
   z-index: 1000;
   padding: 20px;
+}
+
+.modal-close{
+  background-color: transparent;
+  color: var(--color-text);
+  display: flex;
+  align-items: center;
 }
 
 input[type=number]::-webkit-inner-spin-button,
@@ -628,6 +672,21 @@ input[type=number] {
   background: var(--color-bg);
 }
 
+@media screen and (max-width: 480px) {
+  .modal-overlay{
+    display: block;
+  }
+
+  .modal-body{
+    max-height: 550px;
+    overflow-y: scroll;
+  }
+
+  .btn-cancel-pedido{
+    width: 100%;
+  }
+}
+
 /* ============================================
    FORMULARIOS
    ============================================ */
@@ -674,6 +733,25 @@ input[type=number] {
 .form-group textarea {
   resize: vertical;
   min-height: 80px;
+}
+
+.form-label {
+  display: block;
+  margin-bottom: 6px;
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--color-text);
+}
+
+.input-error {
+  border-color: var(--color-danger) !important;
+}
+
+.error-message {
+  display: block;
+  color: var(--color-danger);
+  font-size: 12px;
+  margin-top: 4px;
 }
 
 /* ============================================
@@ -742,12 +820,12 @@ input[type=number] {
   border-bottom: 1px solid var(--color-border);
 }
 
-.item-row > div {
+.item-row>div {
   flex-wrap: wrap;
   gap: 8px;
 }
 
-.item-row > div > span:first-child {
+.item-row>div>span:first-child {
   word-wrap: break-word;
   word-break: break-word;
   overflow-wrap: break-word;
@@ -756,7 +834,7 @@ input[type=number] {
   min-width: 0;
 }
 
-.item-row > div > div:last-child {
+.item-row>div>div:last-child {
   flex-wrap: wrap;
   gap: 8px;
 }
@@ -929,7 +1007,7 @@ input[type=number] {
     width: 100%;
   }
 
-  .sidebar.mobile-open ~ .mobile-overlay {
+  .sidebar.mobile-open~.mobile-overlay {
     display: block;
   }
 
@@ -975,18 +1053,18 @@ input[type=number] {
     padding: 12px 0;
   }
 
-  .item-row > div {
+  .item-row>div {
     flex-direction: column !important;
     align-items: flex-start !important;
   }
 
-  .item-row > div > span:first-child {
+  .item-row>div>span:first-child {
     width: 100%;
     margin-bottom: 8px;
     font-weight: 600;
   }
 
-  .item-row > div > div:last-child {
+  .item-row>div>div:last-child {
     width: 100%;
     justify-content: space-between !important;
   }
@@ -1002,4 +1080,81 @@ input[type=number] {
   border-radius: 5px;
   padding: 8px;
   border: 1px solid #ccc;
+}
+
+/* ============================================
+   BADGES DE ESTADO DE PEDIDOS
+   ============================================ */
+.status-badge-pedido {
+  display: inline-block;
+  padding: 6px 12px;
+  border-radius: 4px;
+  font-size: 13px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.status-badge-pedido.recibido {
+  background-color: #fef3c7;
+  color: #92400e;
+}
+
+.status-badge-pedido.aceptado {
+  background-color: #dbeafe;
+  color: #1e40af;
+}
+
+.status-badge-pedido.entregado {
+  background-color: #d1fae5;
+  color: #065f46;
+}
+
+.status-badge-pedido.cancelado {
+  background-color: #fee2e2;
+  color: #991b1b;
+}
+
+/* ============================================
+   STATS GRID MINIMAL
+   ============================================ */
+.stats-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 16px;
+  margin-bottom: 24px;
+}
+
+.stat-card-minimal {
+  background: var(--color-bg-card);
+  border-radius: var(--border-radius);
+  padding: 16px;
+  border: 1px solid var(--color-border);
+}
+
+.stat-label {
+  font-size: 13px;
+  color: var(--color-text-muted);
+  margin-bottom: 8px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  font-weight: 500;
+}
+
+.stat-value {
+  font-size: 28px;
+  font-weight: 700;
+  color: var(--color-text);
+}
+
+.stat-value.stat-success {
+  color: var(--color-success);
+}
+
+.stat-value.stat-warning {
+  color: var(--color-warning);
+}
+
+.stat-value.stat-danger {
+  color: var(--color-danger);
 }

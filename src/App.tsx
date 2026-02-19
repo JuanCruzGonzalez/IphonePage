@@ -1,7 +1,5 @@
 import { useState } from 'react';
-import { QueryClientProvider } from '@tanstack/react-query';
 import { ReactQueryDevtools } from '@tanstack/react-query-devtools';
-import { queryClient } from './lib/queryClient';
 import './core/styles/app.css';
 import './core/styles/toast.css';
 import { Sidebar } from './shared/components/Sidebar';
@@ -12,16 +10,18 @@ import { VentasProvider } from './features/ventas/context/VentasContext';
 import { PromocionesProvider } from './features/promociones/context/PromocionesContext';
 import { GastosProvider } from './features/gastos/context/GastosContext';
 import { CategoriasProvider } from './features/categorias/context/CategoriasContext';
+import { PedidosProvider } from './features/pedidos/context/PedidosContext';
 import { StockPage } from './features/stock/StockPage';
 import { PromocionesPage } from './features/promociones/PromocionesPage';
 import { GastosPage } from './features/gastos/GastosPage';
 import { CategoriasPage } from './features/categorias/CategoriasPage';
+import { PedidosPage } from './features/pedidos/PedidosPage';
 import { Toast, ConfirmModal } from './shared/components/ToastModal';
 import { useToast, useConfirm } from './shared/hooks/useToast';
 import { useDisableWheelOnNumberInputs } from './shared/hooks/useDisableWheelOnNumberInputs';
 
 function App() {
-  const [activeSection, setActiveSection] = useState<'ventas' | 'productos' | 'stock' | 'promociones' | 'gastos' | 'categorias'>('ventas');
+  const [activeSection, setActiveSection] = useState<'ventas' | 'productos' | 'stock' | 'promociones' | 'gastos' | 'categorias' | 'pedidos'>('ventas');
 
   // Hooks para toast y confirmación
   const { toast, showSuccess, showError, showWarning, hideToast } = useToast();
@@ -31,7 +31,7 @@ function App() {
   useDisableWheelOnNumberInputs();
 
   return (
-    <QueryClientProvider client={queryClient}>
+    <>
       <VentasProvider
         showSuccess={showSuccess}
         showError={showError}
@@ -59,17 +59,23 @@ function App() {
                 showError={showError}
                 showConfirm={showConfirm}
               >
-                <div className="app-container">
-                  <Sidebar activeSection={activeSection} onSectionChange={setActiveSection} />
+                <PedidosProvider
+                  showSuccess={showSuccess}
+                  showError={showError}
+                  showConfirm={showConfirm}
+                >
+                  <div className="app-container">
+                    <Sidebar activeSection={activeSection} onSectionChange={setActiveSection} />
 
-                  <main className="main-content">
-                    {activeSection === 'ventas' && <VentasPage />}
-                    {activeSection === 'productos' && <ProductosPage />}
-                    {activeSection === 'stock' && <StockPage />}
-                    {activeSection === 'promociones' && <PromocionesPage />}
-                    {activeSection === 'gastos' && <GastosPage />}
-                    {activeSection === 'categorias' && <CategoriasPage />}
-                  </main>
+                    <main className="main-content">
+                      {activeSection === 'ventas' && <VentasPage />}
+                      {activeSection === 'productos' && <ProductosPage />}
+                      {activeSection === 'stock' && <StockPage />}
+                      {activeSection === 'promociones' && <PromocionesPage />}
+                      {activeSection === 'gastos' && <GastosPage />}
+                      {activeSection === 'categorias' && <CategoriasPage />}
+                      {activeSection === 'pedidos' && <PedidosPage />}
+                    </main>
 
                   {/* Toast Notification */}
                   <Toast
@@ -88,7 +94,8 @@ function App() {
                     message={confirm.message}
                     type={confirm.type}
                   />
-                </div>
+                  </div>
+                </PedidosProvider>
               </CategoriasProvider>
             </GastosProvider>
           </PromocionesProvider>
@@ -97,7 +104,7 @@ function App() {
 
       {/* React Query Devtools - Solo en desarrollo, se elimina automáticamente en producción */}
       {import.meta.env.DEV && <ReactQueryDevtools initialIsOpen={false} />}
-    </QueryClientProvider>
+    </>
   );
 }
 

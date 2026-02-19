@@ -69,4 +69,11 @@ export const queryKeys = {
   // Categorías
   categorias: ['categorias'] as const,
   categoriaDetalle: (id: number) => ['categorias', id] as const,
+  
+  // Pedidos
+  pedidos: ['pedidos'] as const,
+  pedidoDetalle: (id: number) => ['pedidos', id] as const,
+  pedidosPorEstado: (estado: string) => ['pedidos', 'estado', estado] as const,
+  pedidosPendientes: ['pedidos', 'pendientes'] as const,
+  pedidosMetricas: ['pedidos', 'metricas'] as const,
 } as const;

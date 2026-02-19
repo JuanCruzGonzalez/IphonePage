@@ -9,9 +9,12 @@
  */
 
 import React, { createContext, useContext, useState, useCallback, useMemo, ReactNode } from 'react';
-import { Producto, Promocion } from '../../../core/types';
+import { useQueryClient } from '@tanstack/react-query';
+import { Producto, Promocion, CrearPedidoInput } from '../../../core/types';
 import { calculateCartTotal } from '../../../shared/utils/calculations';
 import { formatPrice } from '../../../shared/utils';
+import { createPedido } from '../../pedidos/services/pedidoService';
+import { queryKeys } from '../../../lib/queryClient';
 
 /**
  * Interfaz para items del carrito
@@ -45,6 +48,7 @@ interface CarritoContextType {
   mostrarCarrito: boolean;
   modalCantidad: ModalCantidad;
   cantidadGramos: string;
+  modalDatosCliente: boolean;
 
   // Setters para el modal de cantidad
   setCantidadGramos: (cantidad: string) => void;
@@ -70,6 +74,15 @@ interface CarritoContextType {
   obtenerItemEnCarrito: (id_producto: number) => ItemCarrito | undefined;
   calcularTotal: number; // Ahora es un valor calculado con useMemo
   enviarPedidoWhatsApp: () => void;
+  abrirModalDatosCliente: () => void;
+  cerrarModalDatosCliente: () => void;
+  confirmarPedidoCliente: (datos: {
+    nombre: string;
+    telefono: string;
+    direccion: string;
+    metodoPago: 'efectivo' | 'transferencia' | 'mercadopago';
+    notas: string;
+  }) => Promise<void>;
 }
 
 const CarritoContext = createContext<CarritoContextType | undefined>(undefined);
@@ -78,6 +91,7 @@ const CarritoContext = createContext<CarritoContextType | undefined>(undefined);
  * Provider del CarritoContext
  */
 export const CarritoProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
+  const queryClient = useQueryClient();
   const [carrito, setCarrito] = useState<ItemCarrito[]>([]);
   const [mostrarCarrito, setMostrarCarrito] = useState(false);
   const [modalCantidad, setModalCantidad] = useState<ModalCantidad>({
@@ -85,6 +99,7 @@ export const CarritoProvider: React.FC<{ children: ReactNode }> = ({ children })
     producto: null,
   });
   const [cantidadGramos, setCantidadGramos] = useState('');
+  const [modalDatosCliente, setModalDatosCliente] = useState(false);
 
   /**
    * Agrega un producto al carrito
@@ -257,39 +272,98 @@ export const CarritoProvider: React.FC<{ children: ReactNode }> = ({ children })
    * Genera mensaje y abre WhatsApp con el pedido
    */
   const enviarPedidoWhatsApp = useCallback(() => {
-    const numeroWhatsApp = '5492616166624';
+    // Abrir modal para capturar datos del cliente
+    setModalDatosCliente(true);
+  }, []);
 
-    let mensaje = 'Hola Chañar, quería hacer el siguiente pedido:\n\n';
+  const abrirModalDatosCliente = useCallback(() => {
+    setModalDatosCliente(true);
+  }, []);
 
-    carrito.forEach(item => {
-      let cantidad = '';
-      if (item.tipo === 'promocion') {
-        cantidad = `${item.cantidad} un`;
-      } else if (item.unidadMedidaId === 1) {
-        cantidad = `${Math.round(item.cantidad)}gr`;
-      } else {
-        cantidad = `${item.cantidad} ${item.unidadMedidaNombre || 'un'}`;
+  const cerrarModalDatosCliente = useCallback(() => {
+    setModalDatosCliente(false);
+  }, []);
+
+  const confirmarPedidoCliente = useCallback(async (datos: {
+    nombre: string;
+    telefono: string;
+    direccion: string;
+    metodoPago: 'efectivo' | 'transferencia' | 'mercadopago';
+    notas: string;
+  }) => {
+    try {
+      // Preparar datos del pedido
+      const pedidoInput: CrearPedidoInput = {
+        cliente_nombre: datos.nombre,
+        cliente_telefono: datos.telefono,
+        cliente_direccion: datos.direccion,
+        metodo_pago: datos.metodoPago,
+        notas: datos.notas || null,
+        items: carrito.map(item => ({
+          tipo: item.tipo,
+          id: item.id_referencia,
+          cantidad: item.cantidad,
+          precio_unitario: item.precio,
+        })),
+      };
+
+      // Crear pedido en la base de datos
+      await createPedido(pedidoInput);
+
+      // Invalidar queries de pedidos para actualizar contadores y tabla
+      queryClient.invalidateQueries({ queryKey: queryKeys.pedidos });
+      queryClient.invalidateQueries({ queryKey: queryKeys.pedidosPendientes });
+      queryClient.invalidateQueries({ queryKey: queryKeys.pedidosMetricas });
+
+      // Generar mensaje de WhatsApp
+      const numeroWhatsApp = '5492616166624';
+      let mensaje = `Hola Chañar soy ${datos.nombre}, quería hacer el siguiente pedido:\n\n`;
+
+      carrito.forEach(item => {
+        let cantidad = '';
+        if (item.tipo === 'promocion') {
+          cantidad = `${item.cantidad} un`;
+        } else if (item.unidadMedidaId === 1) {
+          cantidad = `${Math.round(item.cantidad)}gr`;
+        } else {
+          cantidad = `${item.cantidad} ${item.unidadMedidaNombre || 'un'}`;
+        }
+        const tipo = item.tipo === 'promocion' ? '🎁 ' : '';
+        mensaje += `${tipo}• ${item.nombre}: ${cantidad} - ${formatPrice(item.precio * item.cantidad)}\n`;
+        if (item.descripcion) {
+          mensaje += `  ${item.descripcion}\n`;
+        }
+      });
+
+      mensaje += `\n*Total: ${formatPrice(calcularTotal)}*`;
+      mensaje += `\n\nDatos de entrega:\n`;
+      mensaje += `${datos.telefono}\n`;
+      mensaje += `${datos.direccion}\n`;
+      mensaje += `Pago: ${datos.metodoPago}`;
+      
+      if (datos.notas) {
+        mensaje += `\n ${datos.notas}`;
       }
-      const tipo = item.tipo === 'promocion' ? '🎁 ' : '';
-      mensaje += `${tipo}• ${item.nombre}: ${cantidad} - ${formatPrice(item.precio * item.cantidad)}\n`;
-      if (item.descripcion) {
-        mensaje += `  ${item.descripcion}\n`;
-      }
-    });
 
-    mensaje += `\n*Total: ${formatPrice(calcularTotal)}*`;
+      const mensajeCodificado = encodeURIComponent(mensaje);
+      const urlWhatsApp = `https://wa.me/${numeroWhatsApp}?text=${mensajeCodificado}`;
 
-    const mensajeCodificado = encodeURIComponent(mensaje);
-    const urlWhatsApp = `https://wa.me/${numeroWhatsApp}?text=${mensajeCodificado}`;
+      // Crear un enlace temporal y hacer clic en él
+      const link = document.createElement('a');
+      link.href = urlWhatsApp;
+      link.target = '_blank';
+      link.rel = 'noopener noreferrer';
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
 
-    // Crear un enlace temporal y hacer clic en él
-    const link = document.createElement('a');
-    link.href = urlWhatsApp;
-    link.target = '_blank';
-    link.rel = 'noopener noreferrer';
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
+      // Cerrar modal y vaciar carrito
+      setModalDatosCliente(false);
+      vaciarCarrito();
+    } catch (error) {
+      console.error('Error al crear pedido:', error);
+      alert('Error al crear el pedido. Por favor, intenta nuevamente.');
+    }
   }, [carrito, calcularTotal]);
 
   const value: CarritoContextType = {
@@ -298,6 +372,7 @@ export const CarritoProvider: React.FC<{ children: ReactNode }> = ({ children })
     mostrarCarrito,
     modalCantidad,
     cantidadGramos,
+    modalDatosCliente,
 
     // Setters
     setCantidadGramos,
@@ -323,6 +398,9 @@ export const CarritoProvider: React.FC<{ children: ReactNode }> = ({ children })
     obtenerItemEnCarrito,
     calcularTotal,
     enviarPedidoWhatsApp,
+    abrirModalDatosCliente,
+    cerrarModalDatosCliente,
+    confirmarPedidoCliente,
   };
 
   return (

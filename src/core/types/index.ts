@@ -139,3 +139,65 @@ export interface CategoriaProducto {
   id_categoria: number;
   id_producto: number;
 }
+
+// =============================================
+// PEDIDOS
+// =============================================
+
+export type EstadoPedido = 'RECIBIDO' | 'ACEPTADO' | 'ENTREGADO' | 'CANCELADO';
+export type MetodoPagoPedido = 'efectivo' | 'transferencia' | 'mercadopago';
+
+export interface Pedido {
+  id_pedido: number;
+  fecha_pedido: string;
+  estado: EstadoPedido;
+  id_venta: number | null;
+  
+  // Datos del cliente
+  cliente_nombre: string;
+  cliente_telefono: string;
+  cliente_direccion: string | null;
+  
+  // Detalles del pedido
+  total: number;
+  metodo_pago: MetodoPagoPedido | null;
+  notas: string | null;
+  
+  // Auditoría
+  created_at: string;
+  updated_at: string;
+}
+
+export interface PedidoDetalle {
+  id_pedido_detalle: number;
+  id_pedido: number;
+  tipo: 'producto' | 'promocion';
+  id_producto: number | null;
+  id_promocion: number | null;
+  cantidad: number;
+  precio_unitario: number;
+}
+
+export interface PedidoDetalleConInfo extends PedidoDetalle {
+  producto?: Producto;
+  promocion?: Promocion;
+}
+
+export interface PedidoConDetalles extends Pedido {
+  detalles: PedidoDetalleConInfo[];
+}
+
+// Para crear pedido desde el cliente
+export interface CrearPedidoInput {
+  cliente_nombre: string;
+  cliente_telefono: string;
+  cliente_direccion: string | null;
+  metodo_pago: MetodoPagoPedido | null;
+  notas: string | null;
+  items: {
+    tipo: 'producto' | 'promocion';
+    id: number;
+    cantidad: number;
+    precio_unitario: number;
+  }[];
+}
