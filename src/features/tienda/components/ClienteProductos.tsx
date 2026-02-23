@@ -3,7 +3,7 @@ import { Producto, Categoria } from '../../../core/types';
 import { getProductosActivos } from '../../productos/services/productoService';
 import { getCategoriasActivas } from '../../categorias/services/categoriaService';
 import { supabase } from '../../../core/config/supabase';
-import { formatPrice, formatPrecioParaMostrar } from '../../../shared/utils';
+import { formatPrice } from '../../../shared/utils';
 import { ItemCarrito } from '../context/CarritoContext';
 import { ProductImageSlider } from './ProductImageSlider';
 
@@ -53,10 +53,7 @@ export const ClienteProductos = React.memo<ClienteProductosProps>(({
       const data = await getProductosActivos();
       setProductos(data);
       if (data.length > 0) {
-        const max = Math.max(...data.map(p => {
-          const precio = p.id_unidad_medida === 1 ? p.precioventa * 1 : p.precioventa;
-          return precio;
-        }));
+        const max = Math.max(...data.map(p => p.precioventa));
         setMaxPrice(Math.ceil(max));
         setPriceFilter(Math.ceil(max));
       }
@@ -100,12 +97,9 @@ export const ClienteProductos = React.memo<ClienteProductosProps>(({
 
     if (priceFilter < maxPrice) {
       result = result.filter(p => {
-        let precio = (p.promocion_activa && p.precio_promocion != null)
+        const precio = (p.promocion_activa && p.precio_promocion != null)
           ? p.precio_promocion
           : p.precioventa;
-        if (p.id_unidad_medida === 1) {
-          precio = precio * 100;
-        }
         return precio <= priceFilter;
       });
     }
@@ -148,24 +142,19 @@ export const ClienteProductos = React.memo<ClienteProductosProps>(({
   }, [busqueda, priceFilter, sortBy]);
 
   const getPrecioDisplay = (producto: Producto) => {
-    return formatPrecioParaMostrar(producto.precioventa, producto.id_unidad_medida);
+    return producto.precioventa;
   };
 
   const getPrecioPromoDisplay = (producto: Producto) => {
     if (producto.precio_promocion == null) return 0;
-    return formatPrecioParaMostrar(producto.precio_promocion, producto.id_unidad_medida);
+    return producto.precio_promocion;
   };
 
   const obtenerItemEnCarrito = (id_producto: number): ItemCarrito | undefined =>
     carrito.find(item => item.id === `producto-${id_producto}`);
 
   const manejarAgregarProducto = (producto: Producto) => {
-    if (producto.id_unidad_medida === 1) {
-      setModalCantidad({ isOpen: true, producto });
-      setCantidadGramos('');
-    } else {
-      agregarAlCarrito(producto, 1);
-    }
+    agregarAlCarrito(producto, 1);
   };
 
   const confirmarCantidadGramos = () => {
@@ -345,32 +334,25 @@ export const ClienteProductos = React.memo<ClienteProductosProps>(({
                         <p className="home-product-description">{producto.descripcion}</p>
                       )}
 
-                      {producto.id_unidad_medida === 1 && (
-                        <span className="home-product-unit">Precio por 100gr</span>
-                      )}
-
                       {itemEnCarrito ? (
                         <div className="home-product-qty-controls">
                           <button
                             className="home-product-qty-btn"
                             onClick={() => actualizarCantidad(
                               `producto-${producto.id_producto}`,
-                              itemEnCarrito.cantidad - (producto.id_unidad_medida === 1 ? 10 : 1)
+                              itemEnCarrito.cantidad - 1
                             )}
                           >
                             −
                           </button>
                           <span className="home-product-qty-value">
-                            {producto.id_unidad_medida === 1
-                              ? `${Math.round(itemEnCarrito.cantidad)}gr`
-                              : `${itemEnCarrito.cantidad}`
-                            }
+                            {itemEnCarrito.cantidad}
                           </span>
                           <button
                             className="home-product-qty-btn"
                             onClick={() => actualizarCantidad(
                               `producto-${producto.id_producto}`,
-                              itemEnCarrito.cantidad + (producto.id_unidad_medida === 1 ? 10 : 1)
+                              itemEnCarrito.cantidad + 1
                             )}
                           >
                             +

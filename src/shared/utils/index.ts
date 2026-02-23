@@ -11,3 +11,5 @@ export * from './calculations';
 
 // Fechas
 export * from './dates';
+
+export * from './unidadMedida';
