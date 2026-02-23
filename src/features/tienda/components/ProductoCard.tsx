@@ -1,6 +1,5 @@
 import React from 'react';
 import { Producto } from '../../../core/types';
-import { ProductImageSlider } from './ProductImageSlider';
 import { formatPrice } from '../../../shared/utils/formatters';
 import { getProductImageUrl } from '../../../shared/services/storageService';
 
