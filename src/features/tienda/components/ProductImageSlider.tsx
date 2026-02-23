@@ -86,7 +86,6 @@ export const ProductImageSlider: React.FC<ProductImageSliderProps> = ({
         )}
       </div>
 
-      {hasPromo && <span className="product-slider-badge offer">Oferta</span>}
     </div>
   );
 };

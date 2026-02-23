@@ -1,12 +1,12 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
-import { Producto, Promocion, UnidadMedida } from '../../../core/types';
+import { Producto, Promocion } from '../../../core/types';
 import { updateProducto } from '../../productos/services/productoService';
 import { useVentas } from '../context/VentasContext';
 
 // Small row component for product items (editable unit price)
 // Memoized to prevent unnecessary re-renders when parent updates
 const ProductRow = React.memo<{
-    item: { id_producto: number; cantidad: number; nombre: string; precioventa: number; unidadMedida: UnidadMedida };
+    item: { id_producto: number; cantidad: number; nombre: string; precioventa: number };
     onUpdatePrice: (id_producto: number, newPrice: number) => void;
     onRemove: (id_producto: number) => void;
     onChangeCantidad: (id_producto: number, cantidad: number) => void;
@@ -28,14 +28,13 @@ const ProductRow = React.memo<{
                                 padding: '2px 6px',
                             }}
                             type="number"
-                            value={item.unidadMedida.id_unidad_medida === 1 ? String(item.precioventa * 100) : String(item.precioventa)}
+                            value={String(item.precioventa)}
                             onChange={(e) => {
                                 const val = e.target.value === '' ? 0 : parseFloat(e.target.value);
-                                onUpdatePrice(item.id_producto, item.unidadMedida.id_unidad_medida === 1 ? val / 100 : val);
+                                onUpdatePrice(item.id_producto, val);
                             }}
                             min="0"
                         />
-                        {item.unidadMedida.id_unidad_medida === 1 ? 'x100gr' : 'x' + item.unidadMedida.abreviacion}
                     </span>
                 </div>
                 <div>
@@ -143,7 +142,7 @@ export const ModalNuevaVenta = React.memo<ModalNuevaVentaProps>(({
     showWarning,
 }) => {
     const { modalNuevaVenta, handleNuevaVenta, crearVentaAsync } = useVentas();
-    const [items, setItems] = useState<{ id_producto: number; cantidad: number; nombre: string; precioventa: number; unidadMedida: UnidadMedida }[]>([]);
+    const [items, setItems] = useState<{ id_producto: number; cantidad: number; nombre: string; precioventa: number }[]>([]);
     const [productoSeleccionado, setProductoSeleccionado] = useState('');
     const [busquedaProducto, setBusquedaProducto] = useState('');
     const [showProductosDropdown, setShowProductosDropdown] = useState(false);
@@ -226,19 +225,11 @@ export const ModalNuevaVenta = React.memo<ModalNuevaVentaProps>(({
             return;
         }
 
-        // Crear objeto UnidadMedida si no existe
-        const unidadMedida: UnidadMedida = producto.unidad_medida || {
-            id_unidad_medida: producto.id_unidad_medida,
-            nombre: producto.id_unidad_medida === 1 ? 'Kilogramo' : 'Unidad',
-            abreviacion: producto.id_unidad_medida === 1 ? 'kg' : 'u'
-        };
-
         setItems([...items, {
             id_producto: productoId,
             cantidad: cant,
             nombre: producto.nombre,
             precioventa: producto.precioventa,
-            unidadMedida
         }]);
         setProductoSeleccionado('');
         setBusquedaProducto('');
@@ -362,7 +353,7 @@ export const ModalNuevaVenta = React.memo<ModalNuevaVentaProps>(({
                                         <div style={{ fontWeight: 500 }}>{p.nombre}</div>
                                         <div style={{ fontWeight: 500 }}>{p.descripcion}</div>
                                         <div style={{ fontSize: '12px', color: '#666' }}>
-                                            Stock: {p.stock} | ${p.id_unidad_medida === 1 ? (p.precioventa * 100).toFixed(2) : p.precioventa.toFixed(2)}{p.id_unidad_medida === 1 ? ' x100gr' : ''}
+                                            Stock: {p.stock} | ${p.precioventa.toFixed(2)}
                                         </div>
                                     </div>
                                 ))}

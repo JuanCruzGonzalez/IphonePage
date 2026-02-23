@@ -86,7 +86,7 @@ export const ClientePromociones = React.memo<ClientePromocionesProps>(({
                 <div
                   className="promocion-card-image"
                   style={{
-                    backgroundImage: `linear-gradient(rgba(0, 0, 0, 0.3), rgba(0, 0, 0, 0.5)), url('${getPromocionImageUrl(promocion.imagen_path ?? null) || 'https://images.unsplash.com/photo-1573821663912-6df460f9c684?w=500&h=400&fit=crop'}')`
+                    backgroundImage: `url('${getPromocionImageUrl(promocion.imagen_path ?? null) || 'https://images.unsplash.com/photo-1573821663912-6df460f9c684?w=500&h=400&fit=crop'}')`
                   }}
                 />
 
@@ -106,7 +106,7 @@ export const ClientePromociones = React.memo<ClientePromocionesProps>(({
                               {detalle.producto?.nombre}
                             </span>
                             <span className="promocion-card-producto-cantidad">
-                              x{detalle.cantidad}{detalle.producto?.id_unidad_medida === 1 ? ' gr' : ' und'}
+                              x{detalle.cantidad}
                             </span>
                           </li>
                         ))}

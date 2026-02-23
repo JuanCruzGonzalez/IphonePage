@@ -39,14 +39,7 @@ export async function getVentas() {
     detalle_venta: Array.isArray(v.detalle_venta)
       ? v.detalle_venta.map((d: any) => ({
         ...d,
-        producto: d.producto
-          ? {
-            ...d.producto,
-            unidad_medida: Array.isArray(d.producto.unidad_medida)
-              ? (d.producto.unidad_medida[0] ?? null)
-              : (d.producto.unidad_medida ?? null),
-          }
-          : d.producto,
+        producto: d.producto || null,
       }))
       : v.detalle_venta,
   })) as VentaConDetalles[];
@@ -102,14 +95,7 @@ export async function buscarVentas(options?: { desde?: string; hasta?: string; e
     detalle_venta: Array.isArray(v.detalle_venta)
       ? v.detalle_venta.map((d: any) => ({
         ...d,
-        producto: d.producto
-          ? {
-            ...d.producto,
-            unidad_medida: Array.isArray(d.producto.unidad_medida)
-              ? (d.producto.unidad_medida[0] ?? null)
-              : (d.producto.unidad_medida ?? null),
-          }
-          : d.producto,
+        producto: d.producto || null,
       }))
       : v.detalle_venta,
   })) as VentaConDetalles[];
@@ -171,14 +157,7 @@ export async function getVentasPage(
     detalle_venta: Array.isArray(v.detalle_venta)
       ? v.detalle_venta.map((d: any) => ({
         ...d,
-        producto: d.producto
-          ? {
-            ...d.producto,
-            unidad_medida: Array.isArray(d.producto.unidad_medida)
-              ? (d.producto.unidad_medida[0] ?? null)
-              : (d.producto.unidad_medida ?? null),
-          }
-          : d.producto,
+        producto: d.producto || null,
       }))
       : v.detalle_venta,
   })) as VentaConDetalles[];
@@ -228,14 +207,7 @@ export async function getDetallesVenta(id_venta: number) {
 
   const detalles = (data as any[]).map((d) => ({
     ...d,
-    producto: d.producto
-      ? {
-        ...d.producto,
-        unidad_medida: Array.isArray(d.producto.unidad_medida)
-          ? (d.producto.unidad_medida[0] ?? null)
-          : (d.producto.unidad_medida ?? null),
-      }
-      : d.producto,
+    producto: d.producto || null,
   })) as (DetalleVenta & { producto: any })[];
 
   return detalles;

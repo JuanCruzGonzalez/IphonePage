@@ -27,11 +27,13 @@ interface ProductoFormData {
   stock: number;
   costo: number;
   precioventa: number;
-  unidadMedida: number;
   estado: boolean;
-  vencimiento?: Date | null;
   promocionActiva?: boolean;
   precioPromocion?: number | null;
+  accesorio?: boolean;
+  destacado?: boolean;
+  ordenDestacado?: number | null;
+  condicion?: 'nuevo' | 'usado';
 }
 
 interface ProductosContextValue {
@@ -175,9 +177,11 @@ export const ProductosProvider: React.FC<ProductosProviderProps> = ({
         precioventa: producto.precioventa,
         precio_promocion: producto.precioPromocion || null,
         promocion_activa: producto.promocionActiva || false,
-        id_unidad_medida: producto.unidadMedida,
         estado: producto.estado,
-        vencimiento: producto.vencimiento || undefined,
+        accesorio: producto.accesorio || false,
+        destacado: producto.destacado || false,
+        orden_destacado: producto.ordenDestacado || null,
+        condicion: producto.condicion || 'nuevo',
       });
 
       // Si hay imágenes, procesarlas
@@ -254,9 +258,11 @@ export const ProductosProvider: React.FC<ProductosProviderProps> = ({
         precioventa: producto.precioventa,
         precio_promocion: producto.precioPromocion || null,
         promocion_activa: producto.promocionActiva || false,
-        id_unidad_medida: producto.unidadMedida,
         estado: producto.estado,
-        vencimiento: producto.vencimiento || undefined,
+        accesorio: producto.accesorio || false,
+        destacado: producto.destacado || false,
+        orden_destacado: producto.ordenDestacado || null,
+        condicion: producto.condicion || 'nuevo',
       });
 
       if (!updated) {

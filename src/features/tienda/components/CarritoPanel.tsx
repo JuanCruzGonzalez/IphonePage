@@ -1,128 +1,107 @@
 import React from 'react';
-import { formatPrice, calculateCartTotal, formatCantidadConUnidad, getIncremento } from '../../../shared/utils';
+import { useCarrito } from '../context/CarritoContext';
+import { formatPrice } from '../../../shared/utils';
 
-export interface ItemCarrito {
-  id: string; // Identificador único: "producto-{id}" o "promocion-{id}"
-  tipo: 'producto' | 'promocion';
-  id_referencia: number; // id_producto o id_promocion
-  nombre: string;
-  precio: number;
-  cantidad: number;
-  unidadMedidaId?: number;
-  unidadMedidaNombre?: string;
-}
-
-interface CarritoPanelProps {
-  carrito: ItemCarrito[];
-  mostrarCarrito: boolean;
-  onClose: () => void;
-  onEliminar: (id: string) => void;
-  onActualizarCantidad: (id: string, nuevaCantidad: number) => void;
-  onVaciar: () => void;
-  onEnviarWhatsApp: () => void;
-}
-
-export const CarritoPanel = React.memo<CarritoPanelProps>(({
-  carrito,
-  mostrarCarrito,
-  onClose,
-  onEliminar,
-  onActualizarCantidad,
-  onVaciar,
-  onEnviarWhatsApp,
-}) => {
-  const total = calculateCartTotal(carrito);
+export const CarritoPanel: React.FC = () => {
+  const {
+    carrito,
+    mostrarCarrito,
+    eliminarDelCarrito,
+    actualizarCantidad,
+    vaciarCarrito,
+    calcularTotal,
+    enviarPedidoWhatsApp,
+    cerrarCarrito,
+  } = useCarrito();
 
   if (!mostrarCarrito) return null;
 
   return (
     <>
-      <div className="home-cart-overlay" onClick={onClose} />
-      <div className="home-cart-panel">
-        <div className="home-cart-header">
+      <div onClick={cerrarCarrito} className="modern-cart-overlay" />
+      <div className="modern-cart-panel">
+        <div className="modern-cart-header">
           <div>
-            <h2>Mi Carrito</h2>
-            <p>{carrito.length} {carrito.length === 1 ? 'producto' : 'productos'}</p>
+            <h2 className="modern-cart-title">Mi Carrito</h2>
+            <p className="modern-cart-subtitle">
+              {carrito.length} {carrito.length === 1 ? 'producto' : 'productos'}
+            </p>
           </div>
-          <button className="home-cart-close-btn" onClick={onClose}>✕</button>
+          <button onClick={cerrarCarrito} className="modern-cart-close">
+            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <line x1="18" y1="6" x2="6" y2="18"></line>
+              <line x1="6" y1="6" x2="18" y2="18"></line>
+            </svg>
+          </button>
         </div>
 
-        <div className="home-cart-items">
+        <div className="modern-cart-content">
           {carrito.length === 0 ? (
-            <div className="home-cart-empty">
-              <div className="home-cart-empty-icon">🛒</div>
-              <p className="home-cart-empty-text">Tu carrito está vacío</p>
+            <div className="modern-cart-empty">
+              <svg xmlns="http://www.w3.org/2000/svg" width="80" height="80" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <circle cx="9" cy="21" r="1"></circle>
+                <circle cx="20" cy="21" r="1"></circle>
+                <path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"></path>
+              </svg>
+              <p>Tu carrito está vacío</p>
             </div>
           ) : (
-            carrito.map(item => {
-              const incremento = getIncremento(item.unidadMedidaId);
-              
-              return (
-                <div key={item.id} className="home-cart-item">
-                  <div className="home-cart-item-header">
-                    <div>
-                      <h3 className="home-cart-item-title">{item.nombre}</h3>
-                      {item.tipo === 'promocion' && (
-                        <span className="home-cart-item-badge">Promoción</span>
-                      )}
-                    </div>
-                    <button className="home-cart-item-delete" onClick={() => onEliminar(item.id)}>
-                      <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                        <polyline points="3 6 5 6 21 6" />
-                        <path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6" />
-                        <path d="M10 11v6" />
-                        <path d="M14 11v6" />
-                      </svg>
-                    </button>
-                  </div>
-                  <div className="home-cart-item-footer">
-                    <div className="home-cart-item-controls">
+            <>
+              <div className="modern-cart-items">
+                {carrito.map(item => (
+                  <div key={item.id} className="modern-cart-item">
+                    <div className="modern-cart-item-info">
+                      <h4 className="modern-cart-item-name">{item.nombre}</h4>
                       <button
-                        className="home-cart-item-btn"
-                        onClick={() => onActualizarCantidad(item.id, item.cantidad - incremento)}
-                      >
-                        −
-                      </button>
-                      <span className="home-cart-item-quantity">
-                        {formatCantidadConUnidad(item.cantidad, item.unidadMedidaId, item.unidadMedidaNombre, item.tipo)}
-                      </span>
-                      <button
-                        className="home-cart-item-btn"
-                        onClick={() => onActualizarCantidad(item.id, item.cantidad + incremento)}
-                      >
-                        +
+                        onClick={() => eliminarDelCarrito(item.id)}
+                        className="modern-cart-item-delete">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                          <polyline points="3 6 5 6 21 6"></polyline>
+                          <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+                        </svg>
                       </button>
                     </div>
-                    <div className="home-cart-item-price">
-                      {formatPrice(item.precio * item.cantidad)}
+                    <div className="modern-cart-item-footer">
+                      <div className="modern-cart-item-quantity">
+                        <button
+                          onClick={() => actualizarCantidad(item.id, item.cantidad - 1)}
+                          className="modern-cart-quantity-btn">−</button>
+                        <span className="modern-cart-quantity-value">
+                          {item.cantidad} un
+                        </span>
+                        <button
+                          onClick={() => actualizarCantidad(item.id, item.cantidad + 1)}
+                          className="modern-cart-quantity-btn">+</button>
+                      </div>
+                      <div className="modern-cart-item-price">
+                        {formatPrice(item.precio * item.cantidad)}
+                      </div>
                     </div>
                   </div>
+                ))}
+              </div>
+
+              <div className="modern-cart-footer">
+                <div className="modern-cart-total">
+                  <span>Total:</span>
+                  <span className="modern-cart-total-value">
+                    {formatPrice(calcularTotal)}
+                  </span>
                 </div>
-              );
-            })
+                <button onClick={vaciarCarrito} className="modern-cart-clear-btn">
+                  Vaciar carrito
+                </button>
+                <button onClick={enviarPedidoWhatsApp} className="modern-cart-checkout-btn">
+                  <span>Hacer pedido por WhatsApp</span>
+                  <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+                    <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.890-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413Z" />
+                  </svg>
+                </button>
+              </div>
+            </>
           )}
         </div>
-
-        {carrito.length > 0 && (
-          <div className="home-cart-footer">
-            <div className="home-cart-total">
-              <span className="home-cart-total-label">Total:</span>
-              <span className="home-cart-total-value">{formatPrice(total)}</span>
-            </div>
-            <div className="home-cart-actions">
-              <button className="home-cart-checkout-btn" onClick={onEnviarWhatsApp}>
-                Hacer pedido por WhatsApp
-                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="white">
-                  <path d="M17.6 6.32A7.85 7.85 0 0012 4a7.94 7.94 0 00-6.88 11.89L4 20l4.2-1.1a7.93 7.93 0 003.79.97 7.95 7.95 0 007.99-7.93 7.87 7.87 0 00-2.38-5.62zM12 18.53a6.58 6.58 0 01-3.36-.92l-.24-.14-2.49.66.66-2.43-.16-.25a6.6 6.6 0 0110.09-8.47 6.53 6.53 0 012 4.66 6.6 6.6 0 01-6.5 6.89z"/>
-                </svg>
-              </button>
-              <button className="home-cart-clear-btn" onClick={onVaciar}>
-                Vaciar carrito
-              </button>
-            </div>
-          </div>
-        )}
       </div>
     </>
   );
-});
+};

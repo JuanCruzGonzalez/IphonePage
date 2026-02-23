@@ -27,8 +27,6 @@ export interface ItemCarrito {
   descripcion?: string | null; // Descripción del producto/promoción
   precio: number;
   cantidad: number;
-  unidadMedidaId?: number;
-  unidadMedidaNombre?: string;
 }
 
 /**
@@ -130,8 +128,6 @@ export const CarritoProvider: React.FC<{ children: ReactNode }> = ({ children })
           descripcion: producto.descripcion,
           precio,
           cantidad,
-          unidadMedidaId: producto.id_unidad_medida,
-          unidadMedidaNombre: producto.unidad_medida?.abreviacion || '',
         }];
       }
     });
@@ -245,15 +241,9 @@ export const CarritoProvider: React.FC<{ children: ReactNode }> = ({ children })
 
   /**
    * Maneja el click en "Agregar" de un producto
-   * Si es por peso (gramos), abre el modal; sino agrega directamente
    */
   const manejarAgregarProducto = useCallback((producto: Producto) => {
-    if (producto.id_unidad_medida === 1) {
-      setModalCantidad({ isOpen: true, producto });
-      setCantidadGramos('');
-    } else {
-      agregarAlCarrito(producto, 1);
-    }
+    agregarAlCarrito(producto, 1);
   }, [agregarAlCarrito]);
 
   /**
@@ -320,14 +310,7 @@ export const CarritoProvider: React.FC<{ children: ReactNode }> = ({ children })
       let mensaje = `Hola Chañar soy ${datos.nombre}, quería hacer el siguiente pedido:\n\n`;
 
       carrito.forEach(item => {
-        let cantidad = '';
-        if (item.tipo === 'promocion') {
-          cantidad = `${item.cantidad} un`;
-        } else if (item.unidadMedidaId === 1) {
-          cantidad = `${Math.round(item.cantidad)}gr`;
-        } else {
-          cantidad = `${item.cantidad} ${item.unidadMedidaNombre || 'un'}`;
-        }
+        const cantidad = item.tipo === 'promocion' ? `${item.cantidad} un` : `${item.cantidad} un`;
         const tipo = item.tipo === 'promocion' ? '🎁 ' : '';
         mensaje += `${tipo}• ${item.nombre}: ${cantidad} - ${formatPrice(item.precio * item.cantidad)}\n`;
         if (item.descripcion) {

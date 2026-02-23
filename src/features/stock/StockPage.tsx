@@ -82,7 +82,7 @@ export const StockPage: React.FC<StockPageProps> = () => {
                     <td className="text-muted">{producto.descripcion || '—'}</td>
                     <td>
                       <span className={`stock-badge ${producto.stock < 10 ? 'low' : producto.stock < 30 ? 'medium' : 'high'}`}>
-                        {producto.stock} {producto.unidad_medida!.abreviacion}
+                        {producto.stock} un
                       </span>
                     </td>
                     <td>

@@ -8,6 +8,10 @@ import LoginForm from './auth/form.tsx'
 import { AuthProvider } from './auth/AuthContext.tsx'
 import { ProtectedRoute } from './auth/ProtectedRoute.tsx'
 import { ClientePage } from './features/tienda/ClientePage.tsx'
+import { ProductoDetallePage } from './features/tienda/ProductoDetallePage.tsx'
+import { TiendaLayout } from './features/tienda/TiendaLayout.tsx'
+import { TiendaProductosPage } from './features/tienda/TiendaProductosPage.tsx'
+import { TiendaPromocionesPage } from './features/tienda/TiendaPromocionesPage.tsx'
 import { CarritoProvider } from './features/tienda/context/CarritoContext.tsx'
 import './core/styles/index.css'
 
@@ -18,14 +22,19 @@ createRoot(document.getElementById('root')!).render(
         <BrowserRouter>
           <Routes>
             <Route path="/login" element={<LoginForm />} />
-            <Route 
-              path="/tienda" 
+            <Route
+              path="/tienda"
               element={
                 <CarritoProvider>
-                  <ClientePage />
+                  <TiendaLayout />
                 </CarritoProvider>
-              } 
-            />
+              }
+            >
+              <Route index element={<ClientePage />} />
+              <Route path="productos" element={<TiendaProductosPage />} />
+              <Route path="promociones" element={<TiendaPromocionesPage />} />
+              <Route path="producto/:id" element={<ProductoDetallePage />} />
+            </Route>
             <Route path="/*" element={
               <ProtectedRoute>
                 <App />

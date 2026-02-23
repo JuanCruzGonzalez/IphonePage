@@ -319,7 +319,7 @@ export const VentasPage: React.FC = () => {
                           <span>{detalle.producto.nombre}</span>
                           <span className="text-muted"> ×{detalle.cantidad}</span>
                           <span style={{ marginLeft: '10px', color: '#666' }}>
-                            ${detalle.producto.id_unidad_medida === 1 ? detalle.precio_unitario * 100 : detalle.precio_unitario} {detalle.producto.id_unidad_medida === 1 ? 'x100gr' : ''}
+                            ${detalle.precio_unitario}
                           </span>
                         </>
                       ) : (

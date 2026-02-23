@@ -8,12 +8,12 @@ export interface Producto {
   precioventa: number;
   precio_promocion?: number | null;
   promocion_activa?: boolean;
-  id_unidad_medida: number;
-  unidad_medida?: UnidadMedida;
   estado: boolean;
-  vencimiento?: Date;
-  imagen_path?: string | null; // Mantener por compatibilidad
   imagenes?: ProductoImagen[]; // Nuevo: múltiples imágenes
+  accesorio?: boolean; // Indica si el producto es un accesorio
+  destacado?: boolean; // Indica si el producto es destacado en la página principal
+  orden_destacado?: number | null; // Orden de visualización en destacados
+  condicion?: 'nuevo' | 'usado'; // Condición del producto
 }
 
 export interface ProductoImagen {
@@ -23,12 +23,6 @@ export interface ProductoImagen {
   orden: number;
   es_principal: boolean;
   created_at?: string;
-}
-
-export interface UnidadMedida {
-  id_unidad_medida: number;
-  nombre: string;
-  abreviacion: string;
 }
 
 export interface Promocion {
@@ -64,7 +58,6 @@ export interface DetallePromocionConProducto extends DetallePromocionConCantidad
     id_producto: number;
     nombre: string;
     imagen_path?: string | null;
-    id_unidad_medida?: number;
   };
 }
 

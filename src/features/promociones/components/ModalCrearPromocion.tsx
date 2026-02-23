@@ -22,7 +22,7 @@ export const ModalCrearPromocion = React.memo<ModalCrearPromocionProps>(({ produ
   const [name, setName] = useState('');
   const [precio, setPrecio] = useState('');
   // items: productos agregados a la promoción (incluye nombre para mostrar)
-  const [items, setItems] = useState<{ id_producto: number; cantidad: number; nombre?: string; unidadMedidaId?: number }[]>([]);
+  const [items, setItems] = useState<{ id_producto: number; cantidad: number; nombre?: string }[]>([]);
   const [productoSeleccionado, setProductoSeleccionado] = useState<Producto | null>(null);
   const [busquedaProducto, setBusquedaProducto] = useState('');
   const [showProductosDropdown, setShowProductosDropdown] = useState(false);
@@ -224,7 +224,6 @@ export const ModalCrearPromocion = React.memo<ModalCrearPromocionProps>(({ produ
       id_producto: productoSeleccionado.id_producto, 
       cantidad: cant, 
       nombre: productoSeleccionado.nombre, 
-      unidadMedidaId: productoSeleccionado.id_unidad_medida 
     }]);
     
     setProductoSeleccionado(null);
@@ -318,7 +317,7 @@ export const ModalCrearPromocion = React.memo<ModalCrearPromocionProps>(({ produ
                       >
                         <div style={{ fontWeight: 500 }}>{p.nombre}</div>
                         <div style={{ fontSize: '12px', color: '#666' }}>
-                          Stock: {p.stock} | ${p.id_unidad_medida === 1 ? (p.precioventa * 100).toFixed(2) : p.precioventa.toFixed(2)}{p.id_unidad_medida === 1 ? ' x100gr' : ''}
+                          Stock: {p.stock} | ${p.precioventa.toFixed(2)}
                         </div>
                       </div>
                     ))}

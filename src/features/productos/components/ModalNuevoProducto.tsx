@@ -1,15 +1,13 @@
 import React, { useState, useEffect } from 'react';
-import { UnidadMedida, Categoria, ProductoImagen } from '../../../core/types';
+import { Categoria, ProductoImagen } from '../../../core/types';
 import { useProductos } from '../context/ProductosContext';
 import { GestorImagenesProducto } from './GestorImagenesProducto';
 
 interface ModalNuevoProductoProps {
-  unidadesMedida: UnidadMedida[];
   categorias: Categoria[];
 }
 
 export const ModalNuevoProducto = React.memo<ModalNuevoProductoProps>(({ 
-  unidadesMedida,
   categorias,
 }) => {
   const { 
@@ -33,16 +31,14 @@ export const ModalNuevoProducto = React.memo<ModalNuevoProductoProps>(({
   const [stock, setStock] = useState(initialProduct ? String(initialProduct.stock) : '');
   const [costo, setCosto] = useState(initialProduct ? String(initialProduct.costo) : '');
   const [precioventa, setPrecioventa] = useState(initialProduct ? String(initialProduct.precioventa) : '');
-  const [unidadMedida, setUnidadMedida] = useState(initialProduct ? String(initialProduct.id_unidad_medida) : '');
   const [estadoProducto, setEstadoProducto] = useState<string>(initialProduct ? (initialProduct.estado ? '1' : '2') : '1');
-  const [vencimiento, setVencimiento] = useState<string>(
-    initialProduct?.vencimiento 
-      ? new Date(initialProduct.vencimiento).toISOString().split('T')[0]
-      : ''
-  );
   const [imagenes, setImagenes] = useState<ProductoImagen[]>(initialProduct?.imagenes || []);
   const [promocionActiva, setPromocionActiva] = useState(initialProduct?.promocion_activa ?? false);
   const [precioPromocion, setPrecioPromocion] = useState(initialProduct?.precio_promocion ? String(initialProduct.precio_promocion) : '');
+  const [accesorio, setAccesorio] = useState(initialProduct?.accesorio ?? false);
+  const [condicion, setCondicion] = useState<'nuevo' | 'usado'>(initialProduct?.condicion ?? 'nuevo');
+  const [destacado, setDestacado] = useState(initialProduct?.destacado ?? false);
+  const [ordenDestacado, setOrdenDestacado] = useState(initialProduct?.orden_destacado ? String(initialProduct.orden_destacado) : '');
   const [categoriasSeleccionadas, setCategoriasSeleccionadas] = useState<number[]>(categoriasIniciales);
   const [modalCategoriasOpen, setModalCategoriasOpen] = useState(false);
 
@@ -51,51 +47,42 @@ export const ModalNuevoProducto = React.memo<ModalNuevoProductoProps>(({
       setNombre(initialProduct.nombre ?? '');
       setDescripcion(initialProduct.descripcion ?? '');
       setStock(String(initialProduct.stock ?? ''));
-      if (initialProduct.id_unidad_medida === 1) {
-        setCosto(initialProduct.costo != null ? String(initialProduct.costo * 100) : '');
-      } else {
-        setCosto(String(initialProduct.costo ?? ''));
-      }
-      if (initialProduct.id_unidad_medida === 1) {
-        setPrecioventa(initialProduct.precioventa != null ? String(initialProduct.precioventa * 100) : '');
-      } else {
-        setPrecioventa(String(initialProduct.precioventa ?? ''));
-      }
+      setCosto(String(initialProduct.costo ?? ''));
+      setPrecioventa(String(initialProduct.precioventa ?? ''));
       
-      // Actualizar promoción
       const tienePromocion = initialProduct.promocion_activa ?? false;
       setPromocionActiva(tienePromocion);
       
       if (initialProduct.precio_promocion != null) {
-        if (initialProduct.id_unidad_medida === 1) {
-          setPrecioPromocion(String(initialProduct.precio_promocion * 100));
-        } else {
-          setPrecioPromocion(String(initialProduct.precio_promocion));
-        }
+        setPrecioPromocion(String(initialProduct.precio_promocion));
       } else {
         setPrecioPromocion('');
       }
       
-      setUnidadMedida(String(initialProduct.id_unidad_medida ?? ''));
       setEstadoProducto((initialProduct.estado ?? true) ? '1' : '2');
-      setVencimiento(
-        initialProduct.vencimiento 
-          ? new Date(initialProduct.vencimiento).toISOString().split('T')[0]
-          : ''
-      );
       setImagenes(initialProduct.imagenes || []);
+      setAccesorio(initialProduct.accesorio ?? false);
+      setCondicion(initialProduct.condicion ?? 'nuevo');
+      setDestacado(initialProduct.destacado ?? false);
+      if (initialProduct.orden_destacado != null) {
+        setOrdenDestacado(String(initialProduct.orden_destacado));
+      } else {
+        setOrdenDestacado('');
+      }
     } else {
       setNombre('');
       setDescripcion('');
       setStock('');
       setCosto('');
       setPrecioventa('');
-      setUnidadMedida('');
       setEstadoProducto('1');
-      setVencimiento('');
       setImagenes([]);
       setPromocionActiva(false);
       setPrecioPromocion('');
+      setAccesorio(false);
+      setCondicion('nuevo');
+      setDestacado(false);
+      setOrdenDestacado('');
       setCategoriasSeleccionadas([]);
     }
   }, [initialProduct, isOpen]);
@@ -114,20 +101,26 @@ export const ModalNuevoProducto = React.memo<ModalNuevoProductoProps>(({
     }
 
     const precioPromocionFinal = promocionActiva && precioPromocion 
-      ? (unidadMedida === '1' ? parseFloat(precioPromocion) / 100 : parseFloat(precioPromocion))
+      ? parseFloat(precioPromocion)
+      : null;
+
+    const ordenDestacadoFinal = destacado && ordenDestacado 
+      ? parseInt(ordenDestacado) 
       : null;
 
     const productoData = {
       nombre: nombre.trim(),
       descripcion: descripcion.trim(),
       stock: parseInt(stock),
-      costo: unidadMedida === '1' ? parseInt(costo)/100 : parseInt(costo),
-      precioventa: unidadMedida === '1' ? parseInt(precioventa)/100 : parseInt(precioventa),
-      unidadMedida: parseInt(unidadMedida),
+      costo: parseInt(costo),
+      precioventa: parseInt(precioventa),
       estado: estadoProducto === '1',
-      vencimiento: vencimiento ? new Date(vencimiento) : null,
       promocionActiva: promocionActiva,
       precioPromocion: precioPromocionFinal,
+      accesorio: accesorio,
+      condicion: condicion,
+      destacado: destacado,
+      ordenDestacado: ordenDestacadoFinal,
     };
 
     if (initialProduct) {
@@ -142,14 +135,16 @@ export const ModalNuevoProducto = React.memo<ModalNuevoProductoProps>(({
     setStock('');
     setCosto('');
     setPrecioventa('');
-    setUnidadMedida('');
-    setVencimiento('');
     setImagenes([]);
     setPromocionActiva(false);
     setPrecioPromocion('');
+    setAccesorio(false);
+    setCondicion('nuevo');
+    setDestacado(false);
+    setOrdenDestacado('');
     setCategoriasSeleccionadas([]);
   };
-  const textoGramos = unidadMedida === '1' ? '(por 100 gramos)' : '';
+  
   return (
     <div className="modal-overlay" onClick={onClose}>
       <div className="modal-minimal" onClick={(e) => e.stopPropagation()}>
@@ -177,17 +172,6 @@ export const ModalNuevoProducto = React.memo<ModalNuevoProductoProps>(({
             />
           </div>
           <div className="form-group">
-            <label>Unidad de Medida</label>
-            <select value={unidadMedida} onChange={(e) => setUnidadMedida(e.target.value)}>
-              <option value="">Seleccionar Unidad de Medida</option>
-              {unidadesMedida.map(p => (
-                <option key={p.id_unidad_medida} value={p.id_unidad_medida}>
-                  {p.nombre}
-                </option>
-              ))}
-            </select>
-          </div>
-          <div className="form-group">
             <label>Stock inicial *</label>
             <input
               type="number"
@@ -198,7 +182,7 @@ export const ModalNuevoProducto = React.memo<ModalNuevoProductoProps>(({
             />
           </div>
           <div className="form-group">
-            <label>Precio de Costo {textoGramos}</label>
+            <label>Precio de Costo</label>
             <input
               type="number"
               value={costo}
@@ -208,7 +192,7 @@ export const ModalNuevoProducto = React.memo<ModalNuevoProductoProps>(({
             />
           </div>
           <div className="form-group">
-            <label>Precio de Venta {textoGramos}</label>
+            <label>Precio de Venta</label>
             <input
               type="number"
               value={precioventa}
@@ -235,7 +219,7 @@ export const ModalNuevoProducto = React.memo<ModalNuevoProductoProps>(({
           </div>
           {promocionActiva && (
             <div className="form-group">
-              <label>Precio Promocional {textoGramos}</label>
+              <label>Precio Promocional</label>
               <input
                 type="number"
                 value={precioPromocion}
@@ -253,14 +237,51 @@ export const ModalNuevoProducto = React.memo<ModalNuevoProductoProps>(({
             </select>
           </div>
           <div className="form-group">
-            <label>Fecha de Vencimiento</label>
-            <input
-              type="date"
-              value={vencimiento}
-              onChange={(e) => setVencimiento(e.target.value)}
-              placeholder="Opcional"
-            />
+            <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer' }}>
+              <input 
+                type="checkbox" 
+                checked={accesorio} 
+                onChange={(e) => setAccesorio(e.target.checked)}
+                style={{width: 'fit-content'}}
+              />
+              <span>Es un accesorio</span>
+            </label>
           </div>
+          <div className="form-group">
+            <label>Condición</label>
+            <select value={condicion} onChange={(e) => setCondicion(e.target.value as 'nuevo' | 'usado')}>
+              <option value="nuevo">Nuevo</option>
+              <option value="usado">Usado</option>
+            </select>
+          </div>
+          <div className="form-group">
+            <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer' }}>
+              <input 
+                type="checkbox" 
+                checked={destacado} 
+                onChange={(e) => {
+                  setDestacado(e.target.checked);
+                  if (!e.target.checked) {
+                    setOrdenDestacado('');
+                  }
+                }}
+                style={{width: 'fit-content'}}
+              />
+              <span>Producto destacado</span>
+            </label>
+          </div>
+          {destacado && (
+            <div className="form-group">
+              <label>Orden de destacado (menor número = mayor prioridad)</label>
+              <input
+                type="number"
+                value={ordenDestacado}
+                onChange={(e) => setOrdenDestacado(e.target.value)}
+                min="1"
+                placeholder="1"
+              />
+            </div>
+          )}
           <div className="form-group">
             <label>Categorías</label>
             <button

@@ -64,9 +64,8 @@ export async function getPromocionesActivasConDetalles() {
         cantidad,
         producto(
           id_producto,
-          nombre,
-          imagen_path,
-          id_unidad_medida
+          nombre
+          
         )
       )
     `)

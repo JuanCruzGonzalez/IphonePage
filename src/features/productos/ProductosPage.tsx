@@ -1,13 +1,10 @@
 import React from 'react';
-import { useQuery } from '@tanstack/react-query';
-import { queryKeys } from '../../lib/queryClient';
 import { useDebounce } from '../../shared/hooks/useDebounce';
 import { getProductImageUrl } from '../../shared/services/storageService';
 import { useProductos } from './context/ProductosContext';
 import { Pagination } from '../../shared/components/Pagination';
 import { ModalNuevoProducto } from './components/ModalNuevoProducto';
 import { ModalActualizarStock } from './components/ModalActualizarStock';
-import { getUnidadesMedidas } from './services/productoService';
 import { useCategorias } from '../categorias/context/CategoriasContext';
 
 export const ProductosPage: React.FC = () => {
@@ -25,11 +22,6 @@ export const ProductosPage: React.FC = () => {
   } = useProductos();
 
   const { categorias } = useCategorias();
-  const { data: unidadesMedida = [] } = useQuery({
-    queryKey: queryKeys.unidadesMedida,
-    queryFn: getUnidadesMedidas,
-    staleTime: 1000 * 60 * 10, // 10 minutos
-  });
 
   const [searchTerm, setSearchTerm] = React.useState('');
   const [statusFilter, setStatusFilter] = React.useState<'all' | 'active' | 'inactive'>('all');
@@ -110,7 +102,6 @@ export const ProductosPage: React.FC = () => {
                 <th>Nombre</th>
                 <th>Precio de Costo</th>
                 <th>Precio de Venta</th>
-                <th>Vencimiento</th>
                 <th>Estado</th>
                 <th>Acciones</th>
               </tr>
@@ -118,7 +109,7 @@ export const ProductosPage: React.FC = () => {
             <tbody>
               {displayedProducts.length === 0 ? (
                 <tr>
-                  <td colSpan={7} className="empty-state">
+                  <td colSpan={6} className="empty-state">
                     No hay productos registrados
                   </td>
                 </tr>
@@ -127,7 +118,6 @@ export const ProductosPage: React.FC = () => {
                   // Obtener imagen principal o primera imagen disponible
                   const imagenMostrar = producto.imagenes?.find(img => img.es_principal) 
                     || producto.imagenes?.[0]
-                    || (producto.imagen_path ? { imagen_path: producto.imagen_path } : null);
                   
                   return (
                   <tr key={producto.id_producto}>
@@ -145,9 +135,8 @@ export const ProductosPage: React.FC = () => {
                       )}
                     </td>
                     <td className="font-medium">{producto.nombre}</td>
-                    <td className="text-muted">{producto.unidad_medida?.id_unidad_medida === 1 ? producto.costo * 100 : producto.costo}</td>
-                    <td className="text-muted">{producto.unidad_medida?.id_unidad_medida === 1 ? producto.precioventa * 100 : producto.precioventa}</td>
-                    <td className="text-muted">{producto.vencimiento ? new Date(producto.vencimiento).toLocaleDateString() : 'N/A'}</td>
+                    <td className="text-muted">{producto.costo}</td>
+                    <td className="text-muted">{producto.precioventa}</td>
                     <td>
                       <span className={`status-badge ${producto.estado ? 'active' : 'inactive'}`}>
                         {producto.estado ? 'Activo' : 'Inactivo'}
@@ -221,7 +210,6 @@ export const ProductosPage: React.FC = () => {
 
       {/* Modales */}
       <ModalNuevoProducto 
-        unidadesMedida={unidadesMedida}
         categorias={categorias}
       />
       <ModalActualizarStock />

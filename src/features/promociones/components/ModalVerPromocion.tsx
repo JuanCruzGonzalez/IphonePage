@@ -16,11 +16,6 @@ export const ModalVerPromocion: React.FC<ModalVerPromocionProps> = ({ productosC
     return p ? p.nombre : `#${id_producto}`;
   };
 
-  const resolveUnidadMedida = (id_producto: number) => {
-    const p = productosCatalogo.find(x => x.id_producto === id_producto);
-    return p ? p.unidad_medida?.abreviacion : `#${id_producto}`;
-  };
-
   return (
     <div className="modal-overlay" onClick={modalVerPromocion.close}>
       <div className="modal-minimal" onClick={(e) => e.stopPropagation()}>
@@ -46,7 +41,7 @@ export const ModalVerPromocion: React.FC<ModalVerPromocionProps> = ({ productosC
                     <div>
                       <div style={{ fontWeight: 600 }}>{resolveNombre(d.id_producto)}</div>
                     </div>
-                    <div style={{ fontWeight: 'bold' }}>{d.cantidad} {resolveUnidadMedida(d.id_producto)} </div>
+                    <div style={{ fontWeight: 'bold' }}>{d.cantidad} un </div>
                   </div>
                 ))}
               </div>

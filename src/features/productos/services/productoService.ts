@@ -1,12 +1,5 @@
 import { supabase, handleAuthError } from '../../../core/config/supabase';
-import { Producto, UnidadMedida, ProductoImagen } from '../../../core/types';
-
-// Helper para convertir fecha sin desplazamiento de zona horaria
-const parseDateLocal = (dateString: string | null): Date | null => {
-  if (!dateString) return null;
-  const [year, month, day] = dateString.split('-').map(Number);
-  return new Date(year, month - 1, day);
-};
+import { Producto, ProductoImagen } from '../../../core/types';
 
 // Helper para cargar imágenes de múltiples productos de forma eficiente
 const cargarImagenesProductos = async (productos: Producto[]): Promise<Producto[]> => {
@@ -22,7 +15,6 @@ const cargarImagenesProductos = async (productos: Producto[]): Promise<Producto[
   
   if (error) {
     console.warn('Error al cargar imágenes de productos:', error);
-    // No lanzar error, solo continuar sin imágenes
     return productos;
   }
   
@@ -55,19 +47,13 @@ export async function getProductos() {
     precioventa,
     precio_promocion,
     promocion_activa,
-    id_unidad_medida,
-    unidad_medida (
-      id_unidad_medida,
-      nombre,
-      abreviacion
-    ),
     estado,
-    vencimiento,
-    imagen_path
+    accesorio,
+    destacado,
+    orden_destacado,
+    condicion
   `)
   .order('nombre', { ascending: true })
-  // PostgREST/Supabase may apply a default limit (often 25). Use range to
-  // explicitly request more rows (0..999 = 1000 rows).
   .range(0, 999);
       
   if (error) {
@@ -86,16 +72,13 @@ export async function getProductos() {
     precioventa: p.precioventa,
     precio_promocion: p.precio_promocion,
     promocion_activa: p.promocion_activa,
-    id_unidad_medida: p.id_unidad_medida,
-    unidad_medida: Array.isArray(p.unidad_medida)
-      ? (p.unidad_medida[0] ?? null)
-      : (p.unidad_medida ?? null),
     estado: p.estado,
-    vencimiento: parseDateLocal(p.vencimiento),
-    imagen_path: p.imagen_path,
+    accesorio: p.accesorio,
+    destacado: p.destacado,
+    orden_destacado: p.orden_destacado,
+    condicion: p.condicion || 'nuevo',
   })) as Producto[];
 
-  // Cargar imágenes de todos los productos
   return await cargarImagenesProductos(productos);
 }
 export async function getProductosActivos() {
@@ -110,15 +93,11 @@ export async function getProductosActivos() {
     precioventa,
     precio_promocion,
     promocion_activa,
-    id_unidad_medida,
-    unidad_medida (
-      id_unidad_medida,
-      nombre,
-      abreviacion
-    ),
     estado,
-    vencimiento,
-    imagen_path
+    accesorio,
+    destacado,
+    orden_destacado,
+    condicion
   `).eq('estado', true)
   .order('nombre', { ascending: true })
   .range(0, 999);
@@ -140,16 +119,67 @@ export async function getProductosActivos() {
     precioventa: p.precioventa,
     precio_promocion: p.precio_promocion,
     promocion_activa: p.promocion_activa,
-    id_unidad_medida: p.id_unidad_medida,
-    unidad_medida: Array.isArray(p.unidad_medida)
-      ? (p.unidad_medida[0] ?? null)
-      : (p.unidad_medida ?? null),
     estado: p.estado,
-    vencimiento: parseDateLocal(p.vencimiento),
-    imagen_path: p.imagen_path,
+    accesorio: p.accesorio,
+    destacado: p.destacado,
+    orden_destacado: p.orden_destacado,
+    condicion: p.condicion || 'nuevo',
   })) as Producto[];
 
-  // Cargar imágenes de todos los productos
+  return await cargarImagenesProductos(productos);
+}
+
+/**
+ * Obtiene solo los productos destacados activos con stock > 0,
+ * ordenados por orden_destacado.
+ */
+export async function getProductosDestacados() {
+  const { data, error } = await supabase
+    .from('producto')
+    .select(`
+      id_producto,
+      nombre,
+      descripcion,
+      stock,
+      costo,
+      precioventa,
+      precio_promocion,
+      promocion_activa,
+      estado,
+      accesorio,
+      destacado,
+      orden_destacado,
+      condicion
+    `)
+    .eq('estado', true)
+    .eq('destacado', true)
+    .gt('stock', 0)
+    .order('orden_destacado', { ascending: true, nullsFirst: false })
+    .range(0, 49);
+
+  if (error) {
+    console.error('Error al obtener productos destacados:', error);
+    await handleAuthError(error);
+    throw error;
+  }
+  if (!data) return [];
+
+  const productos = (data as any[]).map((p) => ({
+    id_producto: p.id_producto,
+    nombre: p.nombre,
+    descripcion: p.descripcion,
+    stock: p.stock,
+    costo: p.costo,
+    precioventa: p.precioventa,
+    precio_promocion: p.precio_promocion,
+    promocion_activa: p.promocion_activa,
+    estado: p.estado,
+    accesorio: p.accesorio,
+    destacado: p.destacado,
+    orden_destacado: p.orden_destacado,
+    condicion: p.condicion || 'nuevo',
+  })) as Producto[];
+
   return await cargarImagenesProductos(productos);
 }
 
@@ -166,15 +196,13 @@ export async function buscarProductos(q: string) {
     stock,
     costo,
     precioventa,
-    id_unidad_medida,
+    precio_promocion,
+    promocion_activa,
     estado,
-    vencimiento,
-    imagen_path,
-    unidad_medida (
-      id_unidad_medida,
-      nombre,
-      abreviacion
-    )
+    accesorio,
+    destacado,
+    orden_destacado,
+    condicion
   `)
     .or(`nombre.ilike.%${qTrim}%,descripcion.ilike.%${qTrim}%`)
   .order('nombre', { ascending: true })
@@ -195,14 +223,15 @@ export async function buscarProductos(q: string) {
     stock: p.stock,
     costo: p.costo,
     precioventa: p.precioventa,
-    id_unidad_medida: p.id_unidad_medida,
+    precio_promocion: p.precio_promocion,
+    promocion_activa: p.promocion_activa,
     estado: p.estado,
-    vencimiento: parseDateLocal(p.vencimiento),
-    imagen_path: p.imagen_path,
-    unidad_medida: Array.isArray(p.unidad_medida) ? (p.unidad_medida[0] ?? null) : (p.unidad_medida ?? null),
+    accesorio: p.accesorio,
+    destacado: p.destacado,
+    orden_destacado: p.orden_destacado,
+    condicion: p.condicion || 'nuevo',
   })) as Producto[];
 
-  // Cargar imágenes de todos los productos
   return await cargarImagenesProductos(productos);
 }
 
@@ -220,11 +249,11 @@ export async function getProductosPage(page = 1, pageSize = 5, q = '') {
     precioventa,
     precio_promocion,
     promocion_activa,
-    id_unidad_medida,
     estado,
-    vencimiento,
-    imagen_path,
-    unidad_medida ( id_unidad_medida, nombre, abreviacion )
+    accesorio,
+    destacado,
+    orden_destacado,
+    condicion
   `;
 
   let query: any = supabase
@@ -254,11 +283,11 @@ export async function getProductosPage(page = 1, pageSize = 5, q = '') {
     precioventa: p.precioventa,
     precio_promocion: p.precio_promocion,
     promocion_activa: p.promocion_activa,
-    id_unidad_medida: p.id_unidad_medida,
     estado: p.estado,
-    unidad_medida: Array.isArray(p.unidad_medida) ? (p.unidad_medida[0] ?? null) : (p.unidad_medida ?? null),
-    vencimiento: parseDateLocal(p.vencimiento),
-    imagen_path: p.imagen_path,
+    accesorio: p.accesorio,
+    destacado: p.destacado,
+    orden_destacado: p.orden_destacado,
+    condicion: p.condicion || 'nuevo',
   })) as Producto[];
 
   // Cargar imágenes de todos los productos
@@ -276,6 +305,7 @@ export async function createProducto(producto: Omit<Producto, 'id_producto'>) {
 
   if (error) {
     console.error('Error al crear producto:', error);
+    console.log('Producto que se intentó crear:', producto);
     await handleAuthError(error);
     throw error;
   }
@@ -310,24 +340,6 @@ export async function updateStockProducto(id_producto: number, nuevoStock: numbe
   return data as Producto;
 }
 
-export async function getUnidadesMedidas() {
-  const { data, error } = await supabase
-    .from('unidad_medida')
-    .select(`
-      *
-    `)
-
-  if (error) {
-    console.error('❌ Error al obtener unidades de medida:', error);
-    await handleAuthError(error);
-    throw error;
-  }
-
-  if (!data) return [];
-
-  return data as UnidadMedida[];
-}
-
 export async function updateProducto(
   id_producto: number,
   changes: Partial<{
@@ -338,10 +350,11 @@ export async function updateProducto(
     precioventa: number;
     precio_promocion?: number | null;
     promocion_activa?: boolean;
-    id_unidad_medida: number;
     estado: boolean;
-    vencimiento?: Date | null;
-    imagen_path?: string | null;
+    accesorio?: boolean;
+    destacado?: boolean;
+    orden_destacado?: number | null;
+    condicion?: 'nuevo' | 'usado';
   }>
 ) {
   // Try RPC transaction first
@@ -358,11 +371,11 @@ export async function updateProducto(
         precioventa: p.precioventa,
         precio_promocion: p.precio_promocion,
         promocion_activa: p.promocion_activa,
-        id_unidad_medida: p.id_unidad_medida,
         estado: p.estado,
-        vencimiento: parseDateLocal(p.vencimiento),
-        imagen_path: p.imagen_path,
-        unidad_medida: Array.isArray(p.unidad_medida) ? (p.unidad_medida[0] ?? null) : (p.unidad_medida ?? null),
+        accesorio: p.accesorio,
+        destacado: p.destacado,
+        orden_destacado: p.orden_destacado,
+        condicion: p.condicion || 'nuevo',
       } as Producto;
     }
   } catch (e) {
@@ -374,7 +387,7 @@ export async function updateProducto(
     .update(changes)
     .eq('id_producto', id_producto)
     .select(
-      `id_producto,nombre,descripcion,stock,costo,precioventa,precio_promocion,promocion_activa,id_unidad_medida,estado,vencimiento,imagen_path,unidad_medida(id_unidad_medida,nombre,abreviacion)`
+      `id_producto,nombre,descripcion,stock,costo,precioventa,precio_promocion,promocion_activa,estado,accesorio,destacado,orden_destacado,condicion`
     )
     .single();
 
@@ -396,11 +409,11 @@ export async function updateProducto(
     precioventa: p.precioventa,
     precio_promocion: p.precio_promocion,
     promocion_activa: p.promocion_activa,
-    id_unidad_medida: p.id_unidad_medida,
     estado: p.estado,
-    vencimiento: parseDateLocal(p.vencimiento),
-    imagen_path: p.imagen_path,
-    unidad_medida: Array.isArray(p.unidad_medida) ? (p.unidad_medida[0] ?? null) : (p.unidad_medida ?? null),
+    accesorio: p.accesorio,
+    destacado: p.destacado,
+    orden_destacado: p.orden_destacado,
+    condicion: p.condicion || 'nuevo',
   } as Producto;
 
   return producto;
@@ -419,9 +432,9 @@ export async function updateProductoEstado(id_producto: number, activo: boolean)
         stock: p.stock,
         costo: p.costo,
         precioventa: p.precioventa,
-        id_unidad_medida: p.id_unidad_medida,
+        precio_promocion: p.precio_promocion,
+        promocion_activa: p.promocion_activa,
         estado: p.estado,
-        unidad_medida: Array.isArray(p.unidad_medida) ? (p.unidad_medida[0] ?? null) : (p.unidad_medida ?? null),
       } as Producto;
     }
   } catch (e) {
@@ -433,7 +446,7 @@ export async function updateProductoEstado(id_producto: number, activo: boolean)
     .update({ estado: activo })
     .eq('id_producto', id_producto)
     .select(
-      `id_producto,nombre,descripcion,stock,costo,precioventa,id_unidad_medida,estado,unidad_medida(id_unidad_medida,nombre,abreviacion)`
+      `id_producto,nombre,descripcion,stock,costo,precioventa,precio_promocion,promocion_activa,estado`
     )
     .maybeSingle();
 
@@ -453,9 +466,9 @@ export async function updateProductoEstado(id_producto: number, activo: boolean)
     stock: p.stock,
     costo: p.costo,
     precioventa: p.precioventa,
-    id_unidad_medida: p.id_unidad_medida,
+    precio_promocion: p.precio_promocion,
+    promocion_activa: p.promocion_activa,
     estado: p.estado,
-    unidad_medida: Array.isArray(p.unidad_medida) ? (p.unidad_medida[0] ?? null) : (p.unidad_medida ?? null),
   } as Producto;
 
   return producto;

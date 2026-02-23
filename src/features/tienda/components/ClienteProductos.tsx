@@ -4,7 +4,7 @@ import { getProductosActivos } from '../../productos/services/productoService';
 import { getCategoriasActivas } from '../../categorias/services/categoriaService';
 import { supabase } from '../../../core/config/supabase';
 import { formatPrice, formatPrecioParaMostrar } from '../../../shared/utils';
-import { ItemCarrito } from './CarritoPanel';
+import { ItemCarrito } from '../context/CarritoContext';
 import { ProductImageSlider } from './ProductImageSlider';
 
 interface ClienteProductosProps {
