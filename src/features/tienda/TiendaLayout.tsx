@@ -24,7 +24,7 @@ export const TiendaLayout: React.FC = () => {
   } = useCarrito();
 
   const isActive = (path: string) => {
-    if (path === '/tienda') return location.pathname === '/tienda';
+    if (path === '/') return location.pathname === '/';
     return location.pathname.startsWith(path);
   };
 
@@ -34,27 +34,27 @@ export const TiendaLayout: React.FC = () => {
       <header className="modern-header">
         <div className="modern-header-container">
           {/* Logo */}
-          <div className="modern-header-logo" onClick={() => navigate('/tienda')} style={{ cursor: 'pointer' }}>
+          <div className="modern-header-logo" onClick={() => navigate('/')} style={{ cursor: 'pointer' }}>
             <img src={logo} alt="Iphone Store Logo" style={{ width: '100px', height: 'auto' }} />
           </div>
 
           {/* Navegación */}
           <nav className="modern-header-nav">
             <Link
-              to="/tienda"
-              className={`modern-header-nav-link ${isActive('/tienda') && !isActive('/tienda/productos') && !isActive('/tienda/promociones') && !isActive('/tienda/producto') ? 'active' : ''}`}
+              to="/"
+              className={`modern-header-nav-link ${isActive('/') && !isActive('/productos') && !isActive('/promociones') && !isActive('/producto') ? 'active' : ''}`}
             >
               Inicio
             </Link>
             <Link
-              to="/tienda/productos"
-              className={`modern-header-nav-link ${isActive('/tienda/productos') ? 'active' : ''}`}
+              to="/productos"
+              className={`modern-header-nav-link ${isActive('/productos') ? 'active' : ''}`}
             >
               Productos
             </Link>
             <Link
-              to="/tienda/promociones"
-              className={`modern-header-nav-link ${isActive('/tienda/promociones') ? 'active' : ''}`}
+              to="/promociones"
+              className={`modern-header-nav-link ${isActive('/promociones') ? 'active' : ''}`}
             >
               Promociones
             </Link>
@@ -72,7 +72,7 @@ export const TiendaLayout: React.FC = () => {
               onKeyDown={(e) => {
                 if (e.key === 'Enter') {
                   const value = (e.target as HTMLInputElement).value;
-                  navigate(`/tienda/productos${value ? `?q=${encodeURIComponent(value)}` : ''}`);
+                  navigate(`/productos${value ? `?q=${encodeURIComponent(value)}` : ''}`);
                 }
               }}
             />

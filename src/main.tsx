@@ -23,7 +23,7 @@ createRoot(document.getElementById('root')!).render(
           <Routes>
             <Route path="/login" element={<LoginForm />} />
             <Route
-              path="/tienda"
+              path="/*"
               element={
                 <CarritoProvider>
                   <TiendaLayout />
@@ -35,7 +35,7 @@ createRoot(document.getElementById('root')!).render(
               <Route path="promociones" element={<TiendaPromocionesPage />} />
               <Route path="producto/:id" element={<ProductoDetallePage />} />
             </Route>
-            <Route path="/*" element={
+            <Route path="/administracion/IphonePage" element={
               <ProtectedRoute>
                 <App />
               </ProtectedRoute>

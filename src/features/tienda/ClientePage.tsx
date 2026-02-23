@@ -52,15 +52,15 @@ export const ClientePage: React.FC = () => {
   }, [productos]);
 
   const handleCategoriaClick = (id_categoria: number) => {
-    navigate(`/tienda/productos?cat=${id_categoria}`);
+    navigate(`/productos?cat=${id_categoria}`);
   };
 
   const handleVerCatalogo = () => {
-    navigate('/tienda/productos');
+    navigate('/productos');
   };
 
   const handleVerDetalleProducto = (producto: Producto) => {
-    navigate(`/tienda/producto/${producto.id_producto}`);
+    navigate(`/producto/${producto.id_producto}`);
   };
 
   if (loading) {
@@ -90,7 +90,7 @@ export const ClientePage: React.FC = () => {
               <button onClick={handleVerCatalogo} className="modern-hero-btn primary">
                 Ver Catálogo
               </button>
-              <button onClick={() => navigate('/tienda/promociones')} className="modern-hero-btn secondary">
+              <button onClick={() => navigate('/promociones')} className="modern-hero-btn secondary">
                 Ver Promociones
               </button>
             </div>

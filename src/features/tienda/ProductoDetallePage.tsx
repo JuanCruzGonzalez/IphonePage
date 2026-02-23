@@ -26,7 +26,7 @@ export const ProductoDetallePage: React.FC = () => {
   );
 
   const handleVerDetalleProducto = (prod: Producto) => {
-    navigate(`/tienda/producto/${prod.id_producto}`);
+    navigate(`/producto/${prod.id_producto}`);
     window.scrollTo(0, 0);
   };
 
@@ -48,7 +48,7 @@ export const ProductoDetallePage: React.FC = () => {
         .single();
 
       if (error || !prod) {
-        navigate('/tienda');
+        navigate('/');
         return;
       }
 
@@ -92,14 +92,14 @@ export const ProductoDetallePage: React.FC = () => {
       });
     } catch (error) {
       console.error('Error al cargar producto:', error);
-      navigate('/tienda');
+      navigate('/');
     } finally {
       setLoading(false);
     }
   };
 
   const handleVolver = () => {
-    navigate('/tienda/productos');
+    navigate('/productos');
   };
 
   if (loading) {
@@ -134,7 +134,7 @@ export const ProductoDetallePage: React.FC = () => {
             Volver
           </button>
           <span className="pd-breadcrumb-text">
-            <span onClick={() => navigate('/tienda')} style={{ cursor: 'pointer', color: '#3483fa' }}>Inicio</span>
+            <span onClick={() => navigate('/')} style={{ cursor: 'pointer', color: '#3483fa' }}>Inicio</span>
             {' / '}
             <span onClick={handleVolver} style={{ cursor: 'pointer', color: '#3483fa' }}>Productos</span>
             {' / '}

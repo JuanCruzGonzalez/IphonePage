@@ -73,7 +73,7 @@ export const TiendaProductosPage: React.FC = () => {
   }, [productos, busqueda, categoriaSeleccionada, productosCategorias]);
 
   const handleVerDetalleProducto = (producto: Producto) => {
-    navigate(`/tienda/producto/${producto.id_producto}`);
+    navigate(`/producto/${producto.id_producto}`);
   };
 
   if (loading) {
