@@ -46,6 +46,7 @@ interface ProductosContextValue {
   PAGE_SIZE: number;
   productToEdit: Producto | null;
   categoriasDeProducto: number[];
+  tipoProductoActual: 'telefono' | 'accesorio';
 
   // Modales
   modalNuevoProducto: {
@@ -91,6 +92,7 @@ interface ProductosContextValue {
   // Setters internos (si otros componentes necesitan actualizar estado)
   setProductToEdit: (producto: Producto | null) => void;
   setCategoriasDeProducto: (categorias: number[]) => void;
+  setTipoProductoActual: (tipo: 'telefono' | 'accesorio') => void;
 }
 
 const ProductosContext = createContext<ProductosContextValue | undefined>(undefined);
@@ -126,6 +128,7 @@ export const ProductosProvider: React.FC<ProductosProviderProps> = ({
   const [productosSearchQuery, setProductosSearchQuery] = useState('');
   const [productToEdit, setProductToEdit] = useState<Producto | null>(null);
   const [categoriasDeProducto, setCategoriasDeProducto] = useState<number[]>([]);
+  const [tipoProductoActual, setTipoProductoActual] = useState<'telefono' | 'accesorio'>('telefono');
 
   // Modales
   const modalNuevoProducto = useModal(false);
@@ -137,9 +140,9 @@ export const ProductosProvider: React.FC<ProductosProviderProps> = ({
    * Query para productos paginados
    */
   const productosQuery = useQuery({
-    queryKey: [...queryKeys.productos, 'page', productosPageNum, productosSearchQuery],
+    queryKey: [...queryKeys.productos, 'page', productosPageNum, productosSearchQuery, tipoProductoActual],
     queryFn: async () => {
-      const result = await getProductosPage(productosPageNum, PAGE_SIZE, productosSearchQuery);
+      const result = await getProductosPage(productosPageNum, PAGE_SIZE, productosSearchQuery, tipoProductoActual);
       return result;
     },
     staleTime: 2 * 60 * 1000, // 2 minutos
@@ -178,7 +181,7 @@ export const ProductosProvider: React.FC<ProductosProviderProps> = ({
         precio_promocion: producto.precioPromocion || null,
         promocion_activa: producto.promocionActiva || false,
         estado: producto.estado,
-        accesorio: producto.accesorio || false,
+        accesorio: tipoProductoActual === 'accesorio',
         destacado: producto.destacado || false,
         orden_destacado: producto.ordenDestacado || null,
         condicion: producto.condicion || 'nuevo',
@@ -259,7 +262,7 @@ export const ProductosProvider: React.FC<ProductosProviderProps> = ({
         precio_promocion: producto.precioPromocion || null,
         promocion_activa: producto.promocionActiva || false,
         estado: producto.estado,
-        accesorio: producto.accesorio || false,
+        accesorio: productToEdit.accesorio || false, // Mantener el tipo original del producto
         destacado: producto.destacado || false,
         orden_destacado: producto.ordenDestacado || null,
         condicion: producto.condicion || 'nuevo',
@@ -503,6 +506,7 @@ export const ProductosProvider: React.FC<ProductosProviderProps> = ({
     PAGE_SIZE,
     productToEdit,
     categoriasDeProducto,
+    tipoProductoActual,
 
     // Modales (con reset de estado en el close)
     modalNuevoProducto: {
@@ -532,6 +536,7 @@ export const ProductosProvider: React.FC<ProductosProviderProps> = ({
     // Setters
     setProductToEdit,
     setCategoriasDeProducto,
+    setTipoProductoActual,
   };
 
   return <ProductosContext.Provider value={value}>{children}</ProductosContext.Provider>;

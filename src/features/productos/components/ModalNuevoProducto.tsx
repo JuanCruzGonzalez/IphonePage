@@ -35,7 +35,6 @@ export const ModalNuevoProducto = React.memo<ModalNuevoProductoProps>(({
   const [imagenes, setImagenes] = useState<ProductoImagen[]>(initialProduct?.imagenes || []);
   const [promocionActiva, setPromocionActiva] = useState(initialProduct?.promocion_activa ?? false);
   const [precioPromocion, setPrecioPromocion] = useState(initialProduct?.precio_promocion ? String(initialProduct.precio_promocion) : '');
-  const [accesorio, setAccesorio] = useState(initialProduct?.accesorio ?? false);
   const [condicion, setCondicion] = useState<'nuevo' | 'usado_premium' | 'usado'>(initialProduct?.condicion ?? 'nuevo');
   const [destacado, setDestacado] = useState(initialProduct?.destacado ?? false);
   const [ordenDestacado, setOrdenDestacado] = useState(initialProduct?.orden_destacado ? String(initialProduct.orden_destacado) : '');
@@ -61,7 +60,6 @@ export const ModalNuevoProducto = React.memo<ModalNuevoProductoProps>(({
       
       setEstadoProducto((initialProduct.estado ?? true) ? '1' : '2');
       setImagenes(initialProduct.imagenes || []);
-      setAccesorio(initialProduct.accesorio ?? false);
       setCondicion(initialProduct.condicion ?? 'nuevo');
       setDestacado(initialProduct.destacado ?? false);
       if (initialProduct.orden_destacado != null) {
@@ -79,7 +77,6 @@ export const ModalNuevoProducto = React.memo<ModalNuevoProductoProps>(({
       setImagenes([]);
       setPromocionActiva(false);
       setPrecioPromocion('');
-      setAccesorio(false);
       setCondicion('nuevo');
       setDestacado(false);
       setOrdenDestacado('');
@@ -117,7 +114,6 @@ export const ModalNuevoProducto = React.memo<ModalNuevoProductoProps>(({
       estado: estadoProducto === '1',
       promocionActiva: promocionActiva,
       precioPromocion: precioPromocionFinal,
-      accesorio: accesorio,
       condicion: condicion,
       destacado: destacado,
       ordenDestacado: ordenDestacadoFinal,
@@ -138,7 +134,6 @@ export const ModalNuevoProducto = React.memo<ModalNuevoProductoProps>(({
     setImagenes([]);
     setPromocionActiva(false);
     setPrecioPromocion('');
-    setAccesorio(false);
     setCondicion('nuevo');
     setDestacado(false);
     setOrdenDestacado('');
@@ -235,17 +230,6 @@ export const ModalNuevoProducto = React.memo<ModalNuevoProductoProps>(({
               <option value="1">Activo</option>
               <option value="2">Inactivo</option>
             </select>
-          </div>
-          <div className="form-group">
-            <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer' }}>
-              <input 
-                type="checkbox" 
-                checked={accesorio} 
-                onChange={(e) => setAccesorio(e.target.checked)}
-                style={{width: 'fit-content'}}
-              />
-              <span>Es un accesorio</span>
-            </label>
           </div>
           <div className="form-group">
             <label>Condición</label>

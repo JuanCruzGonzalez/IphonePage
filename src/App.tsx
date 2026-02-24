@@ -4,7 +4,8 @@ import './core/styles/app.css';
 import './core/styles/toast.css';
 import { Sidebar } from './shared/components/Sidebar';
 import { VentasPage } from './features/ventas/VentasPage';
-import { ProductosPage } from './features/productos/ProductosPage';
+import { TelefonosPage } from './features/productos/TelefonosPage';
+import { AccesoriosPage } from './features/productos/AccesoriosPage';
 import { ProductosProvider } from './features/productos/context/ProductosContext';
 import { VentasProvider } from './features/ventas/context/VentasContext';
 import { PromocionesProvider } from './features/promociones/context/PromocionesContext';
@@ -21,7 +22,7 @@ import { useToast, useConfirm } from './shared/hooks/useToast';
 import { useDisableWheelOnNumberInputs } from './shared/hooks/useDisableWheelOnNumberInputs';
 
 function App() {
-  const [activeSection, setActiveSection] = useState<'ventas' | 'productos' | 'stock' | 'promociones' | 'gastos' | 'categorias' | 'pedidos'>('ventas');
+  const [activeSection, setActiveSection] = useState<'ventas' | 'telefonos' | 'accesorios' | 'stock' | 'promociones' | 'gastos' | 'categorias' | 'pedidos'>('ventas');
 
   // Hooks para toast y confirmación
   const { toast, showSuccess, showError, showWarning, hideToast } = useToast();
@@ -69,7 +70,8 @@ function App() {
 
                     <main className="main-content">
                       {activeSection === 'ventas' && <VentasPage />}
-                      {activeSection === 'productos' && <ProductosPage />}
+                      {activeSection === 'telefonos' && <TelefonosPage />}
+                      {activeSection === 'accesorios' && <AccesoriosPage />}
                       {activeSection === 'stock' && <StockPage />}
                       {activeSection === 'promociones' && <PromocionesPage />}
                       {activeSection === 'gastos' && <GastosPage />}

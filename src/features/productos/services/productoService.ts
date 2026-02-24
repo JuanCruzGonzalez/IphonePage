@@ -244,7 +244,7 @@ export async function buscarProductos(q: string) {
 }
 
 // Paginado: devuelve una página de productos y el total (count exacto)
-export async function getProductosPage(page = 1, pageSize = 5, q = '') {
+export async function getProductosPage(page = 1, pageSize = 5, q = '', tipoProducto?: 'telefono' | 'accesorio') {
   const from = (page - 1) * pageSize;
   const to = page * pageSize - 1;
 
@@ -269,6 +269,13 @@ export async function getProductosPage(page = 1, pageSize = 5, q = '') {
     .from('producto')
     .select(selectFields, { count: 'exact' })
     .order('nombre', { ascending: true });
+
+  // Filtrar por tipo de producto
+  if (tipoProducto === 'telefono') {
+    query = query.eq('accesorio', false);
+  } else if (tipoProducto === 'accesorio') {
+    query = query.eq('accesorio', true);
+  }
 
   if (q && q.trim()) {
     const qTrim = q.trim();
