@@ -306,7 +306,7 @@ export const CarritoProvider: React.FC<{ children: ReactNode }> = ({ children })
       queryClient.invalidateQueries({ queryKey: queryKeys.pedidosMetricas });
 
       // Generar mensaje de WhatsApp
-      const numeroWhatsApp = '5492616166624';
+      const numeroWhatsApp = '5492615355139';
       let mensaje = `Hola Chañar soy ${datos.nombre}, quería hacer el siguiente pedido:\n\n`;
 
       carrito.forEach(item => {
