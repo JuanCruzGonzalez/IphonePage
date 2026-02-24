@@ -6,16 +6,22 @@ import { useVentas } from '../context/VentasContext';
 // Small row component for product items (editable unit price)
 // Memoized to prevent unnecessary re-renders when parent updates
 const ProductRow = React.memo<{
-    item: { id_producto: number; cantidad: number; nombre: string; precioventa: number };
+    item: { id_producto: number; cantidad: number; nombre: string; precioventa: number; dolares?: boolean };
     onUpdatePrice: (id_producto: number, newPrice: number) => void;
     onRemove: (id_producto: number) => void;
     onChangeCantidad: (id_producto: number, cantidad: number) => void;
 }>(({ item, onUpdatePrice, onRemove, onChangeCantidad }) => {
+    const esDolares = item.dolares ?? false;
     return (
         <div key={item.id_producto} className="item-row">
             <div>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12, width: '100%' }}>
                     <span>{item.nombre}</span>
+                    {esDolares && (
+                        <span style={{ marginLeft: '8px', fontSize: '12px', padding: '2px 6px', backgroundColor: '#e3f2fd', borderRadius: '4px', color: '#1976d2', fontWeight: '500' }}>
+                            USD
+                        </span>
+                    )}
                     <span style={{ marginLeft: 8, color: '#666', display: 'flex', alignItems: 'center', gap: 4 }}>
                         <span>Precio: </span>
                         <input
@@ -35,6 +41,7 @@ const ProductRow = React.memo<{
                             }}
                             min="0"
                         />
+                        {esDolares && <span style={{ fontSize: '12px', color: '#1976d2' }}>USD</span>}
                     </span>
                 </div>
                 <div>
@@ -56,7 +63,9 @@ const ProductRow = React.memo<{
                         />
                         <button type="button" className="qty-button" onClick={() => onChangeCantidad(item.id_producto, item.cantidad + 1)}>+</button>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
-                            <span style={{ fontWeight: 'bold', width: 'fit-content' }}>${item.cantidad * item.precioventa}</span>
+                            <span style={{ fontWeight: 'bold', width: 'fit-content' }}>
+                                ${(item.cantidad * item.precioventa).toFixed(2)}{esDolares ? ' USD' : ''}
+                            </span>
                             <button className="btn-remove" onClick={() => onRemove(item.id_producto)}>
                                 <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                                     <polyline points="3 6 5 6 21 6"></polyline>
@@ -85,7 +94,12 @@ const PromoRow = React.memo<{
     return (
         <div key={promo.id_promocion} className="item-row">
             <div style={{ display: 'flex', alignItems: 'center', gap: 12, justifyContent: 'space-between', width: '100%' }}>
-                <span>{promo.name}</span>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                    <span>{promo.name}</span>
+                    <span style={{ fontSize: '12px', padding: '2px 6px', backgroundColor: '#f0f0f0', borderRadius: '4px', color: '#666' }}>
+                        Promoción
+                    </span>
+                </div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
                     <div className="qty-controls">
                         <button type="button" className="qty-button" onClick={() => onChangeCantidad(promo.id_promocion, Math.max(1, promo.cantidad - 1))}>−</button>
@@ -119,7 +133,7 @@ const PromoRow = React.memo<{
                         />
                     </span>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
-                        <span style={{ fontWeight: 'bold', width: '70px' }}>${(promo.precio ?? 0) * promo.cantidad}</span>
+                        <span style={{ fontWeight: 'bold', width: '70px' }}>${((promo.precio ?? 0) * promo.cantidad).toFixed(2)}</span>
                         <button className="btn-remove" onClick={() => onRemove(promo.id_promocion)}>Eliminar</button>
                     </div>
                 </div>
@@ -142,7 +156,7 @@ export const ModalNuevaVenta = React.memo<ModalNuevaVentaProps>(({
     showWarning,
 }) => {
     const { modalNuevaVenta, handleNuevaVenta, crearVentaAsync } = useVentas();
-    const [items, setItems] = useState<{ id_producto: number; cantidad: number; nombre: string; precioventa: number }[]>([]);
+    const [items, setItems] = useState<{ id_producto: number; cantidad: number; nombre: string; precioventa: number; dolares?: boolean }[]>([]);
     const [productoSeleccionado, setProductoSeleccionado] = useState('');
     const [busquedaProducto, setBusquedaProducto] = useState('');
     const [showProductosDropdown, setShowProductosDropdown] = useState(false);
@@ -173,10 +187,31 @@ export const ModalNuevaVenta = React.memo<ModalNuevaVentaProps>(({
     }, []);
 
     // Mover useMemo ANTES del early return para cumplir las reglas de hooks
-    const calcularTotal = useMemo(() => {
-        const productosTotal = items.reduce((total, item) => total + (item.cantidad * item.precioventa), 0);
-        const promosTotal = promosAdded.reduce((total, p) => total + (p.cantidad * (p.precio ?? 0)), 0);
-        return productosTotal + promosTotal;
+    const calcularTotales = useMemo(() => {
+        let totalPesos = 0;
+        let totalDolares = 0;
+
+        // Sumar productos
+        items.forEach(item => {
+            const subtotal = item.cantidad * item.precioventa;
+            if (item.dolares) {
+                totalDolares += subtotal;
+            } else {
+                totalPesos += subtotal;
+            }
+        });
+
+        // Sumar promociones (asumimos que siempre son en pesos)
+        promosAdded.forEach(p => {
+            totalPesos += p.cantidad * (p.precio ?? 0);
+        });
+
+        return {
+            totalPesos,
+            totalDolares,
+            tienePesos: totalPesos > 0,
+            tieneDolares: totalDolares > 0
+        };
     }, [items, promosAdded]);
 
     if (!modalNuevaVenta.isOpen) return null;
@@ -230,6 +265,7 @@ export const ModalNuevaVenta = React.memo<ModalNuevaVentaProps>(({
             cantidad: cant,
             nombre: producto.nombre,
             precioventa: producto.precioventa,
+            dolares: producto.dolares,
         }]);
         setProductoSeleccionado('');
         setBusquedaProducto('');
@@ -350,9 +386,16 @@ export const ModalNuevaVenta = React.memo<ModalNuevaVentaProps>(({
                                         onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#f5f5f5'}
                                         onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'white'}
                                     >
-                                        <div style={{ fontWeight: 500 }}>{p.nombre}</div>
+                                        <div style={{ fontWeight: 500, display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                            {p.nombre}
+                                            {p.dolares && (
+                                                <span style={{ fontSize: '10px', padding: '2px 4px', backgroundColor: '#e3f2fd', borderRadius: '3px', color: '#1976d2', fontWeight: '500' }}>
+                                                    USD
+                                                </span>
+                                            )}
+                                        </div>
                                         <div style={{ fontSize: '12px', color: '#666' }}>
-                                            Stock: {p.stock} | ${p.precioventa.toFixed(2)}
+                                            Stock: {p.stock} | ${p.precioventa.toFixed(2)}{p.dolares ? ' USD' : ''}
                                         </div>
                                     </div>
                                 ))}
@@ -464,14 +507,31 @@ export const ModalNuevaVenta = React.memo<ModalNuevaVentaProps>(({
                     <div style={{
                         marginTop: '15px',
                         paddingTop: '15px',
-                        borderTop: '2px solid #ddd',
-                        display: 'flex',
-                        justifyContent: 'space-between',
-                        fontSize: '18px',
-                        fontWeight: 'bold'
+                        borderTop: '2px solid #ddd'
                     }}>
-                        <span>Total:</span>
-                        <span>${calcularTotal}</span>
+                        {calcularTotales.tienePesos && (
+                            <div style={{
+                                display: 'flex',
+                                justifyContent: 'space-between',
+                                fontSize: '18px',
+                                fontWeight: 'bold',
+                                marginBottom: calcularTotales.tieneDolares ? '8px' : '0'
+                            }}>
+                                <span>Total (ARS):</span>
+                                <span>${calcularTotales.totalPesos.toFixed(2)}</span>
+                            </div>
+                        )}
+                        {calcularTotales.tieneDolares && (
+                            <div style={{
+                                display: 'flex',
+                                justifyContent: 'space-between',
+                                fontSize: '18px',
+                                fontWeight: 'bold'
+                            }}>
+                                <span>Total (USD):</span>
+                                <span>${calcularTotales.totalDolares.toFixed(2)} USD</span>
+                            </div>
+                        )}
                     </div>
                 </div>
 

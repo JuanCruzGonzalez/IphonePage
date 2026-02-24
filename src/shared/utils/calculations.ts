@@ -33,6 +33,44 @@ export const calculateVentaTotal = (venta: VentaConDetalles): number => {
 };
 
 /**
+ * Interfaz para totales separados por moneda
+ */
+export interface VentaTotalesPorMoneda {
+  totalPesos: number;      // Total de productos en pesos
+  totalDolares: number;    // Total de productos en dólares (en USD, no convertido)
+  tienePesos: boolean;     // Si hay productos en pesos
+  tieneDolares: boolean;   // Si hay productos en dólares
+}
+
+/**
+ * Calcula los totales de una venta separados por moneda
+ * @param venta - Venta con detalles
+ * @returns Totales separados por moneda
+ */
+export const calculateVentaTotalesPorMoneda = (venta: VentaConDetalles): VentaTotalesPorMoneda => {
+  let totalPesos = 0;
+  let totalDolares = 0;
+
+  venta.detalle_venta.forEach((detalle) => {
+    const subtotal = detalle.cantidad * detalle.precio_unitario;
+    const esProductoEnDolares = detalle.producto?.dolares ?? false;
+
+    if (esProductoEnDolares) {
+      totalDolares += subtotal;
+    } else {
+      totalPesos += subtotal;
+    }
+  });
+
+  return {
+    totalPesos,
+    totalDolares,
+    tienePesos: totalPesos > 0,
+    tieneDolares: totalDolares > 0,
+  };
+};
+
+/**
  * Interfaz para métricas de ventas
  */
 export interface VentasMetrics {

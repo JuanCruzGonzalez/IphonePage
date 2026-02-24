@@ -3,14 +3,13 @@ import { useQuery } from '@tanstack/react-query';
 import { queryKeys } from '../../lib/queryClient';
 import { VentaConDetalles } from '../../core/types';
 import {
-  calculateVentaTotal,
+  calculateVentaTotalesPorMoneda,
   calculateMetricsConDolares,
   dateToYMD,
   formatDate,
   getTodayYMD,
   getCurrentMonthRange,
-  filterByDateRange,
-  formatPriceDolares
+  filterByDateRange
 } from '../../shared/utils';
 import { Pagination } from '../../shared/components/Pagination';
 import { useVentas } from './context/VentasContext';
@@ -193,12 +192,21 @@ export const VentasPage: React.FC = () => {
                   </td>
                 </tr>
               ) : (
-                ventas.map(venta => (
+                ventas.map(venta => {
+                  const totales = calculateVentaTotalesPorMoneda(venta);
+                  return (
                   <tr key={venta.id_venta}>
                     <td className="text-muted">#{venta.id_venta}</td>
                     <td>{formatDate(venta.fecha)}</td>
                     <td>{venta.detalle_venta.length} producto(s)</td>
-                    <td><strong>${calculateVentaTotal(venta)}</strong></td>
+                    <td>
+                      {totales.tienePesos && (
+                        <div><strong>${totales.totalPesos.toFixed(2)}</strong></div>
+                      )}
+                      {totales.tieneDolares && (
+                        <div><strong>${totales.totalDolares.toFixed(2)} USD</strong></div>
+                      )}
+                    </td>
                     <td>
                       <span className={`status-badge ${venta.estado ? 'active' : 'inactive'}`}>
                         {venta.estado ? 'Pagada' : 'Se debe'}
@@ -281,7 +289,8 @@ export const VentasPage: React.FC = () => {
                       )}
                     </td>
                   </tr>
-                ))
+                  );
+                })
               )}
             </tbody>
           </table>
@@ -321,47 +330,82 @@ export const VentasPage: React.FC = () => {
 
               <h3 className="detail-section-title">Productos / Promociones</h3>
               <div className="detail-list">
-                {ventaSeleccionada.detalle_venta.map((detalle) => (
-                  <div key={detalle.id_detalle_venta} className="detail-item">
-                    <div>
-                      {detalle.promocion ? (
-                        <>
-                          <span>{detalle.promocion.name} (Promoción)</span>
-                          <span className="text-muted"> ×{detalle.cantidad}</span>
-                          <span style={{ marginLeft: '10px', color: '#666' }}>
-                            ${detalle.precio_unitario}
-                          </span>
-                        </>
-                      ) : detalle.producto ? (
-                        <>
-                          <span>{detalle.producto.nombre}</span>
-                          <span className="text-muted"> ×{detalle.cantidad}</span>
-                          <span style={{ marginLeft: '10px', color: '#666' }}>
-                            {formatPriceDolares(detalle.precio_unitario, detalle.producto.dolares)}
-                          </span>
-                        </>
-                      ) : (
-                        <span>Ítem desconocido</span>
-                      )}
+                {ventaSeleccionada.detalle_venta.map((detalle) => {
+                  const esProductoEnDolares = detalle.producto?.dolares ?? false;
+                  return (
+                    <div key={detalle.id_detalle_venta} className="detail-item">
+                      <div>
+                        {detalle.promocion ? (
+                          <>
+                            <span>{detalle.promocion.name}</span>
+                            <span style={{ marginLeft: '8px', fontSize: '12px', padding: '2px 6px', backgroundColor: '#f0f0f0', borderRadius: '4px', color: '#666' }}>
+                              Promoción
+                            </span>
+                            <span className="text-muted"> ×{detalle.cantidad}</span>
+                            <span style={{ marginLeft: '10px', color: '#666' }}>
+                              ${detalle.precio_unitario.toFixed(2)}
+                            </span>
+                          </>
+                        ) : detalle.producto ? (
+                          <>
+                            <span>{detalle.producto.nombre}</span>
+                            {esProductoEnDolares && (
+                              <span style={{ marginLeft: '8px', fontSize: '12px', padding: '2px 6px', backgroundColor: '#e3f2fd', borderRadius: '4px', color: '#1976d2', fontWeight: '500' }}>
+                                USD
+                              </span>
+                            )}
+                            <span className="text-muted"> ×{detalle.cantidad}</span>
+                            <span style={{ marginLeft: '10px', color: '#666' }}>
+                              ${detalle.precio_unitario.toFixed(2)}{esProductoEnDolares ? ' USD' : ''}
+                            </span>
+                          </>
+                        ) : (
+                          <span>Ítem desconocido</span>
+                        )}
+                      </div>
+                      <span style={{ fontWeight: 'bold' }}>
+                        ${(detalle.cantidad * detalle.precio_unitario).toFixed(2)}{esProductoEnDolares ? ' USD' : ''}
+                      </span>
                     </div>
-                    <span style={{ fontWeight: 'bold' }}>
-                      {formatPriceDolares(detalle.cantidad * detalle.precio_unitario, detalle.producto?.dolares)}
-                    </span>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
 
               <div style={{
                 marginTop: '20px',
                 paddingTop: '15px',
-                borderTop: '2px solid #ddd',
-                display: 'flex',
-                justifyContent: 'space-between',
-                fontSize: '18px',
-                fontWeight: 'bold'
+                borderTop: '2px solid #ddd'
               }}>
-                <span>Total:</span>
-                <span>${calculateVentaTotal(ventaSeleccionada)}</span>
+                {(() => {
+                  const totales = calculateVentaTotalesPorMoneda(ventaSeleccionada);
+                  return (
+                    <>
+                      {totales.tienePesos && (
+                        <div style={{
+                          display: 'flex',
+                          justifyContent: 'space-between',
+                          fontSize: '18px',
+                          fontWeight: 'bold',
+                          marginBottom: totales.tieneDolares ? '8px' : '0'
+                        }}>
+                          <span>Total (ARS):</span>
+                          <span>${totales.totalPesos.toFixed(2)}</span>
+                        </div>
+                      )}
+                      {totales.tieneDolares && (
+                        <div style={{
+                          display: 'flex',
+                          justifyContent: 'space-between',
+                          fontSize: '18px',
+                          fontWeight: 'bold'
+                        }}>
+                          <span>Total (USD):</span>
+                          <span>${totales.totalDolares.toFixed(2)} USD</span>
+                        </div>
+                      )}
+                    </>
+                  );
+                })()}
               </div>
             </div>
           </div>
