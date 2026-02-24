@@ -52,11 +52,11 @@ export const ClientePage: React.FC = () => {
   }, [productos]);
 
   const handleCategoriaClick = (id_categoria: number) => {
-    navigate(`/productos?cat=${id_categoria}`);
+    navigate(`/telefonos?cat=${id_categoria}`);
   };
 
   const handleVerCatalogo = () => {
-    navigate('/productos');
+    navigate('/telefonos');
   };
 
   const handleVerDetalleProducto = (producto: Producto) => {

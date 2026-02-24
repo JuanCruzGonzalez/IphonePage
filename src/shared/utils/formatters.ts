@@ -30,6 +30,19 @@ export const formatPrice = (precio: number): string => {
 };
 
 /**
+ * Formatea un precio con prefijo USD si corresponde
+ * @param precio - Precio a formatear
+ * @param dolares - Si es true, muestra con prefijo USD
+ * @returns Precio formateado
+ */
+export const formatPriceDolares = (precio: number, dolares?: boolean): string => {
+  if (dolares) {
+    return `$${precio.toFixed(2)} USD`;
+  }
+  return `$${precio.toFixed(2)}`;
+};
+
+/**
  * Formatea un precio con locale español argentino
  * @param precio - Precio a formatear
  * @returns Precio formateado con separadores de miles

@@ -7,7 +7,7 @@ import { ProductosGrid } from './components/ProductosGrid';
 import { useCarrito } from './context/CarritoContext';
 import { supabase } from '../../core/config/supabase';
 
-export const TiendaProductosPage: React.FC = () => {
+export const TiendaTelefonosPage: React.FC = () => {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const busqueda = searchParams.get('q') || '';
@@ -32,8 +32,8 @@ export const TiendaProductosPage: React.FC = () => {
   const cargarProductos = async () => {
     try {
       const data = await getProductosActivos();
-      // Solo accesorios
-      setProductos(data.filter(p => p.accesorio === true));
+      // Solo teléfonos (no accesorios)
+      setProductos(data.filter(p => !p.accesorio));
 
       const categs = await getCategoriasActivas();
       setCategorias(categs);
@@ -53,19 +53,19 @@ export const TiendaProductosPage: React.FC = () => {
         setProductosCategorias(mapa);
       }
     } catch (error) {
-      console.error('Error al cargar productos:', error);
+      console.error('Error al cargar teléfonos:', error);
     } finally {
       setLoading(false);
     }
   };
 
-  // Solo categorías hijas que tienen al menos un producto accesorio
+  // Solo categorías hijas que tienen al menos un teléfono
   const categoriasDisponibles = useMemo(() => {
-    const idsProductosAccesorios = new Set(productos.map(p => p.id_producto));
+    const idsProductosTelefonos = new Set(productos.map(p => p.id_producto));
     const idsCategoriasConProductos = new Set<number>();
 
     productosCategorias.forEach((catIds, prodId) => {
-      if (idsProductosAccesorios.has(prodId)) {
+      if (idsProductosTelefonos.has(prodId)) {
         catIds.forEach(catId => idsCategoriasConProductos.add(catId));
       }
     });
@@ -91,6 +91,14 @@ export const TiendaProductosPage: React.FC = () => {
       result = [...result].sort((a, b) => a.precioventa - b.precioventa);
     } else if (ordenPrecio === 'desc') {
       result = [...result].sort((a, b) => b.precioventa - a.precioventa);
+    } else {
+      // Por defecto: nuevos primero, usados después
+      result = [...result].sort((a, b) => {
+        const condA = a.condicion || 'nuevo';
+        const condB = b.condicion || 'nuevo';
+        if (condA === condB) return 0;
+        return condA === 'nuevo' ? -1 : 1;
+      });
     }
 
     return result;
@@ -116,7 +124,7 @@ export const TiendaProductosPage: React.FC = () => {
           <h2 className="modern-products-title">
             {categoriaSeleccionada
               ? categoriasDisponibles.find(c => c.id_categoria === categoriaSeleccionada)?.nombre
-              : 'Accesorios'}
+              : 'Teléfonos'}
           </h2>
           {(categoriaSeleccionada || ordenPrecio !== 'none') && (
             <button onClick={() => { setCategoriaSeleccionada(null); setOrdenPrecio('none'); }} className="modern-clear-filter">
@@ -127,7 +135,6 @@ export const TiendaProductosPage: React.FC = () => {
 
         {/* Filtros */}
         <div style={{ display: 'flex', gap: '1rem', flexWrap: 'wrap', marginBottom: '1.5rem', alignItems: 'center' }}>
-          {/* Filtro por categorías */}
           {categoriasDisponibles.length > 0 && (
             <select
               value={categoriaSeleccionada ?? ''}
@@ -162,6 +169,8 @@ export const TiendaProductosPage: React.FC = () => {
           actualizarCantidad={actualizarCantidad}
           manejarAgregarProducto={manejarAgregarProducto}
           onVerDetalle={handleVerDetalleProducto}
+          productosCategorias={productosCategorias}
+          categorias={categorias}
         />
       </div>
     </div>

@@ -14,6 +14,7 @@ export interface Producto {
   destacado?: boolean; // Indica si el producto es destacado en la página principal
   orden_destacado?: number | null; // Orden de visualización en destacados
   condicion?: 'nuevo' | 'usado'; // Condición del producto
+  dolares?: boolean; // Indica si el precio está en dólares
 }
 
 export interface ProductoImagen {

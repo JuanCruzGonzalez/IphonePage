@@ -1,6 +1,6 @@
 import React from 'react';
 import { Producto } from '../../../core/types';
-import { formatPrice } from '../../../shared/utils/formatters';
+import { formatPriceDolares } from '../../../shared/utils/formatters';
 import { getProductImageUrl } from '../../../shared/services/storageService';
 
 interface ProductoCardProps {
@@ -9,6 +9,7 @@ interface ProductoCardProps {
   actualizarCantidad: (itemId: string, cantidad: number) => void;
   manejarAgregarProducto: (producto: Producto) => void;
   onVerDetalle?: (producto: Producto) => void;
+  categoriasProducto?: string[];
 }
 
 export const ProductoCard: React.FC<ProductoCardProps> = ({
@@ -17,13 +18,16 @@ export const ProductoCard: React.FC<ProductoCardProps> = ({
   actualizarCantidad,
   manejarAgregarProducto,
   onVerDetalle,
+  categoriasProducto = [],
 }) => {
   const itemEnCarrito = obtenerItemEnCarrito(producto.id_producto);
 
   return (
     <div className="modern-product-card">
       {producto.condicion === 'usado' && (
-        <span className="modern-product-badge used">Usado</span>
+        <span className="modern-product-badge used">
+          {categoriasProducto.some(c => c.toLowerCase().includes('premium')) ? 'Usado Premium' : 'Usado'}
+        </span>
       )}
       {producto.promocion_activa && producto.precio_promocion && (
         <span className={`modern-product-badge${producto.condicion === 'usado' ? ' with-used' : ''}`}>Oferta</span>
@@ -56,15 +60,15 @@ export const ProductoCard: React.FC<ProductoCardProps> = ({
             {producto.promocion_activa && producto.precio_promocion != null ? (
               <>
                 <span className="modern-product-old-price">
-                  {formatPrice(producto.precioventa)}
+                  {formatPriceDolares(producto.precioventa, producto.dolares)}
                 </span>
                 <span className="modern-product-price promo">
-                  {formatPrice(producto.precio_promocion)}
+                  {formatPriceDolares(producto.precio_promocion, producto.dolares)}
                 </span>
               </>
             ) : (
               <span className="modern-product-price">
-                {formatPrice(producto.precioventa)}
+                {formatPriceDolares(producto.precioventa, producto.dolares)}
               </span>
             )}
           </div>

@@ -84,7 +84,6 @@ export const CategoriasPage: React.FC = () => {
           <table className="table">
             <thead>
               <tr>
-                <th>ID</th>
                 <th>Nombre</th>
                 <th>Estado</th>
                 <th>Acciones</th>

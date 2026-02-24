@@ -42,15 +42,21 @@ export const TiendaLayout: React.FC = () => {
           <nav className="modern-header-nav">
             <Link
               to="/"
-              className={`modern-header-nav-link ${isActive('/') && !isActive('/productos') && !isActive('/promociones') && !isActive('/producto') ? 'active' : ''}`}
+              className={`modern-header-nav-link ${isActive('/') && !isActive('/telefonos') && !isActive('/accesorios') && !isActive('/promociones') && !isActive('/producto') ? 'active' : ''}`}
             >
               Inicio
             </Link>
             <Link
-              to="/productos"
-              className={`modern-header-nav-link ${isActive('/productos') ? 'active' : ''}`}
+              to="/telefonos"
+              className={`modern-header-nav-link ${isActive('/telefonos') ? 'active' : ''}`}
             >
-              Productos
+              Teléfonos
+            </Link>
+            <Link
+              to="/accesorios"
+              className={`modern-header-nav-link ${isActive('/accesorios') ? 'active' : ''}`}
+            >
+              Accesorios
             </Link>
             <Link
               to="/promociones"
@@ -72,7 +78,7 @@ export const TiendaLayout: React.FC = () => {
               onKeyDown={(e) => {
                 if (e.key === 'Enter') {
                   const value = (e.target as HTMLInputElement).value;
-                  navigate(`/productos${value ? `?q=${encodeURIComponent(value)}` : ''}`);
+                  navigate(`/telefonos${value ? `?q=${encodeURIComponent(value)}` : ''}`);
                 }
               }}
             />

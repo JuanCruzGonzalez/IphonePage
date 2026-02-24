@@ -1,5 +1,5 @@
 import React from 'react';
-import { Producto } from '../../../core/types';
+import { Producto, Categoria } from '../../../core/types';
 import { ProductoCard } from './ProductoCard';
 
 interface ProductosGridProps {
@@ -8,6 +8,8 @@ interface ProductosGridProps {
   actualizarCantidad: (itemId: string, cantidad: number) => void;
   manejarAgregarProducto: (producto: Producto) => void;
   onVerDetalle?: (producto: Producto) => void;
+  productosCategorias?: Map<number, number[]>;
+  categorias?: Categoria[];
 }
 
 export const ProductosGrid: React.FC<ProductosGridProps> = ({
@@ -16,7 +18,17 @@ export const ProductosGrid: React.FC<ProductosGridProps> = ({
   actualizarCantidad,
   manejarAgregarProducto,
   onVerDetalle,
+  productosCategorias,
+  categorias,
 }) => {
+  const getNombresCategorias = (idProducto: number): string[] => {
+    if (!productosCategorias || !categorias) return [];
+    const catIds = productosCategorias.get(idProducto) || [];
+    return catIds
+      .map(id => categorias.find(c => c.id_categoria === id)?.nombre)
+      .filter((n): n is string => !!n);
+  };
+
   return (
     <>
       <div className="modern-products-grid">
@@ -28,6 +40,7 @@ export const ProductosGrid: React.FC<ProductosGridProps> = ({
             actualizarCantidad={actualizarCantidad}
             manejarAgregarProducto={manejarAgregarProducto}
             onVerDetalle={onVerDetalle}
+            categoriasProducto={getNombresCategorias(producto.id_producto)}
           />
         ))}
       </div>

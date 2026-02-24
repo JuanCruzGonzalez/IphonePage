@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Producto } from '../../core/types';
 import { supabase } from '../../core/config/supabase';
-import { formatPrice } from '../../shared/utils';
+import { formatPriceDolares } from '../../shared/utils/formatters';
 import { ProductDetailGallery } from './components/ProductDetailGallery';
 import { ProductosDestacadosSlider } from './components/ProductosDestacadosSlider';
 import { useCarrito } from './context/CarritoContext';
@@ -20,6 +20,7 @@ export const ProductoDetallePage: React.FC = () => {
 
   const [producto, setProducto] = useState<Producto | null>(null);
   const [loading, setLoading] = useState(true);
+  const [categoriasProducto, setCategoriasProducto] = useState<string[]>([]);
 
   const { productosDestacados } = useProductosDestacados(
     producto?.id_producto
@@ -51,45 +52,34 @@ export const ProductoDetallePage: React.FC = () => {
         navigate('/');
         return;
       }
-
+      console.log('Producto cargado:', prod);
       const { data: imagenes } = await supabase
         .from('producto_imagen')
         .select('*')
         .eq('id_producto', idProducto)
         .order('orden', { ascending: true });
 
-      const { data: promoData } = await supabase
-        .from('detalle_promocion')
-        .select(`
-          cantidad,
-          promocion:id_promocion (
-            id_promocion,
-            precio,
-            estado
-          )
-        `)
-        .eq('id_producto', idProducto);
-
-      let precio_promocion: number | null = null;
-      let promocion_activa = false;
-
-      if (promoData && promoData.length > 0) {
-        for (const dp of promoData) {
-          const promo = dp.promocion as any;
-          if (promo && promo.estado === true && promo.precio != null) {
-            precio_promocion = promo.precio;
-            promocion_activa = true;
-            break;
-          }
-        }
-      }
-
       setProducto({
         ...prod,
         imagenes: imagenes || [],
-        precio_promocion,
-        promocion_activa,
       });
+
+      // Cargar categorías del producto
+      const { data: relCats } = await supabase
+        .from('categoria_producto')
+        .select('id_categoria')
+        .eq('id_producto', idProducto);
+
+      if (relCats && relCats.length > 0) {
+        const catIds = relCats.map((r: any) => r.id_categoria);
+        const { data: cats } = await supabase
+          .from('categoria')
+          .select('nombre')
+          .in('id_categoria', catIds);
+        setCategoriasProducto(cats?.map((c: any) => c.nombre) || []);
+      } else {
+        setCategoriasProducto([]);
+      }
     } catch (error) {
       console.error('Error al cargar producto:', error);
       navigate('/');
@@ -99,7 +89,7 @@ export const ProductoDetallePage: React.FC = () => {
   };
 
   const handleVolver = () => {
-    navigate('/productos');
+    navigate('/telefonos');
   };
 
   if (loading) {
@@ -159,11 +149,10 @@ export const ProductoDetallePage: React.FC = () => {
             {/* Badges */}
             <div className="pd-badges">
               <span className={producto.condicion === 'usado' ? 'pd-badge-used' : 'pd-badge-new'}>
-                {producto.condicion === 'usado' ? 'Usado' : 'Nuevo'}
+                {producto.condicion === 'usado'
+                  ? (categoriasProducto.some(c => c.toLowerCase().includes('premium')) ? 'Usado Premium' : 'Usado')
+                  : 'Nuevo'}
               </span>
-              {producto.stock > 0 && (
-                <span className="pd-badge-stock">En stock</span>
-              )}
               {producto.promocion_activa && producto.precio_promocion && (
                 <span className="pd-badge-promo">Oferta</span>
               )}
@@ -174,20 +163,20 @@ export const ProductoDetallePage: React.FC = () => {
               {producto.promocion_activa && producto.precio_promocion != null ? (
                 <>
                   <span className="pd-price">
-                    {formatPrice(producto.precio_promocion)}
+                    {formatPriceDolares(producto.precio_promocion, producto.dolares)}
                   </span>
                   <div className="pd-price-old-row">
                     <span className="pd-old-price">
-                      {formatPrice(producto.precioventa)}
+                      {formatPriceDolares(producto.precioventa, producto.dolares)}
                     </span>
                     <span className="pd-discount-badge">
-                      Ahorrá {formatPrice(producto.precioventa - producto.precio_promocion)}
+                      Ahorrá {formatPriceDolares(producto.precioventa - producto.precio_promocion, producto.dolares)}
                     </span>
                   </div>
                 </>
               ) : (
                 <span className="pd-price">
-                  {formatPrice(producto.precioventa)}
+                  {formatPriceDolares(producto.precioventa, producto.dolares)}
                 </span>
               )}
             </div>

@@ -4,20 +4,20 @@ import { Producto, ProductoImagen } from '../../../core/types';
 // Helper para cargar imágenes de múltiples productos de forma eficiente
 const cargarImagenesProductos = async (productos: Producto[]): Promise<Producto[]> => {
   if (productos.length === 0) return productos;
-  
+
   const ids = productos.map(p => p.id_producto);
-  
+
   const { data: imagenes, error } = await supabase
     .from('producto_imagen')
     .select('*')
     .in('id_producto', ids)
     .order('orden', { ascending: true });
-  
+
   if (error) {
     console.warn('Error al cargar imágenes de productos:', error);
     return productos;
   }
-  
+
   // Agrupar imágenes por producto
   const imagenesPorProducto = new Map<number, ProductoImagen[]>();
   (imagenes || []).forEach((img: any) => {
@@ -26,7 +26,7 @@ const cargarImagenesProductos = async (productos: Producto[]): Promise<Producto[
     }
     imagenesPorProducto.get(img.id_producto)!.push(img as ProductoImagen);
   });
-  
+
   // Asignar imágenes a cada producto
   return productos.map(p => ({
     ...p,
@@ -51,11 +51,12 @@ export async function getProductos() {
     accesorio,
     destacado,
     orden_destacado,
-    condicion
+    condicion,
+      dolares
   `)
-  .order('nombre', { ascending: true })
-  .range(0, 999);
-      
+    .order('nombre', { ascending: true })
+    .range(0, 999);
+
   if (error) {
     console.error('Error al obtener productos:', error);
     await handleAuthError(error);
@@ -77,6 +78,7 @@ export async function getProductos() {
     destacado: p.destacado,
     orden_destacado: p.orden_destacado,
     condicion: p.condicion || 'nuevo',
+    dolares: p.dolares || false,
   })) as Producto[];
 
   return await cargarImagenesProductos(productos);
@@ -97,12 +99,13 @@ export async function getProductosActivos() {
     accesorio,
     destacado,
     orden_destacado,
-    condicion
+    condicion,
+      dolares
   `).eq('estado', true)
-  .order('nombre', { ascending: true })
-  .range(0, 999);
-      
-      
+    .order('nombre', { ascending: true })
+    .range(0, 999);
+
+
   if (error) {
     console.error('Error al obtener productos:', error);
     await handleAuthError(error);
@@ -124,6 +127,7 @@ export async function getProductosActivos() {
     destacado: p.destacado,
     orden_destacado: p.orden_destacado,
     condicion: p.condicion || 'nuevo',
+    dolares: p.dolares || false,
   })) as Producto[];
 
   return await cargarImagenesProductos(productos);
@@ -149,7 +153,8 @@ export async function getProductosDestacados() {
       accesorio,
       destacado,
       orden_destacado,
-      condicion
+      condicion,
+      dolares
     `)
     .eq('estado', true)
     .eq('destacado', true)
@@ -178,6 +183,7 @@ export async function getProductosDestacados() {
     destacado: p.destacado,
     orden_destacado: p.orden_destacado,
     condicion: p.condicion || 'nuevo',
+    dolares: p.dolares || false,
   })) as Producto[];
 
   return await cargarImagenesProductos(productos);
@@ -202,11 +208,12 @@ export async function buscarProductos(q: string) {
     accesorio,
     destacado,
     orden_destacado,
-    condicion
+    condicion,
+    dolares
   `)
     .or(`nombre.ilike.%${qTrim}%,descripcion.ilike.%${qTrim}%`)
-  .order('nombre', { ascending: true })
-  .range(0, 999);
+    .order('nombre', { ascending: true })
+    .range(0, 999);
 
   if (error) {
     console.error('Error al buscar productos:', error);
@@ -230,6 +237,7 @@ export async function buscarProductos(q: string) {
     destacado: p.destacado,
     orden_destacado: p.orden_destacado,
     condicion: p.condicion || 'nuevo',
+    dolares: p.dolares || false,
   })) as Producto[];
 
   return await cargarImagenesProductos(productos);
@@ -253,7 +261,8 @@ export async function getProductosPage(page = 1, pageSize = 5, q = '') {
     accesorio,
     destacado,
     orden_destacado,
-    condicion
+    condicion,
+      dolares
   `;
 
   let query: any = supabase
@@ -279,7 +288,7 @@ export async function getProductosPage(page = 1, pageSize = 5, q = '') {
     nombre: p.nombre,
     descripcion: p.descripcion,
     stock: p.stock,
-    costo: p.costo, 
+    costo: p.costo,
     precioventa: p.precioventa,
     precio_promocion: p.precio_promocion,
     promocion_activa: p.promocion_activa,
@@ -288,6 +297,7 @@ export async function getProductosPage(page = 1, pageSize = 5, q = '') {
     destacado: p.destacado,
     orden_destacado: p.orden_destacado,
     condicion: p.condicion || 'nuevo',
+    dolares: p.dolares || false,
   })) as Producto[];
 
   // Cargar imágenes de todos los productos
@@ -355,6 +365,7 @@ export async function updateProducto(
     destacado?: boolean;
     orden_destacado?: number | null;
     condicion?: 'nuevo' | 'usado';
+    dolares?: boolean;
   }>
 ) {
   // Try RPC transaction first
@@ -376,6 +387,7 @@ export async function updateProducto(
         destacado: p.destacado,
         orden_destacado: p.orden_destacado,
         condicion: p.condicion || 'nuevo',
+        dolares: p.dolares || false,
       } as Producto;
     }
   } catch (e) {
@@ -414,6 +426,7 @@ export async function updateProducto(
     destacado: p.destacado,
     orden_destacado: p.orden_destacado,
     condicion: p.condicion || 'nuevo',
+    dolares: p.dolares || false,
   } as Producto;
 
   return producto;
