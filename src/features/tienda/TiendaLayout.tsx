@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Outlet, useNavigate, useLocation, Link } from 'react-router-dom';
 import { useCarrito } from './context/CarritoContext';
 import { CarritoPanel } from './components/CarritoPanel';
@@ -10,6 +10,7 @@ import './ClientePage.new.css';
 export const TiendaLayout: React.FC = () => {
   const navigate = useNavigate();
   const location = useLocation();
+  const [menuOpen, setMenuOpen] = useState(false);
   const {
     carrito,
     modalCantidad,
@@ -28,17 +29,33 @@ export const TiendaLayout: React.FC = () => {
     return location.pathname.startsWith(path);
   };
 
+  const handleNavClick = (path: string) => {
+    navigate(path);
+    setMenuOpen(false);
+  };
+
   return (
     <div className="modern-cliente-page">
       {/* Header */}
       <header className="modern-header">
         <div className="modern-header-container">
+          {/* Botón Hamburguesa */}
+          <button 
+            className="modern-header-hamburger" 
+            onClick={() => setMenuOpen(!menuOpen)}
+            aria-label="Menú"
+          >
+            <span></span>
+            <span></span>
+            <span></span>
+          </button>
           {/* Logo */}
           <div className="modern-header-logo" onClick={() => navigate('/')} style={{ cursor: 'pointer' }}>
             <img src={logo} alt="Iphone Store Logo" style={{ width: '100px', height: 'auto' }} />
           </div>
 
-          {/* Navegación */}
+
+          {/* Navegación Desktop */}
           <nav className="modern-header-nav">
             <Link
               to="/"
@@ -66,8 +83,8 @@ export const TiendaLayout: React.FC = () => {
             </Link>
           </nav>
 
-          {/* Buscador */}
-          <div className="modern-header-search">
+          {/* Buscador Desktop */}
+          <div className="modern-header-search modern-header-search-desktop">
             <svg className="modern-header-search-icon" xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none">
               <path d="M15.7955 15.8111L21 21M18 10.5C18 14.6421 14.6421 18 10.5 18C6.35786 18 3 14.6421 3 10.5C3 6.35786 6.35786 3 10.5 3C14.6421 3 18 6.35786 18 10.5Z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
             </svg>
@@ -98,6 +115,73 @@ export const TiendaLayout: React.FC = () => {
               )}
             </button>
           </div>
+        </div>
+
+        {/* Buscador Mobile - Fuera del nav */}
+        <div className="modern-header-search-mobile">
+          <svg className="modern-header-search-icon" xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none">
+            <path d="M15.7955 15.8111L21 21M18 10.5C18 14.6421 14.6421 18 10.5 18C6.35786 18 3 14.6421 3 10.5C3 6.35786 6.35786 3 10.5 3C14.6421 3 18 6.35786 18 10.5Z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+          </svg>
+          <input
+            type="text"
+            placeholder="Buscar productos..."
+            className="modern-header-search-input"
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') {
+                const value = (e.target as HTMLInputElement).value;
+                navigate(`/telefonos${value ? `?q=${encodeURIComponent(value)}` : ''}`);
+              }
+            }}
+          />
+        </div>
+
+        {/* Menú Mobile */}
+        <div className={`modern-mobile-menu ${menuOpen ? 'open' : ''}`}>
+          <div className="modern-mobile-menu-overlay" onClick={() => setMenuOpen(false)}></div>
+          <nav className="modern-mobile-menu-content">
+            <button 
+              onClick={() => handleNavClick('/')}
+              className={`modern-mobile-menu-link ${isActive('/') && !isActive('/telefonos') && !isActive('/accesorios') && !isActive('/promociones') && !isActive('/producto') ? 'active' : ''}`}
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path>
+                <polyline points="9 22 9 12 15 12 15 22"></polyline>
+              </svg>
+              Inicio
+            </button>
+            <button 
+              onClick={() => handleNavClick('/telefonos')}
+              className={`modern-mobile-menu-link ${isActive('/telefonos') ? 'active' : ''}`}
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <rect x="5" y="2" width="14" height="20" rx="2" ry="2"></rect>
+                <line x1="12" y1="18" x2="12.01" y2="18"></line>
+              </svg>
+              Teléfonos
+            </button>
+            <button 
+              onClick={() => handleNavClick('/accesorios')}
+              className={`modern-mobile-menu-link ${isActive('/accesorios') ? 'active' : ''}`}
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <circle cx="12" cy="12" r="10"></circle>
+                <line x1="12" y1="8" x2="12" y2="16"></line>
+                <line x1="8" y1="12" x2="16" y2="12"></line>
+              </svg>
+              Accesorios
+            </button>
+            <button 
+              onClick={() => handleNavClick('/promociones')}
+              className={`modern-mobile-menu-link ${isActive('/promociones') ? 'active' : ''}`}
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <circle cx="9" cy="9" r="2"></circle>
+                <circle cx="15" cy="15" r="2"></circle>
+                <path d="M3 3l18 18M9 15L3 9m18 12l-6-6"></path>
+              </svg>
+              Promociones
+            </button>
+          </nav>
         </div>
       </header>
 
