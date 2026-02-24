@@ -33,7 +33,7 @@ interface ProductoFormData {
   accesorio?: boolean;
   destacado?: boolean;
   ordenDestacado?: number | null;
-  condicion?: 'nuevo' | 'usado';
+  condicion?: 'nuevo' | 'usado_premium' | 'usado';
 }
 
 interface ProductosContextValue {
