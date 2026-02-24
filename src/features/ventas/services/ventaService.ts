@@ -176,9 +176,22 @@ export async function createVenta(
   // Si no se proporciona cotización, obtener la actual
   const cotizacion = cotizacion_dolar ?? await getCotizacionActual();
 
+  // Transformar detalles de camelCase a snake_case para el RPC
+  const detallesTransformados = detalles.map(detalle => {
+    const transformado: any = { ...detalle };
+    
+    // Convertir precioUnitario a precio_unitario si existe
+    if ('precioUnitario' in detalle) {
+      transformado.precio_unitario = detalle.precioUnitario;
+      delete transformado.precioUnitario;
+    }
+    
+    return transformado;
+  });
+
   const { data, error } = await supabase.rpc('create_venta_transaction', {
     p_venta: { fecha, estado, cotizacion_dolar: cotizacion },
-    p_detalles: detalles,
+    p_detalles: detallesTransformados,
   });
 
   if (error) {
