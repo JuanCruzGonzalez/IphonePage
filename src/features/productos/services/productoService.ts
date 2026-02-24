@@ -364,7 +364,7 @@ export async function updateProducto(
     accesorio?: boolean;
     destacado?: boolean;
     orden_destacado?: number | null;
-    condicion?: 'nuevo' | 'usado';
+    condicion?: 'nuevo' | 'usado_premium' | 'usado';
     dolares?: boolean;
   }>
 ) {

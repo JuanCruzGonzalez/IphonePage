@@ -13,3 +13,5 @@ export * from './calculations';
 export * from './dates';
 
 export * from './unidadMedida';
+// Product Slugs
+export * from './productSlug';

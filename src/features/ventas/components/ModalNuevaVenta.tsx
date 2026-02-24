@@ -351,7 +351,6 @@ export const ModalNuevaVenta = React.memo<ModalNuevaVentaProps>(({
                                         onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'white'}
                                     >
                                         <div style={{ fontWeight: 500 }}>{p.nombre}</div>
-                                        <div style={{ fontWeight: 500 }}>{p.descripcion}</div>
                                         <div style={{ fontSize: '12px', color: '#666' }}>
                                             Stock: {p.stock} | ${p.precioventa.toFixed(2)}
                                         </div>

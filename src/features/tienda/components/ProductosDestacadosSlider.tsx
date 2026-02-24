@@ -29,13 +29,12 @@ export const ProductosDestacadosSlider: React.FC<ProductosDestacadosSliderProps>
   return (
     <div className="featured-swiper-container">
       <Swiper
-        modules={[Navigation, Pagination]}
+        modules={[Navigation]}
         spaceBetween={30}
         slidesPerView={4}
         navigation={{
             addIcons: true,
         }}
-        pagination={{ clickable: true }}
         breakpoints={{
           320: {
             slidesPerView: 1,

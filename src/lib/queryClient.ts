@@ -76,4 +76,9 @@ export const queryKeys = {
   pedidosPorEstado: (estado: string) => ['pedidos', 'estado', estado] as const,
   pedidosPendientes: ['pedidos', 'pendientes'] as const,
   pedidosMetricas: ['pedidos', 'metricas'] as const,
+  
+  // Cotización Dólar
+  cotizacionDolar: ['cotizacion-dolar'] as const,
+  cotizacionActual: ['cotizacion-dolar', 'actual'] as const,
+  historialCotizaciones: ['cotizacion-dolar', 'historial'] as const,
 } as const;

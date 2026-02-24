@@ -105,42 +105,86 @@ export const ModalDetallePedido: React.FC = () => {
           {/* Productos */}
           <div className="card" style={{ marginBottom: '20px', padding: '16px' }}>
             <h3 style={{ fontSize: '16px', fontWeight: 600, marginBottom: '12px', color: '#333' }}>📦 Productos</h3>
-            <table style={{ width: '100%', fontSize: '14px' }}>
-              <thead>
-                <tr style={{ borderBottom: '2px solid #e5e7eb' }}>
-                  <th style={{ paddingBottom: '8px', textAlign: 'left', color: '#666', fontWeight: 500 }}>Producto</th>
-                  <th style={{ paddingBottom: '8px', textAlign: 'center', color: '#666', fontWeight: 500 }}>Cant.</th>
-                  <th style={{ paddingBottom: '8px', textAlign: 'right', color: '#666', fontWeight: 500 }}>Precio Unit.</th>
-                  <th style={{ paddingBottom: '8px', textAlign: 'right', color: '#666', fontWeight: 500 }}>Subtotal</th>
-                </tr>
-              </thead>
-              <tbody>
-                {pedidoSeleccionado.detalles?.map((detalle: any, index: number) => {
-                  const subtotal = (detalle.cantidad || 0) * (detalle.precio_unitario || 0);
-                  return (
-                    <tr key={index} style={{ borderBottom: '1px solid #f3f4f6' }}>
-                      <td style={{ paddingTop: '12px', paddingBottom: '12px' }}>
-                        <div style={{ fontWeight: 500 }}>{detalle.nombre_item || 'Sin nombre'}</div>
-                        {detalle.tipo === 'promocion' && (
-                          <div style={{ fontSize: '12px', color: '#10b981', marginTop: '2px' }}>🎉 Promoción</div>
-                        )}
-                      </td>
-                      <td style={{ paddingTop: '12px', paddingBottom: '12px', textAlign: 'center' }}>{detalle.cantidad || 0}</td>
-                      <td style={{ paddingTop: '12px', paddingBottom: '12px', textAlign: 'right' }}>{formatPrice(detalle.precio_unitario || 0)}</td>
-                      <td style={{ paddingTop: '12px', paddingBottom: '12px', textAlign: 'right', fontWeight: 500 }}>{formatPrice(subtotal)}</td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-              <tfoot>
-                <tr>
-                  <td colSpan={3} style={{ paddingTop: '12px', textAlign: 'right', fontSize: '16px', fontWeight: 600 }}>Total:</td>
-                  <td style={{ paddingTop: '12px', textAlign: 'right', fontSize: '18px', fontWeight: 700, color: '#10b981' }}>
-                    {formatPrice(pedidoSeleccionado.total)}
-                  </td>
-                </tr>
-              </tfoot>
-            </table>
+            
+            {/* Calcular totales por moneda */}
+            {(() => {
+              const detallesPesos = pedidoSeleccionado.detalles?.filter((d: any) => 
+                d.tipo === 'promocion' || !d.producto?.dolares
+              ) || [];
+              const detallesDolares = pedidoSeleccionado.detalles?.filter((d: any) => 
+                d.tipo === 'producto' && d.producto?.dolares
+              ) || [];
+              
+              const totalPesos = detallesPesos.reduce((sum: number, d: any) => 
+                sum + ((d.cantidad || 0) * (d.precio_unitario || 0)), 0
+              );
+              const totalDolares = detallesDolares.reduce((sum: number, d: any) => 
+                sum + ((d.cantidad || 0) * (d.precio_unitario || 0)), 0
+              );
+
+              return (
+                <>
+                  <table style={{ width: '100%', fontSize: '14px' }}>
+                    <thead>
+                      <tr style={{ borderBottom: '2px solid #e5e7eb' }}>
+                        <th style={{ paddingBottom: '8px', textAlign: 'left', color: '#666', fontWeight: 500 }}>Producto</th>
+                        <th style={{ paddingBottom: '8px', textAlign: 'center', color: '#666', fontWeight: 500 }}>Cant.</th>
+                        <th style={{ paddingBottom: '8px', textAlign: 'right', color: '#666', fontWeight: 500 }}>Precio Unit.</th>
+                        <th style={{ paddingBottom: '8px', textAlign: 'right', color: '#666', fontWeight: 500 }}>Subtotal</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {pedidoSeleccionado.detalles?.map((detalle: any, index: number) => {
+                        const subtotal = (detalle.cantidad || 0) * (detalle.precio_unitario || 0);
+                        const esDolares = detalle.tipo === 'producto' && detalle.producto?.dolares;
+                        return (
+                          <tr key={index} style={{ borderBottom: '1px solid #f3f4f6' }}>
+                            <td style={{ paddingTop: '12px', paddingBottom: '12px' }}>
+                              <div style={{ fontWeight: 500 }}>
+                                {detalle.nombre_item || 'Sin nombre'}
+                                {esDolares && <span style={{ marginLeft: '6px', fontSize: '12px', color: '#3b82f6' }}>💵 USD</span>}
+                              </div>
+                              {detalle.tipo === 'promocion' && (
+                                <div style={{ fontSize: '12px', color: '#10b981', marginTop: '2px' }}>🎉 Promoción</div>
+                              )}
+                            </td>
+                            <td style={{ paddingTop: '12px', paddingBottom: '12px', textAlign: 'center' }}>{detalle.cantidad || 0}</td>
+                            <td style={{ paddingTop: '12px', paddingBottom: '12px', textAlign: 'right' }}>
+                              {esDolares ? '$' : '$'}{(detalle.precio_unitario || 0).toFixed(2)}
+                            </td>
+                            <td style={{ paddingTop: '12px', paddingBottom: '12px', textAlign: 'right', fontWeight: 500 }}>
+                              {esDolares ? '$' : '$'}{subtotal.toFixed(2)}
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                    <tfoot>
+                      {totalPesos > 0 && (
+                        <tr style={{ borderTop: '1px solid #e5e7eb' }}>
+                          <td colSpan={3} style={{ paddingTop: '12px', textAlign: 'right', fontSize: '15px', fontWeight: 600, color: '#666' }}>
+                            Total en Pesos (ARS):
+                          </td>
+                          <td style={{ paddingTop: '12px', textAlign: 'right', fontSize: '16px', fontWeight: 700, color: '#059669' }}>
+                            {formatPrice(totalPesos)}
+                          </td>
+                        </tr>
+                      )}
+                      {totalDolares > 0 && (
+                        <tr>
+                          <td colSpan={3} style={{ paddingTop: '8px', textAlign: 'right', fontSize: '15px', fontWeight: 600, color: '#666' }}>
+                            Total en Dólares (USD):
+                          </td>
+                          <td style={{ paddingTop: '8px', textAlign: 'right', fontSize: '16px', fontWeight: 700, color: '#2563eb' }}>
+                            ${totalDolares.toFixed(2)}
+                          </td>
+                        </tr>
+                      )}
+                    </tfoot>
+                  </table>
+                </>
+              );
+            })()}
           </div>
 
           {/* Acciones de estado */}

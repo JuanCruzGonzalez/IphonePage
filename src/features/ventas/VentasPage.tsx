@@ -4,21 +4,25 @@ import { queryKeys } from '../../lib/queryClient';
 import { VentaConDetalles } from '../../core/types';
 import {
   calculateVentaTotal,
-  calculateMetrics,
+  calculateMetricsConDolares,
   dateToYMD,
   formatDate,
   getTodayYMD,
-  formatCurrency,
   getCurrentMonthRange,
-  filterByDateRange
+  filterByDateRange,
+  formatPriceDolares
 } from '../../shared/utils';
 import { Pagination } from '../../shared/components/Pagination';
 import { useVentas } from './context/VentasContext';
 import { useGastos } from '../gastos/context/GastosContext';
 import { ModalNuevaVenta } from './components/ModalNuevaVenta';
+import { ModalCotizacionDolar } from './components/ModalCotizacionDolar';
+import { VentasMetricsDisplay } from './components/VentasMetricsDisplay';
 import { getProductosActivos } from '../productos/services/productoService';
 import { getPromocionesActivas } from '../promociones/services/promocionService';
+import { getCotizacionActual } from './services/cotizacionService';
 import { useToast } from '../../shared/hooks/useToast';
+import { useModal } from '../../shared/hooks/useModal';
 
 export const VentasPage: React.FC = () => {
   const {
@@ -34,6 +38,7 @@ export const VentasPage: React.FC = () => {
 
   const { gastos } = useGastos();
   const { showError, showWarning } = useToast();
+  const modalCotizacion = useModal();
 
   const { data: productosActivos = [] } = useQuery({
     queryKey: queryKeys.productosActivos,
@@ -45,6 +50,12 @@ export const VentasPage: React.FC = () => {
     queryKey: queryKeys.promocionesActivas,
     queryFn: getPromocionesActivas,
     staleTime: 1000 * 60 * 5,
+  });
+
+  const { data: cotizacionActual = 1000 } = useQuery({
+    queryKey: queryKeys.cotizacionActual,
+    queryFn: getCotizacionActual,
+    staleTime: 1000 * 60 * 5, // 5 minutos
   });
 
   const [desde, setDesde] = useState<string>('');
@@ -83,7 +94,7 @@ export const VentasPage: React.FC = () => {
   const monthRange = getCurrentMonthRange();
   const ventasMesActual = filterByDateRange(ventas, monthRange, (v) => dateToYMD(v.fecha));
   const gastosActivos = gastos.filter(g => g.estado === true);
-  const metricsMesActual = calculateMetrics(ventasMesActual, gastosActivos);
+  const metricsMesActual = calculateMetricsConDolares(ventasMesActual, gastosActivos, cotizacionActual);
 
   return (
     <div className="page">
@@ -92,29 +103,36 @@ export const VentasPage: React.FC = () => {
           <h1 className="page-title">Ventas</h1>
           <p className="page-subtitle">Gestiona el historial de ventas</p>
         </div>
-        <button className="btn-primary" onClick={modalNuevaVenta.open}>
-          + Nueva Venta
-        </button>
+        <div style={{ display: 'flex', gap: '0.5rem' }}>
+          <button 
+            className="btn-secondary" 
+            onClick={modalCotizacion.open}
+            title="Gestionar cotización del dólar"
+          >
+            💵 Dólar
+          </button>
+          <button className="btn-primary" onClick={modalNuevaVenta.open}>
+            + Nueva Venta
+          </button>
+        </div>
       </div>
 
-      <div className="stats-grid">
-        <div className="stat-card-minimal">
-          <div className="stat-label">Ingreso (mes actual)</div>
-          <div className="stat-value">{formatCurrency(metricsMesActual.revenue)}</div>
-        </div>
-        <div className="stat-card-minimal">
-          <div className="stat-label">Costo (mes actual)</div>
-          <div className="stat-value">{formatCurrency(metricsMesActual.cost)}</div>
-        </div>
-        <div className="stat-card-minimal">
-          <div className="stat-label">Ganancia (mes actual)</div>
-          <div className="stat-value">{formatCurrency(metricsMesActual.profit)}</div>
-        </div>
-        <div className="stat-card-minimal">
+      {/* Métricas del mes actual */}
+      <div style={{ marginBottom: '1rem' }}>
+        <h3 style={{ fontSize: '0.875rem', fontWeight: 600, color: '#64748b', marginBottom: '0.75rem' }}>
+          Métricas del Mes Actual
+        </h3>
+        <VentasMetricsDisplay metrics={metricsMesActual} showUSD={true} />
+      </div>
+
+      {/* Ventas de hoy */}
+      <div style={{ marginBottom: '1.5rem' }}>
+        <div className="stat-card-minimal" style={{ display: 'inline-block', minWidth: '200px' }}>
           <div className="stat-label">Ventas Hoy</div>
           <div className="stat-value">{ventasHoy}</div>
         </div>
       </div>
+
       <div className="stats-grid ventas-filters">
         <div className="ventas-filters-row">
           <div className="filter-column">
@@ -319,7 +337,7 @@ export const VentasPage: React.FC = () => {
                           <span>{detalle.producto.nombre}</span>
                           <span className="text-muted"> ×{detalle.cantidad}</span>
                           <span style={{ marginLeft: '10px', color: '#666' }}>
-                            ${detalle.precio_unitario}
+                            {formatPriceDolares(detalle.precio_unitario, detalle.producto.dolares)}
                           </span>
                         </>
                       ) : (
@@ -327,7 +345,7 @@ export const VentasPage: React.FC = () => {
                       )}
                     </div>
                     <span style={{ fontWeight: 'bold' }}>
-                      ${detalle.cantidad * detalle.precio_unitario}
+                      {formatPriceDolares(detalle.cantidad * detalle.precio_unitario, detalle.producto?.dolares)}
                     </span>
                   </div>
                 ))}
@@ -356,6 +374,11 @@ export const VentasPage: React.FC = () => {
         promociones={promocionesActivas}
         showError={showError}
         showWarning={showWarning}
+      />
+      
+      <ModalCotizacionDolar 
+        isOpen={modalCotizacion.isOpen}
+        onClose={modalCotizacion.close}
       />
     </div>
   );

@@ -174,7 +174,7 @@ export const PedidosPage: React.FC = () => {
 
       {/* Filtros y búsqueda */}
       <div className="card">
-        <div style={{ display: 'flex', gap: '12px', marginBottom: '16px', paddingRight: '24px' }}>
+        <div style={{ display: 'flex', gap: '12px', marginBottom: '16px', paddingRight: '24px', padding: '24px' }}>
           <select 
             value={filtroEstado} 
             onChange={(e) => setFiltroEstado(e.target.value as any)}

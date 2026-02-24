@@ -13,7 +13,7 @@ export interface Producto {
   accesorio?: boolean; // Indica si el producto es un accesorio
   destacado?: boolean; // Indica si el producto es destacado en la página principal
   orden_destacado?: number | null; // Orden de visualización en destacados
-  condicion?: 'nuevo' | 'usado'; // Condición del producto
+  condicion?: 'nuevo' | 'usado_premium' | 'usado'; // Condición del producto
   dolares?: boolean; // Indica si el precio está en dólares
 }
 
@@ -78,6 +78,7 @@ export interface Venta {
   fecha: string;
   estado: boolean;
   baja: boolean;
+  cotizacion_dolar?: number | null; // Valor del dólar al momento de la venta
 }
 
 export interface DetalleVenta {
@@ -116,6 +117,27 @@ export interface Gasto {
   descripcion: string | null;
   estado: boolean;
 }
+
+// =============================================
+// COTIZACIÓN DEL DÓLAR
+// =============================================
+
+export interface CotizacionDolar {
+  id_cotizacion: number;
+  fecha: string;
+  valor: number; // Cuántos pesos vale 1 dólar
+  observaciones?: string | null;
+  created_at?: string;
+}
+
+export interface CotizacionDolarInput {
+  valor: number;
+  observaciones?: string;
+}
+
+// =============================================
+// FIN COTIZACIÓN DEL DÓLAR
+// =============================================
 
 export interface Categoria {
   id_categoria: number;

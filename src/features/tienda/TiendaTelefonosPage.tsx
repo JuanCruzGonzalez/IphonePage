@@ -3,6 +3,7 @@ import { useNavigate, useSearchParams } from 'react-router-dom';
 import { Producto, Categoria } from '../../core/types';
 import { getProductosActivos } from '../productos/services/productoService';
 import { getCategoriasActivas } from '../categorias/services/categoriaService';
+import { generateProductUrl } from '../../shared/utils';
 import { ProductosGrid } from './components/ProductosGrid';
 import { useCarrito } from './context/CarritoContext';
 import { supabase } from '../../core/config/supabase';
@@ -11,6 +12,7 @@ export const TiendaTelefonosPage: React.FC = () => {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const busqueda = searchParams.get('q') || '';
+  const condicionParam = searchParams.get('condicion') as 'nuevo' | 'usado_premium' | 'usado' | null;
 
   const {
     obtenerItemEnCarrito,
@@ -24,10 +26,15 @@ export const TiendaTelefonosPage: React.FC = () => {
   const [categoriaSeleccionada, setCategoriaSeleccionada] = useState<number | null>(null);
   const [productosCategorias, setProductosCategorias] = useState<Map<number, number[]>>(new Map());
   const [ordenPrecio, setOrdenPrecio] = useState<'none' | 'asc' | 'desc'>('none');
+  const [condicionSeleccionada, setCondicionSeleccionada] = useState<'nuevo' | 'usado_premium' | 'usado' | null>(condicionParam);
 
   useEffect(() => {
     cargarProductos();
   }, []);
+
+  useEffect(() => {
+    setCondicionSeleccionada(condicionParam);
+  }, [condicionParam]);
 
   const cargarProductos = async () => {
     try {
@@ -87,6 +94,10 @@ export const TiendaTelefonosPage: React.FC = () => {
       });
     }
 
+    if (condicionSeleccionada !== null) {
+      result = result.filter(p => (p.condicion || 'nuevo') === condicionSeleccionada);
+    }
+
     if (ordenPrecio === 'asc') {
       result = [...result].sort((a, b) => a.precioventa - b.precioventa);
     } else if (ordenPrecio === 'desc') {
@@ -102,10 +113,11 @@ export const TiendaTelefonosPage: React.FC = () => {
     }
 
     return result;
-  }, [productos, busqueda, categoriaSeleccionada, productosCategorias, ordenPrecio]);
+  }, [productos, busqueda, categoriaSeleccionada, productosCategorias, ordenPrecio, condicionSeleccionada]);
 
   const handleVerDetalleProducto = (producto: Producto) => {
-    navigate(`/producto/${producto.id_producto}`);
+    const productUrl = generateProductUrl(producto.id_producto, producto.nombre);
+    navigate(`/producto/${productUrl}`);
   };
 
   if (loading) {
@@ -126,8 +138,8 @@ export const TiendaTelefonosPage: React.FC = () => {
               ? categoriasDisponibles.find(c => c.id_categoria === categoriaSeleccionada)?.nombre
               : 'Teléfonos'}
           </h2>
-          {(categoriaSeleccionada || ordenPrecio !== 'none') && (
-            <button onClick={() => { setCategoriaSeleccionada(null); setOrdenPrecio('none'); }} className="modern-clear-filter">
+          {(categoriaSeleccionada || ordenPrecio !== 'none' || condicionSeleccionada) && (
+            <button onClick={() => { setCategoriaSeleccionada(null); setOrdenPrecio('none'); setCondicionSeleccionada(null); }} className="modern-clear-filter">
               Limpiar filtros
             </button>
           )}
@@ -135,7 +147,7 @@ export const TiendaTelefonosPage: React.FC = () => {
 
         {/* Filtros */}
         <div style={{ display: 'flex', gap: '1rem', flexWrap: 'wrap', marginBottom: '1.5rem', alignItems: 'center' }}>
-          {categoriasDisponibles.length > 0 && (
+          {/* {categoriasDisponibles.length > 0 && (
             <select
               value={categoriaSeleccionada ?? ''}
               onChange={(e) => setCategoriaSeleccionada(e.target.value ? Number(e.target.value) : null)}
@@ -149,7 +161,7 @@ export const TiendaTelefonosPage: React.FC = () => {
                 </option>
               ))}
             </select>
-          )}
+          )} */}
 
           <select
             value={ordenPrecio}
@@ -160,6 +172,18 @@ export const TiendaTelefonosPage: React.FC = () => {
             <option value="none">Ordenar por precio</option>
             <option value="asc">Menor a Mayor</option>
             <option value="desc">Mayor a Menor</option>
+          </select>
+
+          <select
+            value={condicionSeleccionada ?? ''}
+            onChange={(e) => setCondicionSeleccionada(e.target.value ? e.target.value as 'nuevo' | 'usado_premium' | 'usado' : null)}
+            className="modern-category-btn"
+            style={{ fontSize: '0.85rem', padding: '0.4rem 1rem', cursor: 'pointer' }}
+          >
+            <option value="">Todas las condiciones</option>
+            <option value="nuevo">Nuevo</option>
+            <option value="usado_premium">Usado Premium</option>
+            <option value="usado">Usado</option>
           </select>
         </div>
 

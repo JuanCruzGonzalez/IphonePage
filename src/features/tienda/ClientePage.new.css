@@ -469,7 +469,7 @@
 
 .modern-feature-icon {
     width: 4rem;
-    height: 4rem;
+    /* height: 4rem; */
     margin: 0 auto 1.5rem;
     border-radius: 1rem;
     display: flex;

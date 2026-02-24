@@ -25,19 +25,8 @@ export async function getPedidos(): Promise<PedidoConDetalles[]> {
         .from('pedido_detalle')
         .select(`
           *,
-          producto:id_producto (
-            id_producto,
-            nombre,
-            descripcion,
-            imagen_path,
-            id_unidad_medida
-          ),
-          promocion:id_promocion (
-            id_promocion,
-            name,
-            precio,
-            imagen_path
-          )
+          producto (*),
+          promocion (*)
         `)
         .eq('id_pedido', pedido.id_pedido);
 
@@ -81,8 +70,8 @@ export async function getPedidosPorEstado(estado: EstadoPedido): Promise<PedidoC
         .from('pedido_detalle')
         .select(`
           *,
-          producto:id_producto (*),
-          promocion:id_promocion (*)
+          producto (*),
+          promocion (*)
         `)
         .eq('id_pedido', pedido.id_pedido);
 
@@ -122,8 +111,8 @@ export async function getPedidoById(id_pedido: number): Promise<PedidoConDetalle
     .from('pedido_detalle')
     .select(`
       *,
-      producto:id_producto (*),
-      promocion:id_promocion (*)
+      producto (*),
+      promocion (*)
     `)
     .eq('id_pedido', id_pedido);
 
@@ -162,8 +151,8 @@ export async function buscarPedidos(query: string): Promise<PedidoConDetalles[]>
         .from('pedido_detalle')
         .select(`
           *,
-          producto:id_producto (*),
-          promocion:id_promocion (*)
+          producto (*),
+          promocion (*)
         `)
         .eq('id_pedido', pedido.id_pedido);
 

@@ -36,7 +36,7 @@ export const ModalNuevoProducto = React.memo<ModalNuevoProductoProps>(({
   const [promocionActiva, setPromocionActiva] = useState(initialProduct?.promocion_activa ?? false);
   const [precioPromocion, setPrecioPromocion] = useState(initialProduct?.precio_promocion ? String(initialProduct.precio_promocion) : '');
   const [accesorio, setAccesorio] = useState(initialProduct?.accesorio ?? false);
-  const [condicion, setCondicion] = useState<'nuevo' | 'usado'>(initialProduct?.condicion ?? 'nuevo');
+  const [condicion, setCondicion] = useState<'nuevo' | 'usado_premium' | 'usado'>(initialProduct?.condicion ?? 'nuevo');
   const [destacado, setDestacado] = useState(initialProduct?.destacado ?? false);
   const [ordenDestacado, setOrdenDestacado] = useState(initialProduct?.orden_destacado ? String(initialProduct.orden_destacado) : '');
   const [categoriasSeleccionadas, setCategoriasSeleccionadas] = useState<number[]>(categoriasIniciales);
@@ -249,8 +249,9 @@ export const ModalNuevoProducto = React.memo<ModalNuevoProductoProps>(({
           </div>
           <div className="form-group">
             <label>Condición</label>
-            <select value={condicion} onChange={(e) => setCondicion(e.target.value as 'nuevo' | 'usado')}>
+            <select value={condicion} onChange={(e) => setCondicion(e.target.value as 'nuevo' | 'usado_premium' | 'usado')}>
               <option value="nuevo">Nuevo</option>
+              <option value="usado_premium">Usado Premium</option>
               <option value="usado">Usado</option>
             </select>
           </div>

@@ -1,6 +1,7 @@
 // api/ventasService.ts
 import { supabase, handleAuthError } from '../../../core/config/supabase';
 import { DetalleVenta, VentaConDetalles } from '../../../core/types';
+import { getCotizacionActual } from './cotizacionService';
 
 // ============= VENTAS =============
 export async function getVentas() {
@@ -169,10 +170,14 @@ export async function getVentasPage(
 export async function createVenta(
   fecha: string,
   detalles: any[],
-  estado: boolean
+  estado: boolean,
+  cotizacion_dolar?: number
 ) {
+  // Si no se proporciona cotización, obtener la actual
+  const cotizacion = cotizacion_dolar ?? await getCotizacionActual();
+
   const { data, error } = await supabase.rpc('create_venta_transaction', {
-    p_venta: { fecha, estado },
+    p_venta: { fecha, estado, cotizacion_dolar: cotizacion },
     p_detalles: detalles,
   });
 

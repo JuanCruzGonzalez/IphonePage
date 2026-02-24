@@ -3,6 +3,7 @@ import { useNavigate, useSearchParams } from 'react-router-dom';
 import { Producto, Categoria } from '../../core/types';
 import { getProductosActivos } from '../productos/services/productoService';
 import { getCategoriasActivas } from '../categorias/services/categoriaService';
+import { generateProductUrl } from '../../shared/utils';
 import { ProductosGrid } from './components/ProductosGrid';
 import { useCarrito } from './context/CarritoContext';
 import { supabase } from '../../core/config/supabase';
@@ -97,7 +98,8 @@ export const TiendaProductosPage: React.FC = () => {
   }, [productos, busqueda, categoriaSeleccionada, productosCategorias, ordenPrecio]);
 
   const handleVerDetalleProducto = (producto: Producto) => {
-    navigate(`/producto/${producto.id_producto}`);
+    const productUrl = generateProductUrl(producto.id_producto, producto.nombre);
+    navigate(`/producto/${productUrl}`);
   };
 
   if (loading) {

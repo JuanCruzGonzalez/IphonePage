@@ -3,6 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { Producto } from '../../core/types';
 import { supabase } from '../../core/config/supabase';
 import { formatPriceDolares } from '../../shared/utils/formatters';
+import { generateProductUrl, extractProductIdFromSlug } from '../../shared/utils';
 import { ProductDetailGallery } from './components/ProductDetailGallery';
 import { ProductosDestacadosSlider } from './components/ProductosDestacadosSlider';
 import { useCarrito } from './context/CarritoContext';
@@ -27,13 +28,19 @@ export const ProductoDetallePage: React.FC = () => {
   );
 
   const handleVerDetalleProducto = (prod: Producto) => {
-    navigate(`/producto/${prod.id_producto}`);
+    const productUrl = generateProductUrl(prod.id_producto, prod.nombre);
+    navigate(`/producto/${productUrl}`);
     window.scrollTo(0, 0);
   };
 
   useEffect(() => {
     if (id) {
-      cargarProducto(parseInt(id));
+      const productId = extractProductIdFromSlug(id);
+      if (productId) {
+        cargarProducto(productId);
+      } else {
+        navigate('/');
+      }
     }
   }, [id]);
 
