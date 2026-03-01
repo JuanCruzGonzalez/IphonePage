@@ -19,36 +19,19 @@ export async function createEmpleado({ email, password, nombre, apellido, fecha_
 	dni?: string;
 	estado?: string;
 }) {
-	// Guardar la sesión del admin antes del signup
-	const { data: sessionData } = await supabase.auth.getSession();
-	const adminSession = sessionData?.session;
+	// Forzar refresh del token para asegurar que app_metadata esté actualizado
+	const { data: refreshed, error: refreshError } = await supabase.auth.refreshSession();
+	if (refreshError || !refreshed.session) throw new Error('No hay sesión activa');
 
-	const { data, error } = await supabase.auth.signUp({
-		email,
-		password,
-		options: {
-			data: { role: 'empleado' }
-		}
+	const { data, error } = await supabase.functions.invoke('create-empleado', {
+		body: { email, password, nombre, apellido, fecha_nacimiento, dni, estado },
+		headers: {
+			Authorization: `Bearer ${refreshed.session.access_token}`,
+		},
 	});
+
 	if (error) throw error;
-
-	const userId = data?.user?.id;
-
-	// Restaurar la sesión del admin inmediatamente
-	if (adminSession) {
-		await supabase.auth.setSession({
-			access_token: adminSession.access_token,
-			refresh_token: adminSession.refresh_token,
-		});
-	}
-
-	// Guardar datos del perfil del nuevo empleado usando la sesión del admin
-	if (userId && (nombre || apellido || fecha_nacimiento || dni)) {
-		await supabase
-			.from('profiles')
-			.update({ nombre, apellido, fecha_nacimiento, dni, estado: estado || 'activo' })
-			.eq('user_id', userId);
-	}
+	if (data?.error) throw new Error(data.error);
 
 	return true;
 }
