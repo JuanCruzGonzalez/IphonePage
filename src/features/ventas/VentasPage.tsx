@@ -4,21 +4,14 @@ import { queryKeys } from '../../lib/queryClient';
 import { VentaConDetalles } from '../../core/types';
 import {
   calculateVentaTotalesPorMoneda,
-  calculateMetricsConDolares,
-  dateToYMD,
   formatDate,
-  getTodayYMD,
-  getCurrentMonthRange,
 } from '../../shared/utils';
 import { Pagination } from '../../shared/components/Pagination';
 import { useVentas } from './context/VentasContext';
-import { useGastos } from '../gastos/context/GastosContext';
 import { ModalNuevaVenta } from './components/ModalNuevaVenta';
 import { ModalCotizacionDolar } from './components/ModalCotizacionDolar';
 import { getProductosActivos } from '../productos/services/productoService';
 import { getPromocionesActivas } from '../promociones/services/promocionService';
-import { getCotizacionActual } from './services/cotizacionService';
-import { getVentasPage } from './services/ventaService';
 import { useToast } from '../../shared/hooks/useToast';
 import { useModal } from '../../shared/hooks/useModal';
 
@@ -34,7 +27,6 @@ export const VentasPage: React.FC = () => {
     handleBuscarVentas,
   } = useVentas();
 
-  const { gastos } = useGastos();
   const { showError, showWarning } = useToast();
   const modalCotizacion = useModal();
 
@@ -50,21 +42,7 @@ export const VentasPage: React.FC = () => {
     staleTime: 1000 * 60 * 5,
   });
 
-  const { data: cotizacionActual = 1000 } = useQuery({
-    queryKey: queryKeys.cotizacionActual,
-    queryFn: getCotizacionActual,
-    staleTime: 1000 * 60 * 5, // 5 minutos
-  });
-
   // Query separada para métricas del mes actual (independiente de la paginación)
-  const monthRange = getCurrentMonthRange();
-  const { data: ventasMesData } = useQuery({
-    queryKey: ['ventas', 'metricas-mes', monthRange.start, monthRange.end],
-    queryFn: () => getVentasPage(1, 1000, { desde: monthRange.start, hasta: monthRange.end, baja: false }),
-    staleTime: 1000 * 60 * 2, // 2 minutos
-  });
-  const ventasMesActual = ventasMesData?.ventas || [];
-
   const [desde, setDesde] = useState<string>('');
   const [hasta, setHasta] = useState<string>('');
   const [estadoFilter, setEstadoFilter] = useState<'all' | 'pagada' | 'pendiente' | 'baja'>('all');
