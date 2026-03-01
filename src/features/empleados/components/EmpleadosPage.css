@@ -1,0 +1,180 @@
+.empleadosContainer {
+  padding: 24px;
+  max-width: 700px;
+}
+
+.tituloEmpleados {
+  margin-bottom: 32px;
+}
+
+.nuevoEmpleadoBtn {
+  margin-bottom: 24px;
+  background: #2563eb;
+  color: white;
+  border: none;
+  border-radius: 8px;
+  padding: 10px 20px;
+  font-weight: 500;
+  font-size: 15px;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+.nuevoEmpleadoBtn:hover {
+  background: #1d4ed8;
+}
+
+.modalEmpleadoForm {
+  min-width: 320px;
+  padding: 16px;
+}
+
+.formEmpleado {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.inputEmpleado {
+  padding: 8px;
+  border-radius: 6px;
+  border: 1px solid #e2e8f0;
+  font-size: 15px;
+}
+
+.submitEmpleadoBtn {
+  padding: 10px;
+  border-radius: 8px;
+  background: #2563eb;
+  color: white;
+  font-weight: 500;
+  font-size: 15px;
+  border: none;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+.submitEmpleadoBtn:hover {
+  background: #1d4ed8;
+}
+
+.mensajeError {
+  color: #dc2626;
+  margin-top: 12px;
+}
+
+.mensajeExito {
+  color: #16a34a;
+  margin-top: 12px;
+}
+
+.bg-light {
+  background-color: #f8f9fa;
+}
+
+/* Detalle empleado modal */
+.modalEmpleadoDetalleBody {
+  max-height: 70vh;
+  overflow-y: auto;
+  padding: 16px;
+}
+
+.empleadoDetalleTable {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.empleadoDetalleLabel {
+  font-weight: bold;
+  padding: 8px;
+  border-bottom: 1px solid #eee;
+  width: 180px;
+}
+
+.empleadoDetalleValue {
+  padding: 8px;
+  border-bottom: 1px solid #eee;
+}
+
+.empleadoDetalleFooter {
+  margin-top: 24px;
+  text-align: right;
+}
+.empleadosContainer {
+  padding: 24px;
+  max-width: 700px;
+  margin: 0 auto;
+}
+
+.tituloEmpleados {
+  margin-bottom: 32px;
+}
+
+.nuevoEmpleadoBtn {
+  margin-bottom: 24px;
+  background: #2563eb;
+  color: white;
+  border: none;
+  border-radius: 8px;
+  padding: 10px 20px;
+  font-weight: 500;
+  font-size: 15px;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+.nuevoEmpleadoBtn:hover {
+  background: #1d4ed8;
+}
+
+.modalEmpleadoForm {
+  min-width: 320px;
+  padding: 16px;
+}
+
+.formEmpleado {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.inputEmpleado {
+  padding: 8px;
+  border-radius: 6px;
+  border: 1px solid #e2e8f0;
+  font-size: 15px;
+}
+
+.submitEmpleadoBtn {
+  padding: 10px;
+  border-radius: 8px;
+  background: #2563eb;
+  color: white;
+  font-weight: 500;
+  font-size: 15px;
+  border: none;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+.submitEmpleadoBtn:hover {
+  background: #1d4ed8;
+}
+
+.mensajeError {
+  color: #dc2626;
+  margin-top: 12px;
+}
+
+.mensajeExito {
+  color: #16a34a;
+  margin-top: 12px;
+}
+
+.bg-light {
+  background-color: #f8f9fa;
+}
+
+.bg-white {
+  background-color: #ffffff;
+}
+
+.color-black {
+  color: #000000;
+}

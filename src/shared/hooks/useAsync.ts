@@ -2,10 +2,10 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 
 /**
  * useAsync
- * Lightweight helper to execute async functions with loading/error/value state and
- * automatic safety against setting state on unmounted components.
+ * Helper ligero para ejecutar funciones asíncronas con estados de carga/error/valor y
+ * protección automática contra configurar estado en componentes desmontados.
  *
- * Example:
+ * Ejemplo:
  * const { execute, loading, error, value } = useAsync<MyType>();
  * const result = await execute(() => fetchSomething());
  */
@@ -22,12 +22,13 @@ export function useAsync<T>() {
     const [value, setValue] = useState<T | null>(null);
 
     const execute = useCallback(async (fn: () => Promise<T>) => {
+        setLoading(true);
         setError(null);
         try {
             const res = await fn();
-            // If the component unmounted while awaiting, just return the result.
+
             if (!mountedRef.current) return res;
-            // Only store a value when the function returns something (avoid storing `undefined` for fire-and-forget tasks)
+
             if (typeof res !== 'undefined') setValue(res);
             setLoading(false);
             return res;

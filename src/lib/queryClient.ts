@@ -81,4 +81,8 @@ export const queryKeys = {
   cotizacionDolar: ['cotizacion-dolar'] as const,
   cotizacionActual: ['cotizacion-dolar', 'actual'] as const,
   historialCotizaciones: ['cotizacion-dolar', 'historial'] as const,
+
+  // Empleados
+  empleados: ['empleados'] as const,
+  empleadoDetalle: (id: number) => ['empleados', id] as const,
 } as const;

@@ -38,13 +38,13 @@ const ArbolCategoriasItem: React.FC<ArbolCategoriasItemProps> = ({
                                     <div style={{ display: 'flex', alignItems: 'center', paddingLeft: `${nivel * 24}px` }}>
                                         {tieneHijos ? (
                                             <>
-                                                {estaExpandido ? <svg xmlns="http://www.w3.org/2000/svg" fill="#000000" version="1.1" id="Layer_1" width="20px" height="20px" viewBox="0 0 100 100" enable-background="new 0 0 100 100">
+                                                {estaExpandido ? <svg xmlns="http://www.w3.org/2000/svg" fill="#000000" version="1.1" id="Layer_1" width="20px" height="20px" viewBox="0 0 100 100" enableBackground="new 0 0 100 100">
                                                     <g>
                                                         <path d="M78.466,35.559L50.15,63.633L22.078,35.317c-0.777-0.785-2.044-0.789-2.828-0.012s-0.789,2.044-0.012,2.827L48.432,67.58   c0.365,0.368,0.835,0.563,1.312,0.589c0.139,0.008,0.278-0.001,0.415-0.021c0.054,0.008,0.106,0.021,0.16,0.022   c0.544,0.029,1.099-0.162,1.515-0.576l29.447-29.196c0.785-0.777,0.79-2.043,0.012-2.828S79.249,34.781,78.466,35.559z" />
                                                     </g>
                                                 </svg>
                                                     :
-                                                    <svg xmlns="http://www.w3.org/2000/svg" fill="#000000" version="1.1" id="Layer_1" width="20px" height="20px" viewBox="0 0 100 100" enable-background="new 0 0 100 100" style={{ transform: 'rotate(180deg)' }}>
+                                                    <svg xmlns="http://www.w3.org/2000/svg" fill="#000000" version="1.1" id="Layer_1" width="20px" height="20px" viewBox="0 0 100 100" enableBackground="new 0 0 100 100" style={{ transform: 'rotate(180deg)' }}>
                                                         <g>
                                                             <path d="M33.934,54.458l30.822,27.938c0.383,0.348,0.864,0.519,1.344,0.519c0.545,0,1.087-0.222,1.482-0.657   c0.741-0.818,0.68-2.083-0.139-2.824L37.801,52.564L64.67,22.921c0.742-0.818,0.68-2.083-0.139-2.824   c-0.817-0.742-2.082-0.679-2.824,0.139L33.768,51.059c-0.439,0.485-0.59,1.126-0.475,1.723   C33.234,53.39,33.446,54.017,33.934,54.458z" />
                                                         </g>

@@ -48,7 +48,6 @@ export const Toast: React.FC<ToastProps> = ({
   );
 };
 
-// Modal de confirmación (para reemplazar window.confirm)
 interface ConfirmModalProps {
   isOpen: boolean;
   onClose: () => void;

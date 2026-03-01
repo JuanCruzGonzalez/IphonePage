@@ -5,13 +5,13 @@ import { useCategorias } from './context/CategoriasContext';
 import { ModalCategoria } from './components/ModalCategoria';
 
 export const CategoriasPage: React.FC = () => {
-  const { 
-    categorias, 
-    isLoading, 
+  const {
+    categorias,
+    isLoading,
     categoriaToEdit,
     modalCategoria,
-    handleNuevaCategoria, 
-    handleEditarCategoria, 
+    handleNuevaCategoria,
+    handleEditarCategoria,
     handleToggleCategoriaEstado,
     handleSubmitCategoria
   } = useCategorias();
@@ -64,21 +64,20 @@ export const CategoriasPage: React.FC = () => {
         </div>
       </div>
 
-      <div className="card">
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px', paddingRight: '24px' }}>
-          <h2 className="card-title">Lista de Categorías</h2>
-          <div style={{ display: 'flex', gap: '8px' }}>
-            <select 
-              value={filtroEstado} 
-              onChange={(e) => setFiltroEstado(e.target.value as 'all' | 'activo' | 'inactivo')}
-              style={{ padding: '10px', backgroundColor: '#f9f9f9', border: '1px solid #ddd', borderRadius: '4px', color: '#333' }}
-            >
-              <option value="all">Todos</option>
-              <option value="activo">Activas</option>
-              <option value="inactivo">Inactivas</option>
-            </select>
-          </div>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px', paddingRight: '24px' }}>
+        <div style={{ display: 'flex', gap: '8px' }}>
+          <select
+            value={filtroEstado}
+            onChange={(e) => setFiltroEstado(e.target.value as 'all' | 'activo' | 'inactivo')}
+            style={{ padding: '10px', backgroundColor: '#f9f9f9', border: '1px solid #ddd', borderRadius: '4px', color: '#333' }}
+          >
+            <option value="all">Todos</option>
+            <option value="activo">Activas</option>
+            <option value="inactivo">Inactivas</option>
+          </select>
         </div>
+      </div>
+      <div className="card">
 
         <div className="table-wrapper">
           <table className="table">

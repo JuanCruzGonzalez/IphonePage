@@ -2,7 +2,7 @@ import { useCallback, useState } from 'react';
 
 /**
  * useModal
- * Small convenience hook to manage boolean modal open/close state.
+ * hook para el manejo de modales, con estado de abierto/cerrado y funciones para abrir, cerrar y alternar.
  */
 export function useModal(initial = false) {
   const [isOpen, setIsOpen] = useState<boolean>(initial);

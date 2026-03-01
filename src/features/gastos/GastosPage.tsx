@@ -65,7 +65,6 @@ export const GastosPage: React.FC = () => {
 
       <div className="card">
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px', paddingRight: '24px' }}>
-          <h2 className="card-title">Lista de Gastos</h2>
           <div style={{ display: 'flex', gap: '8px' }}>
             <select 
               value={filtroEstado} 

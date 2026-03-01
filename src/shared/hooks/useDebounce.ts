@@ -2,8 +2,8 @@ import { useEffect, useState } from 'react';
 
 /**
  * useDebounce
- * Returns a debounced value that updates after `delay` ms once `value` stops changing.
- * Useful for debouncing user input (e.g. search) before triggering requests.
+ * Retorna un valor rebotado que se actualiza después de `delay` ms una vez que `value` deja de cambiar.
+ * Útil para rebotear entrada del usuario (ej: búsqueda) antes de activar solicitudes.
  */
 export function useDebounce<T>(value: T, delay = 300) {
   const [debounced, setDebounced] = useState<T>(value);

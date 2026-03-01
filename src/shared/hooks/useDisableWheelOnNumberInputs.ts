@@ -14,14 +14,12 @@ export function useDisableWheelOnNumberInputs() {
         if (!el) return;
         if (el.tagName === 'INPUT') {
           const input = el as HTMLInputElement;
-          // Si es type=number evitamos que la rueda cambie su valor
+
           if (input.type === 'number') {
             e.preventDefault();
           }
         }
       } catch (err) {
-        // no bloquear si algo inesperado falla
-        // eslint-disable-next-line no-console
         console.error('useDisableWheelOnNumberInputs error:', err);
       }
     };

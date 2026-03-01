@@ -9,7 +9,6 @@ import {
   formatDate,
   getTodayYMD,
   getCurrentMonthRange,
-  filterByDateRange
 } from '../../shared/utils';
 import { Pagination } from '../../shared/components/Pagination';
 import { useVentas } from './context/VentasContext';
@@ -20,6 +19,7 @@ import { VentasMetricsDisplay } from './components/VentasMetricsDisplay';
 import { getProductosActivos } from '../productos/services/productoService';
 import { getPromocionesActivas } from '../promociones/services/promocionService';
 import { getCotizacionActual } from './services/cotizacionService';
+import { getVentasPage } from './services/ventaService';
 import { useToast } from '../../shared/hooks/useToast';
 import { useModal } from '../../shared/hooks/useModal';
 
@@ -57,6 +57,15 @@ export const VentasPage: React.FC = () => {
     staleTime: 1000 * 60 * 5, // 5 minutos
   });
 
+  // Query separada para métricas del mes actual (independiente de la paginación)
+  const monthRange = getCurrentMonthRange();
+  const { data: ventasMesData } = useQuery({
+    queryKey: ['ventas', 'metricas-mes', monthRange.start, monthRange.end],
+    queryFn: () => getVentasPage(1, 1000, { desde: monthRange.start, hasta: monthRange.end, baja: false }),
+    staleTime: 1000 * 60 * 2, // 2 minutos
+  });
+  const ventasMesActual = ventasMesData?.ventas || [];
+
   const [desde, setDesde] = useState<string>('');
   const [hasta, setHasta] = useState<string>('');
   const [estadoFilter, setEstadoFilter] = useState<'all' | 'pagada' | 'pendiente' | 'baja'>('all');
@@ -89,10 +98,8 @@ export const VentasPage: React.FC = () => {
   const hoy = getTodayYMD();
   const ventasHoy = ventas.filter(v => dateToYMD(v.fecha) === hoy).length;
 
-  // ventas del mes actual
-  const monthRange = getCurrentMonthRange();
-  const ventasMesActual = filterByDateRange(ventas, monthRange, (v) => dateToYMD(v.fecha));
   const gastosActivos = gastos.filter(g => g.estado === true);
+
   const metricsMesActual = calculateMetricsConDolares(ventasMesActual, gastosActivos, cotizacionActual);
 
   return (
@@ -117,20 +124,20 @@ export const VentasPage: React.FC = () => {
       </div>
 
       {/* Métricas del mes actual */}
-      <div style={{ marginBottom: '1rem' }}>
+      {/* <div style={{ marginBottom: '1rem' }}>
         <h3 style={{ fontSize: '0.875rem', fontWeight: 600, color: '#64748b', marginBottom: '0.75rem' }}>
           Métricas del Mes Actual
         </h3>
         <VentasMetricsDisplay metrics={metricsMesActual} showUSD={true} />
-      </div>
+      </div> */}
 
       {/* Ventas de hoy */}
-      <div style={{ marginBottom: '1.5rem' }}>
+      {/* <div style={{ marginBottom: '1.5rem' }}>
         <div className="stat-card-minimal" style={{ display: 'inline-block', minWidth: '200px' }}>
           <div className="stat-label">Ventas Hoy</div>
           <div className="stat-value">{ventasHoy}</div>
         </div>
-      </div>
+      </div> */}
 
       <div className="stats-grid ventas-filters">
         <div className="ventas-filters-row">

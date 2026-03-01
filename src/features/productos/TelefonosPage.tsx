@@ -38,7 +38,6 @@ export const TelefonosPage: React.FC = () => {
     if (debounced !== productosSearchQuery) {
       handleBuscarProductos(debounced);
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [debounced]);
 
   const stockBajo = productos.filter(p => p.stock < 10).length;

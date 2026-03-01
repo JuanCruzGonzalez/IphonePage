@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { ReactQueryDevtools } from '@tanstack/react-query-devtools';
 import './core/styles/app.css';
+import { DashboardPage } from './features/dashboard/DashboardPage';
 import './core/styles/toast.css';
 import { Sidebar } from './shared/components/Sidebar';
 import { VentasPage } from './features/ventas/VentasPage';
@@ -20,9 +21,11 @@ import { PedidosPage } from './features/pedidos/PedidosPage';
 import { Toast, ConfirmModal } from './shared/components/ToastModal';
 import { useToast, useConfirm } from './shared/hooks/useToast';
 import { useDisableWheelOnNumberInputs } from './shared/hooks/useDisableWheelOnNumberInputs';
+import EmpleadosPage from './features/empleados/components/EmpleadosPage';
+import { EmpleadosProvider } from './features/empleados/context/EmpleadoContext';
 
 function App() {
-  const [activeSection, setActiveSection] = useState<'ventas' | 'telefonos' | 'accesorios' | 'stock' | 'promociones' | 'gastos' | 'categorias' | 'pedidos'>('ventas');
+  const [activeSection, setActiveSection] = useState<'dashboard' | 'ventas' | 'telefonos' | 'accesorios' | 'stock' | 'promociones' | 'gastos' | 'categorias' | 'pedidos' | 'empleados'>('dashboard');
 
   // Hooks para toast y confirmación
   const { toast, showSuccess, showError, showWarning, hideToast } = useToast();
@@ -65,38 +68,46 @@ function App() {
                   showError={showError}
                   showConfirm={showConfirm}
                 >
-                  <div className="app-container">
-                    <Sidebar activeSection={activeSection} onSectionChange={setActiveSection} />
+                  <EmpleadosProvider
+                    showSuccess={showSuccess}
+                    showError={showError}
+                    showConfirm={showConfirm}
+                  >
+                    <div className="app-container">
+                      <Sidebar activeSection={activeSection} onSectionChange={setActiveSection} />
 
-                    <main className="main-content">
-                      {activeSection === 'ventas' && <VentasPage />}
-                      {activeSection === 'telefonos' && <TelefonosPage />}
-                      {activeSection === 'accesorios' && <AccesoriosPage />}
-                      {activeSection === 'stock' && <StockPage />}
-                      {activeSection === 'promociones' && <PromocionesPage />}
-                      {activeSection === 'gastos' && <GastosPage />}
-                      {activeSection === 'categorias' && <CategoriasPage />}
-                      {activeSection === 'pedidos' && <PedidosPage />}
-                    </main>
+                      <main className="main-content">
+                        {activeSection === 'dashboard' && <DashboardPage />}
+                        {activeSection === 'ventas' && <VentasPage />}
+                        {activeSection === 'telefonos' && <TelefonosPage />}
+                        {activeSection === 'accesorios' && <AccesoriosPage />}
+                        {activeSection === 'stock' && <StockPage />}
+                        {activeSection === 'promociones' && <PromocionesPage />}
+                        {activeSection === 'gastos' && <GastosPage />}
+                        {activeSection === 'categorias' && <CategoriasPage />}
+                        {activeSection === 'pedidos' && <PedidosPage />}
+                        {activeSection === 'empleados' && <EmpleadosPage />}
+                      </main>
 
-                  {/* Toast Notification */}
-                  <Toast
-                    isOpen={toast.isOpen}
-                    message={toast.message}
-                    type={toast.type}
-                    onClose={hideToast}
-                  />
+                      {/* Toast Notification */}
+                      <Toast
+                        isOpen={toast.isOpen}
+                        message={toast.message}
+                        type={toast.type}
+                        onClose={hideToast}
+                      />
 
-                  {/* Confirm Modal */}
-                  <ConfirmModal
-                    isOpen={confirm.isOpen}
-                    onClose={hideConfirm}
-                    onConfirm={confirm.onConfirm}
-                    title={confirm.title}
-                    message={confirm.message}
-                    type={confirm.type}
-                  />
-                  </div>
+                      {/* Confirm Modal */}
+                      <ConfirmModal
+                        isOpen={confirm.isOpen}
+                        onClose={hideConfirm}
+                        onConfirm={confirm.onConfirm}
+                        title={confirm.title}
+                        message={confirm.message}
+                        type={confirm.type}
+                      />
+                    </div>
+                  </EmpleadosProvider>
                 </PedidosProvider>
               </CategoriasProvider>
             </GastosProvider>

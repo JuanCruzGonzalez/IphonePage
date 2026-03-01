@@ -217,3 +217,14 @@ export interface CrearPedidoInput {
     precio_unitario: number;
   }[];
 }
+
+export interface Empleado {
+  user_id: string;
+  email: string;
+  nombre: string;
+  apellido: string;
+  fecha_nacimiento: string;
+  dni: string;
+  estado: string;
+  created_at: string;
+}

@@ -1,18 +1,17 @@
 import { supabase, handleAuthError } from '../../core/config/supabase';
 
 const BUCKET_NAME = 'productos';
-const PROMOCIONES_BUCKET_NAME = 'productos'; // Usando el mismo bucket
+const PROMOCIONES_BUCKET_NAME = 'productos';
 
 /**
  * Subir una imagen al storage de Supabase
  */
 export async function uploadProductImage(file: File, productId: number): Promise<string> {
-  // Generar nombre único para el archivo
+
   const fileExt = file.name.split('.').pop();
   const fileName = `${productId}_${Date.now()}.${fileExt}`;
   const filePath = `${fileName}`;
 
-  // Subir archivo
   const { error } = await supabase.storage
     .from(BUCKET_NAME)
     .upload(filePath, file, {
@@ -26,7 +25,6 @@ export async function uploadProductImage(file: File, productId: number): Promise
     throw error;
   }
 
-  // Retornar la ruta del archivo
   return filePath;
 }
 
@@ -66,7 +64,6 @@ export async function updateProductImage(
   productId: number,
   oldImagePath?: string | null
 ): Promise<string> {
-  // Eliminar imagen anterior si existe
   if (oldImagePath) {
     try {
       await deleteProductImage(oldImagePath);
@@ -75,7 +72,6 @@ export async function updateProductImage(
     }
   }
 
-  // Subir nueva imagen
   return uploadProductImage(file, productId);
 }
 
@@ -85,12 +81,10 @@ export async function updateProductImage(
  * Subir una imagen de promoción al storage de Supabase
  */
 export async function uploadPromocionImage(file: File, promocionId: number): Promise<string> {
-  // Generar nombre único para el archivo con prefijo 'promo_'
   const fileExt = file.name.split('.').pop();
   const fileName = `promo_${promocionId}_${Date.now()}.${fileExt}`;
   const filePath = `${fileName}`;
 
-  // Subir archivo
   const { error } = await supabase.storage
     .from(PROMOCIONES_BUCKET_NAME)
     .upload(filePath, file, {
@@ -104,7 +98,6 @@ export async function uploadPromocionImage(file: File, promocionId: number): Pro
     throw error;
   }
 
-  // Retornar la ruta del archivo
   return filePath;
 }
 
@@ -144,7 +137,6 @@ export async function updatePromocionImage(
   promocionId: number,
   oldImagePath?: string | null
 ): Promise<string> {
-  // Eliminar imagen anterior si existe
   if (oldImagePath) {
     try {
       await deletePromocionImage(oldImagePath);
@@ -153,6 +145,5 @@ export async function updatePromocionImage(
     }
   }
 
-  // Subir nueva imagen
   return uploadPromocionImage(file, promocionId);
 }
