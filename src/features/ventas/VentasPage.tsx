@@ -15,7 +15,6 @@ import { useVentas } from './context/VentasContext';
 import { useGastos } from '../gastos/context/GastosContext';
 import { ModalNuevaVenta } from './components/ModalNuevaVenta';
 import { ModalCotizacionDolar } from './components/ModalCotizacionDolar';
-import { VentasMetricsDisplay } from './components/VentasMetricsDisplay';
 import { getProductosActivos } from '../productos/services/productoService';
 import { getPromocionesActivas } from '../promociones/services/promocionService';
 import { getCotizacionActual } from './services/cotizacionService';
@@ -94,13 +93,6 @@ export const VentasPage: React.FC = () => {
 
 
   const [ventaSeleccionada, setVentaSeleccionada] = useState<VentaConDetalles | null>(null);
-
-  const hoy = getTodayYMD();
-  const ventasHoy = ventas.filter(v => dateToYMD(v.fecha) === hoy).length;
-
-  const gastosActivos = gastos.filter(g => g.estado === true);
-
-  const metricsMesActual = calculateMetricsConDolares(ventasMesActual, gastosActivos, cotizacionActual);
 
   return (
     <div className="page">
