@@ -3,6 +3,7 @@ import { usePedidos } from './context/PedidosContext';
 import { ModalDetallePedido } from './components/ModalDetallePedido';
 import { formatPrice, formatDate } from '../../shared/utils';
 import { EstadoPedido } from '../../core/types';
+import CargandoPage from '../../shared/components/CargandoPage';
 
 export const PedidosPage: React.FC = () => {
   const {
@@ -36,13 +37,13 @@ export const PedidosPage: React.FC = () => {
   const handleBuscar = async () => {
     if (busqueda.trim()) {
       const resultados = await handleBuscarPedidos(busqueda);
-      setPedidosFiltrados(filtroEstado === 'all' 
-        ? resultados 
+      setPedidosFiltrados(filtroEstado === 'all'
+        ? resultados
         : resultados.filter(p => p.estado === filtroEstado)
       );
     } else {
-      setPedidosFiltrados(filtroEstado === 'all' 
-        ? pedidos 
+      setPedidosFiltrados(filtroEstado === 'all'
+        ? pedidos
         : pedidos.filter(p => p.estado === filtroEstado)
       );
     }
@@ -129,12 +130,7 @@ export const PedidosPage: React.FC = () => {
 
   if (isLoading) {
     return (
-      <div className="page">
-        <div className="loading-state">
-          <div className="loading-spinner"></div>
-          <p>Cargando pedidos...</p>
-        </div>
-      </div>
+      <CargandoPage mensaje="pedidos" />
     );
   }
 
@@ -175,8 +171,8 @@ export const PedidosPage: React.FC = () => {
       {/* Filtros y búsqueda */}
       <div className="card">
         <div style={{ display: 'flex', gap: '12px', marginBottom: '16px', paddingRight: '24px', padding: '24px' }}>
-          <select 
-            value={filtroEstado} 
+          <select
+            value={filtroEstado}
             onChange={(e) => setFiltroEstado(e.target.value as any)}
             style={{ padding: '10px', backgroundColor: '#f9f9f9', border: '1px solid #ddd', borderRadius: '4px', color: '#333' }}
           >
@@ -200,8 +196,8 @@ export const PedidosPage: React.FC = () => {
               Buscar
             </button>
             {busqueda && (
-              <button 
-                className="btn-secondary" 
+              <button
+                className="btn-secondary"
                 onClick={() => {
                   setBusqueda('');
                   setPedidosFiltrados(filtroEstado === 'all' ? pedidos : pedidos.filter(p => p.estado === filtroEstado));

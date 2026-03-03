@@ -4,6 +4,7 @@ import { ModalGasto } from './components/ModalGasto';
 import EstadisticasGrid from './components/EstadisticasGrid';
 import Filtros from './components/Filtros';
 import TablaGastos from './components/TablaGastos';
+import CargandoPage from '../../shared/components/CargandoPage';
 
 export const GastosPage: React.FC = () => {
   const {
@@ -20,12 +21,7 @@ export const GastosPage: React.FC = () => {
 
   if (isLoading) {
     return (
-      <div className="page">
-        <div className="loading-state">
-          <div className="loading-spinner"></div>
-          <p>Cargando gastos...</p>
-        </div>
-      </div>
+      <CargandoPage mensaje="gastos" />
     );
   }
 

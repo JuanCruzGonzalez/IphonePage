@@ -3,6 +3,7 @@ import { construirArbolCategorias } from './services/categoriaService';
 import { ArbolCategorias } from './components/ArbolCategorias';
 import { useCategorias } from './context/CategoriasContext';
 import { ModalCategoria } from './components/ModalCategoria';
+import CargandoPage from '../../shared/components/CargandoPage';
 
 export const CategoriasPage: React.FC = () => {
   const {
@@ -19,12 +20,7 @@ export const CategoriasPage: React.FC = () => {
 
   if (isLoading) {
     return (
-      <div className="page">
-        <div className="loading-state">
-          <div className="loading-spinner"></div>
-          <p>Cargando categorías...</p>
-        </div>
-      </div>
+      <CargandoPage mensaje="categorías" />
     );
   }
 
