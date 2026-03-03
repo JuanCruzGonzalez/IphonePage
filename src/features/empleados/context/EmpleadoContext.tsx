@@ -31,7 +31,7 @@ interface EmpleadosContextValue {
   handleNuevoEmpleado: () => void;
   handleEditarEmpleado: (empleado: Empleado) => void;
   handleSubmitEmpleado: ({ empleado }: { empleado: Empleado }, password?: string) => Promise<void>;
-  handleToggleEmpleadoEstado: (id_empleado: string, estadoActual: boolean, nombre: string) => Promise<void>;
+  handleToggleEmpleadoEstado: (empleado: Empleado) => Promise<void>;
 }
 
 const EmpleadosContext = createContext<EmpleadosContextValue | undefined>(undefined);
@@ -112,11 +112,11 @@ export const EmpleadosProvider: React.FC<EmpleadosProviderProps> = ({
   });
 
   const toggleEstadoMutation = useMutation({
-    mutationFn: ({ id, estado }: { id: string; estado: string }) => {
-      if (estado === 'activo') {
-        return darDeBajaEmpleado(id);
+    mutationFn: (empleado: Empleado) => {
+      if (empleado.estado === 'activo') {
+        return darDeBajaEmpleado(empleado.user_id);
       } else {
-        return darDeAltaEmpleado(id);
+        return darDeAltaEmpleado(empleado.user_id);
       }
     },
     onSuccess: (_, variables) => {
@@ -165,22 +165,17 @@ export const EmpleadosProvider: React.FC<EmpleadosProviderProps> = ({
   );
 
   const handleToggleEmpleadoEstado = async (
-    id_empleado: string,
-    estadoActual: boolean,
-    nombre: string
+    empleado: Empleado
   ) => {
-    const mensaje = estadoActual ? 'desactivar' : 'activar';
+    const mensaje = empleado.estado === 'activo' ? 'Dar de baja' : 'Dar de alta';
 
     showConfirm(
       `¿${mensaje.charAt(0).toUpperCase() + mensaje.slice(1)} empleado?`,
-      `¿Estás seguro de ${mensaje} "${nombre}"?`,
+      `¿Estás seguro de ${mensaje.toLowerCase()} "${empleado.nombre}"?`,
       async () => {
-        await toggleEstadoMutation.mutateAsync({
-          id: id_empleado,
-          estado: estadoActual ? 'activo' : 'baja',
-        });
+        await toggleEstadoMutation.mutateAsync(empleado);
       },
-      estadoActual ? 'danger' : 'info'
+      empleado.estado === 'activo' ? 'danger' : 'info'
     );
   };
 

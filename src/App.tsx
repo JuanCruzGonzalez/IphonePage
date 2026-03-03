@@ -21,7 +21,7 @@ import { PedidosPage } from './features/pedidos/PedidosPage';
 import { Toast, ConfirmModal } from './shared/components/ToastModal';
 import { useToast, useConfirm } from './shared/hooks/useToast';
 import { useDisableWheelOnNumberInputs } from './shared/hooks/useDisableWheelOnNumberInputs';
-import EmpleadosPage from './features/empleados/components/EmpleadosPage';
+import EmpleadosPage from './features/empleados/EmpleadosPage';
 import { EmpleadosProvider } from './features/empleados/context/EmpleadoContext';
 
 function App() {

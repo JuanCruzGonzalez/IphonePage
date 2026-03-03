@@ -178,3 +178,8 @@
 .color-black {
   color: #000000;
 }
+
+.headerTable{
+  text-align: left; 
+  border-bottom: 1px solid #ccc;
+}
