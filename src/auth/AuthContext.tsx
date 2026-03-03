@@ -37,6 +37,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
                 setUser(session?.user ?? null);
             }
         });
+        supabase.auth.refreshSession();
 
         return () => subscription.unsubscribe();
     }, []);
@@ -45,7 +46,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         await supabase.auth.signOut();
         setUser(null);
     };
-
     return (
         <AuthContext.Provider value={{ user, loading, signOut, supabase }}>
             {children}

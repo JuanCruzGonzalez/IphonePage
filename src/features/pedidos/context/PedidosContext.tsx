@@ -126,7 +126,7 @@ export const PedidosProvider: React.FC<PedidosProviderProps> = ({
       queryClient.invalidateQueries({ queryKey: queryKeys.pedidos });
       queryClient.invalidateQueries({ queryKey: queryKeys.pedidosPendientes });
       queryClient.invalidateQueries({ queryKey: queryKeys.pedidosMetricas });
-      queryClient.invalidateQueries({ queryKey: queryKeys.ventas }); // Si se creó venta
+      queryClient.invalidateQueries({ queryKey: queryKeys.ventas });
       
       const estadoTexto = {
         RECIBIDO: 'recibido',
