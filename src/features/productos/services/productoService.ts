@@ -30,7 +30,7 @@ const cargarImagenesProductos = async (productos: Producto[]): Promise<Producto[
   // Asignar imágenes a cada producto
   return productos.map(p => ({
     ...p,
-    imagenes: imagenesPorProducto.get(p.id_producto) || [],
+    imagenes: imagenesPorProducto.get(p.id_producto!) || [],
   }));
 };
 
@@ -330,10 +330,10 @@ export async function createProducto(producto: Omit<Producto, 'id_producto'>) {
   return data as Producto;
 }
 
-export async function updateStockProducto(id_producto: number, nuevoStock: number) {
+export async function updateStockProducto(producto: Producto, nuevoStock: number) {
   // Prefer server-side transaction RPC if available
   try {
-    const { data: rpcData, error: rpcError } = await supabase.rpc('update_producto_stock_transaction', { p_id_producto: id_producto, p_nuevo_stock: nuevoStock });
+    const { data: rpcData, error: rpcError } = await supabase.rpc('update_producto_stock_transaction', { p_id_producto: producto.id_producto, p_nuevo_stock: nuevoStock });
     if (!rpcError && rpcData) {
       return rpcData as Producto;
     }
@@ -344,7 +344,7 @@ export async function updateStockProducto(id_producto: number, nuevoStock: numbe
   const { data, error } = await supabase
     .from('producto')
     .update({ stock: nuevoStock })
-    .eq('id_producto', id_producto)
+    .eq('id_producto', producto.id_producto)
     .select()
     .single();
 

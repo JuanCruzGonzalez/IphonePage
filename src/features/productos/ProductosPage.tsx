@@ -3,7 +3,7 @@ import { useDebounce } from '../../shared/hooks/useDebounce';
 import { useProductos } from './context/ProductosContext';
 import { Pagination } from '../../shared/components/Pagination';
 import { ModalNuevoProducto } from './components/ModalNuevoProducto';
-import { ModalActualizarStock } from './components/ModalActualizarStock';
+import { ModalActualizarStock } from '../stock/componentes/ModalActualizarStock';
 import { useCategorias } from '../categorias/context/CategoriasContext';
 import Page from '../../shared/components/Page';
 import Card from '../../shared/components/Card';

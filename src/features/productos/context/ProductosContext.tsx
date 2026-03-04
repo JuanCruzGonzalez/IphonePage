@@ -60,7 +60,7 @@ interface ProductosContextValue {
   handleToggleProductoEstado: (
     producto: Producto
   ) => Promise<void>;
-  handleActualizarStock: (productoId: number, cantidad: number) => Promise<void>;
+  handleActualizarStock: (producto: Producto, cantidad: number) => Promise<void>;
 
   // Estados de loading (React Query mutations)
   isCreatingProducto: boolean;
@@ -295,12 +295,9 @@ export const ProductosProvider: React.FC<ProductosProviderProps> = ({
    * Mutation para actualizar stock
    */
   const actualizarStockMutation = useMutation({
-    mutationFn: async ({ productoId, cantidad }: { productoId: number; cantidad: number }) => {
-      const producto = productosQuery.data?.productos.find((p) => p.id_producto === productoId);
-      if (!producto) throw new Error('Producto no encontrado');
-
+    mutationFn: async ({ producto, cantidad }: { producto: Producto; cantidad: number }) => {
       const nuevoStock = producto.stock + cantidad;
-      const updated = await updateStockProducto(productoId, nuevoStock);
+      const updated = await updateStockProducto(producto, nuevoStock);
 
       return { updated, producto, nuevoStock };
     },
@@ -454,8 +451,8 @@ export const ProductosProvider: React.FC<ProductosProviderProps> = ({
    * Actualiza el stock de un producto
    */
   const handleActualizarStock = useCallback(
-    async (productoId: number, cantidad: number) => {
-      await actualizarStockMutation.mutateAsync({ productoId, cantidad });
+    async (producto: Producto, cantidad: number) => {
+      await actualizarStockMutation.mutateAsync({ producto, cantidad });
     },
     [actualizarStockMutation]
   );

@@ -601,7 +601,7 @@ input[type="number"]::webkit-outer-spin-button {
   border-radius: 10px 10px 0 0;
 }
 
-.modal-body{
+.modal-body {
   border-radius: 0px 0px 10px 10px;
 }
 
@@ -619,7 +619,7 @@ input[type="number"]::webkit-outer-spin-button {
   padding: 20px;
 }
 
-.modal-close{
+.modal-close {
   background-color: transparent;
   color: var(--color-text);
   display: flex;
@@ -673,16 +673,16 @@ input[type=number] {
 }
 
 @media screen and (max-width: 480px) {
-  .modal-overlay{
+  .modal-overlay {
     display: block;
   }
 
-  .modal-body{
+  .modal-body {
     max-height: 550px;
     overflow-y: scroll;
   }
 
-  .btn-cancel-pedido{
+  .btn-cancel-pedido {
     width: 100%;
   }
 }
@@ -1159,37 +1159,52 @@ input[type=number] {
   color: var(--color-danger);
 }
 
-.flex{
+.flex {
   display: flex;
 }
 
-.gap-8{
+.gap-8 {
   gap: 8px;
 }
-.width-40{
+
+.width-40 {
   width: 40px;
 }
 
-.justify-center{
+.justify-center {
   justify-content: center;
 }
 
-.height-40{
+.height-40 {
   height: 40px;
 }
 
-.border-1{
+.border-1 {
   border: 1px solid #ddd;
 }
 
-.padding-10{
+.padding-10 {
   padding: 10px;
 }
 
-.background-gray{
+.background-gray {
   background-color: #f0f0f0;
 }
 
-.background-white{
+.background-white {
   background-color: #ffffff;
+}
+
+.item-buscador {
+  position: 'absolute';
+  top: '100%';
+  left: 0;
+  right: 0;
+  background-color: white;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  max-height: 200px;
+  overflow-y: auto;
+  z-index: 1000;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
 }

@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { Producto, Promocion } from '../../../core/types';
 import { updateProducto } from '../../productos/services/productoService';
 import { useVentas } from '../context/VentasContext';
+import ProductosDropDown from '../../stock/componentes/ProductosDropDown';
 
 // Small row component for product items (editable unit price)
 // Memoized to prevent unnecessary re-renders when parent updates
@@ -360,46 +361,7 @@ export const ModalNuevaVenta = React.memo<ModalNuevaVentaProps>(({
                             placeholder="Escribe para buscar..."
                         />
                         {showProductosDropdown && busquedaProducto && productosFiltrados.length > 0 && (
-                            <div style={{
-                                position: 'absolute',
-                                top: '100%',
-                                left: 0,
-                                right: 0,
-                                backgroundColor: 'white',
-                                border: '1px solid #ddd',
-                                borderRadius: '4px',
-                                maxHeight: '200px',
-                                overflowY: 'auto',
-                                zIndex: 1000,
-                                boxShadow: '0 2px 8px rgba(0,0,0,0.1)'
-                            }}>
-                                {productosFiltrados.map(p => (
-                                    <div
-                                        key={p.id_producto}
-                                        onClick={() => seleccionarProducto(p)}
-                                        style={{
-                                            padding: '8px 12px',
-                                            cursor: 'pointer',
-                                            borderBottom: '1px solid #f0f0f0',
-                                            fontSize: '14px'
-                                        }}
-                                        onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#f5f5f5'}
-                                        onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'white'}
-                                    >
-                                        <div style={{ fontWeight: 500, display: 'flex', alignItems: 'center', gap: '6px' }}>
-                                            {p.nombre}
-                                            {p.dolares && (
-                                                <span style={{ fontSize: '10px', padding: '2px 4px', backgroundColor: '#e3f2fd', borderRadius: '3px', color: '#1976d2', fontWeight: '500' }}>
-                                                    USD
-                                                </span>
-                                            )}
-                                        </div>
-                                        <div style={{ fontSize: '12px', color: '#666' }}>
-                                            Stock: {p.stock} | ${p.precioventa.toFixed(2)}{p.dolares ? ' USD' : ''}
-                                        </div>
-                                    </div>
-                                ))}
-                            </div>
+                            <ProductosDropDown productosFiltrados={productosFiltrados} seleccionarProducto={seleccionarProducto} />
                         )}
                     </div>
                     <div className="form-group" style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
