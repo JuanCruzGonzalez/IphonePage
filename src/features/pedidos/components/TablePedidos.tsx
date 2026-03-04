@@ -2,7 +2,7 @@ import { PedidoConDetalles } from "../../../core/types";
 import { formatDate, formatPrice } from "../../../shared/utils";
 import { getEstadoBadgeClass, getEstadoTexto } from "../services/pedidoService";
 import BotonEstado from "./BotonEstado";
-import { AceptarIcon, CancelarIcon, EntregarIcon } from "./Iconos";
+import { AceptarIcon, CancelarIcon, EntregarIcon } from "../../../shared/components/Iconos";
 
 export default function TablePedidos({ pedidosFiltrados, handleVerPedido, handleCambiarEstado }: { pedidosFiltrados: PedidoConDetalles[]; handleVerPedido: (pedido: PedidoConDetalles) => void; handleCambiarEstado: (id_pedido: number, estado: 'ACEPTADO' | 'CANCELADO' | 'ENTREGADO') => void; }) {
     return (

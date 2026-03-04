@@ -1158,3 +1158,38 @@ input[type=number] {
 .stat-value.stat-danger {
   color: var(--color-danger);
 }
+
+.flex{
+  display: flex;
+}
+
+.gap-8{
+  gap: 8px;
+}
+.width-40{
+  width: 40px;
+}
+
+.justify-center{
+  justify-content: center;
+}
+
+.height-40{
+  height: 40px;
+}
+
+.border-1{
+  border: 1px solid #ddd;
+}
+
+.padding-10{
+  padding: 10px;
+}
+
+.background-gray{
+  background-color: #f0f0f0;
+}
+
+.background-white{
+  background-color: #ffffff;
+}

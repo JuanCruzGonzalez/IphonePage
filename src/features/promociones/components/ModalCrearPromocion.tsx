@@ -221,7 +221,7 @@ export const ModalCrearPromocion = React.memo<ModalCrearPromocionProps>(({ produ
     }
     
     setItems(prev => [...prev, { 
-      id_producto: productoSeleccionado.id_producto, 
+      id_producto: productoSeleccionado.id_producto!, 
       cantidad: cant, 
       nombre: productoSeleccionado.nombre, 
     }]);
