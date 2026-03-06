@@ -38,7 +38,7 @@ export const PedidosPage: React.FC = () => {
   const handlerOnFiltroChange = (value: string) => {
     setFiltroEstado(value as 'all' | EstadoPedido);
   }
-  
+
   // Filtrar pedidos
   useMemo(() => {
     let resultado = pedidos;
@@ -88,20 +88,19 @@ export const PedidosPage: React.FC = () => {
       <Metricas contadorPendientes={contadorPendientes} metricasHoy={metricasHoy} />
 
       {/* Filtros y búsqueda */}
+      <div className="filtro">
+        <SelectorEstados filtroEstado={filtroEstado} handlerOnFiltroChange={handlerOnFiltroChange} />
+
+        <Buscador
+          busqueda={busqueda}
+          handleSetBuscar={handleSetBuscar}
+          handleBuscar={handleBuscar}
+          filtroEstado={filtroEstado}
+          handlerSetPedidosFiltrados={handlerSetPedidosFiltrados}
+          pedidos={pedidos}
+        />
+      </div>
       <Card>
-        <div className="filtro">
-          <SelectorEstados filtroEstado={filtroEstado} handlerOnFiltroChange={handlerOnFiltroChange} />
-
-          <Buscador
-            busqueda={busqueda}
-            handleSetBuscar={handleSetBuscar}
-            handleBuscar={handleBuscar}
-            filtroEstado={filtroEstado}
-            handlerSetPedidosFiltrados={handlerSetPedidosFiltrados}
-            pedidos={pedidos}
-          />  
-        </div>
-
         <TablePedidos handleCambiarEstado={handleCambiarEstado} pedidosFiltrados={pedidosFiltrados} handleVerPedido={handleVerPedido} />
       </Card>
 
