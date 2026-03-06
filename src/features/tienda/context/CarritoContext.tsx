@@ -15,6 +15,7 @@ import { calculateCartTotal } from '../../../shared/utils/calculations';
 import { formatPrice } from '../../../shared/utils';
 import { createPedido } from '../../pedidos/services/pedidoService';
 import { queryKeys } from '../../../lib/queryClient';
+import { useClienteAuth } from '../context/ClienteAuthContext';
 
 /**
  * Interfaz para items del carrito
@@ -78,8 +79,9 @@ interface CarritoContextType {
     nombre: string;
     telefono: string;
     direccion: string;
-    metodoPago: 'efectivo' | 'transferencia' | 'mercadopago';
+    metodoPago: 'efectivo' | 'transferencia' | 'mercadopago' | 'plan_de_pago';
     notas: string;
+    planCuotas?: number;
   }) => Promise<void>;
 }
 
@@ -90,6 +92,7 @@ const CarritoContext = createContext<CarritoContextType | undefined>(undefined);
  */
 export const CarritoProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
   const queryClient = useQueryClient();
+  const { clientePerfil } = useClienteAuth();
   const [carrito, setCarrito] = useState<ItemCarrito[]>([]);
   const [mostrarCarrito, setMostrarCarrito] = useState(false);
   const [modalCantidad, setModalCantidad] = useState<ModalCantidad>({
@@ -278,8 +281,9 @@ export const CarritoProvider: React.FC<{ children: ReactNode }> = ({ children })
     nombre: string;
     telefono: string;
     direccion: string;
-    metodoPago: 'efectivo' | 'transferencia' | 'mercadopago';
+    metodoPago: 'efectivo' | 'transferencia' | 'mercadopago' | 'plan_de_pago';
     notas: string;
+    planCuotas?: number;
   }) => {
     try {
       // Preparar datos del pedido
@@ -289,6 +293,8 @@ export const CarritoProvider: React.FC<{ children: ReactNode }> = ({ children })
         cliente_direccion: datos.direccion,
         metodo_pago: datos.metodoPago,
         notas: datos.notas || null,
+        id_cliente: clientePerfil?.id_cliente,
+        plan_cuotas: datos.planCuotas,
         items: carrito.map(item => ({
           tipo: item.tipo,
           id: item.id_referencia,
@@ -322,7 +328,7 @@ export const CarritoProvider: React.FC<{ children: ReactNode }> = ({ children })
       mensaje += `\n\nDatos de entrega:\n`;
       mensaje += `${datos.telefono}\n`;
       mensaje += `${datos.direccion}\n`;
-      mensaje += `Pago: ${datos.metodoPago}`;
+      mensaje += `\nPago: ${datos.metodoPago === 'plan_de_pago' ? `Plan de pago (${datos.planCuotas} cuotas)` : datos.metodoPago}`;
       
       if (datos.notas) {
         mensaje += `\n ${datos.notas}`;
@@ -347,7 +353,7 @@ export const CarritoProvider: React.FC<{ children: ReactNode }> = ({ children })
       console.error('Error al crear pedido:', error);
       alert('Error al crear el pedido. Por favor, intenta nuevamente.');
     }
-  }, [carrito, calcularTotal]);
+  }, [carrito, calcularTotal, clientePerfil]);
 
   const value: CarritoContextType = {
     // Estado

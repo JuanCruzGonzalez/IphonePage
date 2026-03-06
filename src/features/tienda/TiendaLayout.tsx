@@ -1,8 +1,10 @@
 import React, { useState } from 'react';
 import { Outlet, useNavigate, useLocation, Link } from 'react-router-dom';
 import { useCarrito } from './context/CarritoContext';
+import { useClienteAuth } from './context/ClienteAuthContext';
 import { CarritoPanel } from './components/CarritoPanel';
 import { DatosClienteModal } from './components/DatosClienteModal';
+import { ClienteUserMenu } from './components/ClienteUserMenu';
 import { formatPrice } from '../../shared/utils';
 import logo from '../../assets/log.png';
 import './ClientePage.new.css';
@@ -23,6 +25,7 @@ export const TiendaLayout: React.FC = () => {
     cerrarModalDatosCliente,
     confirmarPedidoCliente,
   } = useCarrito();
+  const { clientePerfil } = useClienteAuth();
 
   const isActive = (path: string) => {
     if (path === '/') return location.pathname === '/';
@@ -102,7 +105,8 @@ export const TiendaLayout: React.FC = () => {
           </div>
 
           {/* Acciones */}
-          <div className="modern-header-actions">
+          <div className="modern-header-actions" style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+            <ClienteUserMenu />
             <button onClick={toggleMostrarCarrito} className="modern-header-cart-btn">
               <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                 <path d="M2 3L2.26491 3.0883C3.58495 3.52832 4.24497 3.74832 4.62248 4.2721C5 4.79587 5 5.49159 5 6.88304V9.5C5 12.3284 5 13.7426 5.87868 14.6213C6.75736 15.5 8.17157 15.5 11 15.5H19"></path>
@@ -236,6 +240,11 @@ export const TiendaLayout: React.FC = () => {
         isOpen={modalDatosCliente}
         onClose={cerrarModalDatosCliente}
         onConfirm={confirmarPedidoCliente}
+        initialData={clientePerfil ? {
+          nombre: `${clientePerfil.nombre ?? ''} ${clientePerfil.apellido ?? ''}`.trim(),
+          telefono: clientePerfil.telefono ?? '',
+          direccion: clientePerfil.direccion ?? '',
+        } : undefined}
       />
     </div>
   );

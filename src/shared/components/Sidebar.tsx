@@ -5,8 +5,8 @@ import { useNavigate } from 'react-router-dom';
 import { usePedidos } from '../../features/pedidos/context/PedidosContext';
 
 interface SidebarProps {
-  activeSection: 'dashboard' | 'ventas' | 'telefonos' | 'accesorios' | 'stock' | 'promociones' | 'gastos' | 'categorias' | 'pedidos' | 'empleados';
-  onSectionChange: (section: 'dashboard' | 'ventas' | 'telefonos' | 'accesorios' | 'stock' | 'promociones' | 'gastos' | 'categorias' | 'pedidos' | 'empleados') => void;
+  activeSection: 'dashboard' | 'ventas' | 'telefonos' | 'accesorios' | 'stock' | 'promociones' | 'gastos' | 'categorias' | 'pedidos' | 'empleados' | 'clientes';
+  onSectionChange: (section: 'dashboard' | 'ventas' | 'telefonos' | 'accesorios' | 'stock' | 'promociones' | 'gastos' | 'categorias' | 'pedidos' | 'empleados' | 'clientes') => void;
 }
 
 export const Sidebar = React.memo<SidebarProps>(({ activeSection, onSectionChange }) => {
@@ -29,7 +29,7 @@ export const Sidebar = React.memo<SidebarProps>(({ activeSection, onSectionChang
     setIsMobileMenuOpen(!isMobileMenuOpen);
   };
 
-  const handleSectionChange = (section: 'dashboard' | 'ventas' | 'telefonos' | 'accesorios' | 'stock' | 'promociones' | 'gastos' | 'categorias' | 'pedidos' | 'empleados') => {
+  const handleSectionChange = (section: 'dashboard' | 'ventas' | 'telefonos' | 'accesorios' | 'stock' | 'promociones' | 'gastos' | 'categorias' | 'pedidos' | 'empleados' | 'clientes') => {
     onSectionChange(section);
     setIsMobileMenuOpen(false);
   };
@@ -83,9 +83,12 @@ export const Sidebar = React.memo<SidebarProps>(({ activeSection, onSectionChang
         <path d="M7.0498 7.0498H7.0598M10.5118 3H7.8C6.11984 3 5.27976 3 4.63803 3.32698C4.07354 3.6146 3.6146 4.07354 3.32698 4.63803C3 5.27976 3 6.11984 3 7.8V10.5118C3 11.2455 3 11.6124 3.08289 11.9577C3.15638 12.2638 3.27759 12.5564 3.44208 12.8249C3.6276 13.1276 3.88703 13.387 4.40589 13.9059L9.10589 18.6059C10.2939 19.7939 10.888 20.388 11.5729 20.6105C12.1755 20.8063 12.8245 20.8063 13.4271 20.6105C14.112 20.388 14.7061 19.7939 15.8941 18.6059L18.6059 15.8941C19.7939 14.7061 20.388 14.112 20.6105 13.4271C20.8063 12.8245 20.8063 12.1755 20.6105 11.5729C20.388 10.888 19.7939 10.2939 18.6059 9.10589L13.9059 4.40589C13.387 3.88703 13.1276 3.6276 12.8249 3.44208C12.5564 3.27759 12.2638 3.15638 11.9577 3.08289C11.6124 3 11.2455 3 10.5118 3ZM7.5498 7.0498C7.5498 7.32595 7.32595 7.5498 7.0498 7.5498C6.77366 7.5498 6.5498 7.32595 6.5498 7.0498C6.5498 6.77366 6.77366 6.5498 7.0498 6.5498C7.32595 6.5498 7.5498 6.77366 7.5498 7.0498Z" stroke="#000000" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
       </svg>
     },
-    // Solo mostrar la opción de empleados si el usuario es admin
-    ...(user?.user_metadata?.role === 'admin'
-      ? [{ id: 'empleados' as const, label: 'Empleados', icon: <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="8" r="4" stroke="#000" strokeWidth="2"/><path d="M4 20c0-2.209 3.582-4 8-4s8 1.791 8 4" stroke="#000" strokeWidth="2"/></svg> }]
+    // Solo mostrar empleados y clientes si el usuario es admin
+    ...(user?.app_metadata?.role === 'admin'
+      ? [
+          { id: 'empleados' as const, label: 'Empleados', icon: <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="8" r="4" stroke="#000" strokeWidth="2"/><path d="M4 20c0-2.209 3.582-4 8-4s8 1.791 8 4" stroke="#000" strokeWidth="2"/></svg> },
+          { id: 'clientes' as const, label: 'Clientes', icon: <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M17 20H22V18C22 16.3431 20.6569 15 19 15C18.0444 15 17.1931 15.4468 16.6438 16.1429M17 20H7M17 20V18C17 17.3438 16.8736 16.717 16.6438 16.1429M7 20H2V18C2 16.3431 3.34315 15 5 15C5.95561 15 6.80686 15.4468 7.35625 16.1429M7 20V18C7 17.3438 7.12642 16.717 7.35625 16.1429M7.35625 16.1429C7.95083 14.301 9.69767 13 11.75 13H12.25C14.3023 13 16.0492 14.301 16.6438 16.1429M15 7C15 8.65685 13.6569 10 12 10C10.3431 10 9 8.65685 9 7C9 5.34315 10.3431 4 12 4C13.6569 4 15 5.34315 15 7ZM21 10C21 11.1046 20.1046 12 19 12C17.8954 12 17 11.1046 17 10C17 8.89543 17.8954 8 19 8C20.1046 8 21 8.89543 21 10ZM7 10C7 11.1046 6.10457 12 5 12C3.89543 12 3 11.1046 3 10C3 8.89543 3.89543 8 5 8C6.10457 8 7 8.89543 7 10Z" stroke="#000" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg> },
+        ]
       : []),
   ];
 

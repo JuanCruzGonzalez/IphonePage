@@ -9,7 +9,10 @@ import {
   getContadorPedidosPendientes,
   autoCancelarPedidosVencidos,
   getMetricasPedidosHoy,
+  getPedidoById,
 } from '../services/pedidoService';
+import { updateVentaEstado, updateVentaMetodoPago } from '../../ventas/services/ventaService';
+import { createPlanDePago } from '../../ventas/services/planDePagoService';
 import { useModal } from '../../../shared/hooks/useModal';
 
 /** ======================
@@ -122,7 +125,35 @@ export const PedidosProvider: React.FC<PedidosProviderProps> = ({
   const cambiarEstadoMutation = useMutation({
     mutationFn: ({ id_pedido, nuevoEstado }: { id_pedido: number; nuevoEstado: EstadoPedido }) =>
       updateEstadoPedido(id_pedido, nuevoEstado),
-    onSuccess: (_, variables) => {
+    onSuccess: async (_, variables) => {
+      const { id_pedido, nuevoEstado } = variables;
+
+      // Cuando un pedido con plan de pago se entrega, crear el plan
+      if (nuevoEstado === 'ENTREGADO') {
+        const pedido = pedidoSeleccionado || pedidos.find(p => p.id_pedido === id_pedido);
+        if (pedido?.metodo_pago === 'plan_de_pago' && pedido.plan_cuotas) {
+          try {
+            // Re-fetch pedido para obtener el id_venta asignado por el trigger de DB
+            const updatedPedido = await getPedidoById(id_pedido);
+            if (updatedPedido?.id_venta) {
+              await updateVentaEstado(updatedPedido.id_venta, false); // impaga hasta completar plan
+              await updateVentaMetodoPago(updatedPedido.id_venta, 'plan_de_pago');
+              await createPlanDePago({
+                id_venta: updatedPedido.id_venta,
+                id_cliente: pedido.id_cliente ?? undefined,
+                cliente_nombre: pedido.cliente_nombre,
+                cliente_telefono: pedido.cliente_telefono,
+                numero_cuotas: pedido.plan_cuotas,
+                monto_total: pedido.total,
+                monto_cuota: Math.round((pedido.total / pedido.plan_cuotas) * 100) / 100,
+              });
+            }
+          } catch (err) {
+            console.error('Error al crear plan de pago desde pedido:', err);
+            showError('Venta creada, pero hubo un error al registrar el plan de pago');
+          }
+        }
+      }
       queryClient.invalidateQueries({ queryKey: queryKeys.pedidos });
       queryClient.invalidateQueries({ queryKey: queryKeys.pedidosPendientes });
       queryClient.invalidateQueries({ queryKey: queryKeys.pedidosMetricas });

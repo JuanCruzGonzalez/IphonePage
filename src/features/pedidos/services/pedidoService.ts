@@ -193,6 +193,8 @@ export async function createPedido(input: CrearPedidoInput): Promise<Pedido> {
       notas: input.notas,
       total,
       estado: 'RECIBIDO',
+      id_cliente: input.id_cliente ?? null,
+      plan_cuotas: input.plan_cuotas ?? null,
     })
     .select()
     .single();

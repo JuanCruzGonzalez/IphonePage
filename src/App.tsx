@@ -22,9 +22,11 @@ import { useToast, useConfirm } from './shared/hooks/useToast';
 import { useDisableWheelOnNumberInputs } from './shared/hooks/useDisableWheelOnNumberInputs';
 import EmpleadosPage from './features/empleados/EmpleadosPage';
 import { EmpleadosProvider } from './features/empleados/context/EmpleadoContext';
+import ClientesPage from './features/clientes/ClientesPage';
+import { ClientesProvider } from './features/clientes/context/ClientesContext';
 
 function App() {
-  const [activeSection, setActiveSection] = useState<'dashboard' | 'ventas' | 'telefonos' | 'accesorios' | 'stock' | 'promociones' | 'gastos' | 'categorias' | 'pedidos' | 'empleados'>('dashboard');
+  const [activeSection, setActiveSection] = useState<'dashboard' | 'ventas' | 'telefonos' | 'accesorios' | 'stock' | 'promociones' | 'gastos' | 'categorias' | 'pedidos' | 'empleados' | 'clientes'>('dashboard');
 
   // Hooks para toast y confirmación
   const { toast, showSuccess, showError, showWarning, hideToast } = useToast();
@@ -72,6 +74,11 @@ function App() {
                     showError={showError}
                     showConfirm={showConfirm}
                   >
+                    <ClientesProvider
+                      showSuccess={showSuccess}
+                      showError={showError}
+                      showConfirm={showConfirm}
+                    >
                     <div className="app-container">
                       <Sidebar activeSection={activeSection} onSectionChange={setActiveSection} />
 
@@ -86,6 +93,7 @@ function App() {
                         {activeSection === 'categorias' && <CategoriasPage />}
                         {activeSection === 'pedidos' && <PedidosPage />}
                         {activeSection === 'empleados' && <EmpleadosPage />}
+                        {activeSection === 'clientes' && <ClientesPage />}
                       </main>
 
                       {/* Toast Notification */}
@@ -106,6 +114,7 @@ function App() {
                         type={confirm.type}
                       />
                     </div>
+                    </ClientesProvider>
                   </EmpleadosProvider>
                 </PedidosProvider>
               </CategoriasProvider>

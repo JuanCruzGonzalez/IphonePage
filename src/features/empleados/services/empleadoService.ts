@@ -30,8 +30,24 @@ export async function createEmpleado({ email, password, nombre, apellido, fecha_
 		},
 	});
 
-	if (error) throw error;
-	if (data?.error) throw new Error(data.error);
+	if (error) {
+		// Extraer el mensaje real del body de la respuesta (no el genérico de supabase-js)
+		if (error.context instanceof Response) {
+			try {
+				const body = await error.context.json();
+				const msg = body?.error || body?.message;
+				if (msg === 'User already registered') throw new Error('El email ya está registrado');
+				if (msg) throw new Error(msg);
+			} catch (parseErr) {
+				if (parseErr instanceof Error && parseErr.message !== error.message) throw parseErr;
+			}
+		}
+		throw error;
+	}
+	if (data?.error) {
+		if (data.error === 'User already registered') throw new Error('El email ya está registrado');
+		throw new Error(data.error);
+	}
 
 	return true;
 }

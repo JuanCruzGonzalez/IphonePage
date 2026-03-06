@@ -1,8 +1,8 @@
-import { VentaConDetalles } from "../../../core/types";
+import { Venta } from "../../../core/types";
 import { calculateVentaTotalesPorMoneda, formatDate } from "../../../shared/utils";
 
 export default function TablaVentas({ ventas, handleSetVentaSeleccionada, handleToggleVentaFlag }: {
-    ventas: VentaConDetalles[], handleSetVentaSeleccionada: (venta: VentaConDetalles | null) => void, handleToggleVentaFlag: (id_venta: number, field: "baja" | "estado",
+    ventas: Venta[], handleSetVentaSeleccionada: (venta: Venta | null) => void, handleToggleVentaFlag: (id_venta: number, field: "baja" | "estado",
         currentValue: boolean,
         label?: string) => void
 }) {

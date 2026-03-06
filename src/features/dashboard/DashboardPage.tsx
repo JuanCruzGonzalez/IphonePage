@@ -139,7 +139,7 @@ export const DashboardPage: React.FC = () => {
 
         <RenderKPI
           value={String(stockCritico.length)}
-          label="Productos sin stock"
+          label="Productos con bajo stock"
           sub={stockCritico.length > 0 ? 'Requieren reposición' : 'Sin alertas'}
           subClass={stockCritico.length > 0 ? 'negative' : 'positive'} iconEl={<IconBox />}
           iconClass="red"

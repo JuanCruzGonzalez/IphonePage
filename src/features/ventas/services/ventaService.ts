@@ -1,6 +1,6 @@
 // api/ventasService.ts
 import { supabase, handleAuthError } from '../../../core/config/supabase';
-import { DetalleVenta, VentaConDetalles } from '../../../core/types';
+import { DetalleVenta } from '../../../core/types';
 import { getCotizacionActual } from './cotizacionService';
 
 // ============= VENTAS =============
@@ -35,17 +35,7 @@ export async function getVentas() {
     return [];
   }
 
-  const ventas = (data as any[]).map((v) => ({
-    ...v,
-    detalle_venta: Array.isArray(v.detalle_venta)
-      ? v.detalle_venta.map((d: any) => ({
-        ...d,
-        producto: d.producto || null,
-      }))
-      : v.detalle_venta,
-  })) as VentaConDetalles[];
-
-  return ventas;
+  return data;
 }
 
 /**
@@ -91,17 +81,7 @@ export async function buscarVentas(options?: { desde?: string; hasta?: string; e
 
   if (!data) return [];
 
-  const ventas = (data as any[]).map((v) => ({
-    ...v,
-    detalle_venta: Array.isArray(v.detalle_venta)
-      ? v.detalle_venta.map((d: any) => ({
-        ...d,
-        producto: d.producto || null,
-      }))
-      : v.detalle_venta,
-  })) as VentaConDetalles[];
-
-  return ventas;
+  return data;
 }
 
 /**
@@ -153,17 +133,7 @@ export async function getVentasPage(
 
   if (!data) return { ventas: [], total: count || 0 };
 
-  const ventas = (data as any[]).map((v) => ({
-    ...v,
-    detalle_venta: Array.isArray(v.detalle_venta)
-      ? v.detalle_venta.map((d: any) => ({
-        ...d,
-        producto: d.producto || null,
-      }))
-      : v.detalle_venta,
-  })) as VentaConDetalles[];
-
-  return { ventas, total: count || 0 };
+  return { ventas: data, total: count || 0 };
 }
 
 
@@ -172,7 +142,7 @@ export async function createVenta(
   detalles: any[],
   estado: boolean,
   cotizacion_dolar?: number
-) {
+): Promise<number> {
   // Si no se proporciona cotización, obtener la actual
   const cotizacion = cotizacion_dolar ?? await getCotizacionActual();
 
@@ -200,11 +170,39 @@ export async function createVenta(
     throw error;
   }
 
-  return data;
+  // Extraer id_venta del resultado del RPC (puede ser int, objeto, o array)
+  let idVenta: number | null = null;
+  if (typeof data === 'number') idVenta = data;
+  else if (data && typeof data === 'object' && !Array.isArray(data) && 'id_venta' in data) idVenta = (data as any).id_venta;
+  else if (Array.isArray(data) && data.length > 0) idVenta = (data[0] as any)?.id_venta ?? null;
+
+  // Fallback: buscar la venta más reciente para esa fecha
+  if (!idVenta) {
+    const { data: latest } = await supabase
+      .from('venta')
+      .select('id_venta')
+      .eq('fecha', fecha)
+      .eq('baja', false)
+      .order('id_venta', { ascending: false })
+      .limit(1)
+      .single();
+    idVenta = latest?.id_venta ?? null;
+  }
+
+  return idVenta as number;
 }
 
 
 // ============= DETALLES DE VENTA =============
+export async function updateVentaMetodoPago(id_venta: number, metodo_pago: string) {
+  const { error } = await supabase
+    .from('venta')
+    .update({ metodo_pago })
+    .eq('id_venta', id_venta);
+
+  if (error) throw error;
+}
+
 export async function getDetallesVenta(id_venta: number) {
   const { data, error } = await supabase
     .from('detalle_venta')

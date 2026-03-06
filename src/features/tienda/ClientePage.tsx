@@ -74,7 +74,7 @@ export const ClientePage: React.FC = () => {
       <section className="modern-hero">
         <div className="modern-hero-container">
           <div className="modern-hero-content">
-            <span className="modern-hero-badge">NUEVA COLECCIÓN 2025</span>
+            <span className="modern-hero-badge">NUEVA COLECCIÓN 2026</span>
             <h2 className="modern-hero-title">
               Productos de calidad<br />a tu alcance.
             </h2>

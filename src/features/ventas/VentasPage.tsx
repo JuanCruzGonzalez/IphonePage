@@ -1,11 +1,11 @@
 import React, { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { queryKeys } from '../../lib/queryClient';
-import { VentaConDetalles } from '../../core/types';
 import { Pagination } from '../../shared/components/Pagination';
 import { useVentas } from './context/VentasContext';
 import { ModalNuevaVenta } from './components/ModalNuevaVenta';
 import { ModalCotizacionDolar } from './components/ModalCotizacionDolar';
+import { PlanesDePagoPanel } from './components/PlanesDePagoPanel';
 import { getProductosActivos } from '../productos/services/productoService';
 import { getPromocionesActivas } from '../promociones/services/promocionService';
 import { useToast } from '../../shared/hooks/useToast';
@@ -16,6 +16,7 @@ import Card from '../../shared/components/Card';
 import TablaVentas from './components/TablaVentas';
 import ModalVentaDetalle from './components/ModalVentaDetalle';
 import Filtros from './components/Filtros';
+import { Venta } from '../../core/types';
 
 export const VentasPage: React.FC = () => {
   const {
@@ -31,6 +32,7 @@ export const VentasPage: React.FC = () => {
 
   const { showError, showWarning } = useToast();
   const modalCotizacion = useModal();
+  const [activeTab, setActiveTab] = useState<'ventas' | 'planes'>('ventas');
 
   const { data: productosActivos = [] } = useQuery({
     queryKey: queryKeys.productosActivos,
@@ -61,14 +63,14 @@ export const VentasPage: React.FC = () => {
     setEstadoFilter(value);
   }
 
-  const [ventaSeleccionada, setVentaSeleccionada] = useState<VentaConDetalles | null>(null);
+  const [ventaSeleccionada, setVentaSeleccionada] = useState<Venta | null>(null);
 
-  const handleSetVentaSeleccionada = (venta: VentaConDetalles | null) => {
+  const handleSetVentaSeleccionada = (venta: Venta | null) => {
     setVentaSeleccionada(venta);
   }
   return (
     <Page>
-      <PageHeader funcion={modalNuevaVenta.open} textButton='Nueva Venta' title='Ventas' subtitle='Gestiona el historial de ventas'/>
+      <PageHeader funcion={modalNuevaVenta.open} textButton='Nueva Venta' title='Ventas' subtitle='Gestiona el historial de ventas' />
       <button
         className="btn-secondary btn-dollar"
         onClick={modalCotizacion.open}
@@ -77,47 +79,78 @@ export const VentasPage: React.FC = () => {
         💵 Dólar
       </button>
 
-      <Filtros
-        desde={desde}
-        hasta={hasta}
-        estadoFilter={estadoFilter}
-        handleBuscarVentas={handleBuscarVentas}
-        handleSetDesde={handleSetDesde}
-        handleSetHasta={handleSetHasta}
-        handleSetEstadoFilter={handleSetEstadoFilter}
-      />
+      {/* Tabs */}
+      <div style={{ display: 'flex', gap: 0, borderBottom: '2px solid #e5e7eb', marginBottom: 16 }}>
+        {(['ventas', 'planes'] as const).map(tab => (
+          <button
+            key={tab}
+            onClick={() => setActiveTab(tab)}
+            style={{
+              padding: '8px 20px',
+              border: 'none',
+              background: 'none',
+              cursor: 'pointer',
+              fontWeight: activeTab === tab ? 700 : 400,
+              color: activeTab === tab ? '#2563eb' : '#6b7280',
+              borderBottom: activeTab === tab ? '1px solid #2563eb' : '1px solid transparent',
+              marginBottom: -2,
+              fontSize: 14,
+            }}
+          >
+            {tab === 'ventas' ? 'Ventas' : '🗓️ Planes de Pago'}
+          </button>
+        ))}
+      </div>
 
-      {/* Pager */}
-      <Pagination
-        currentPage={ventasPageNum}
-        totalItems={ventasTotal}
-        pageSize={PAGE_SIZE}
-        onPageChange={(p, e) => loadVentasPage(p, e)}
-        extra={{
-          desde: desde || undefined,
-          hasta: hasta || undefined,
-          estado: estadoFilter === 'pagada' ? true : estadoFilter === 'pendiente' ? false : undefined,
-          baja: estadoFilter === 'baja' ? true : false
-        }}
-      />
-      <Card>
-        <TablaVentas ventas={ventas} handleSetVentaSeleccionada={handleSetVentaSeleccionada} handleToggleVentaFlag={handleToggleVentaFlag} />
-      </Card>
-      <Pagination
-        currentPage={ventasPageNum}
-        totalItems={ventasTotal}
-        pageSize={PAGE_SIZE}
-        onPageChange={(p, e) => loadVentasPage(p, e)}
-        extra={{
-          desde: desde || undefined,
-          hasta: hasta || undefined,
-          estado: estadoFilter === 'pagada' ? true : estadoFilter === 'pendiente' ? false : undefined,
-          baja: estadoFilter === 'baja' ? true : false
-        }}
-      />
-      {/* Modal de Detalle */}
-      {ventaSeleccionada && (
-        <ModalVentaDetalle ventaSeleccionada={ventaSeleccionada} handleSetVentaSeleccionada={handleSetVentaSeleccionada} />
+      {activeTab === 'ventas' && (
+        <>
+          <Filtros
+            desde={desde}
+            hasta={hasta}
+            estadoFilter={estadoFilter}
+            handleBuscarVentas={handleBuscarVentas}
+            handleSetDesde={handleSetDesde}
+            handleSetHasta={handleSetHasta}
+            handleSetEstadoFilter={handleSetEstadoFilter}
+          />
+
+          {/* Pager */}
+          <Pagination
+            currentPage={ventasPageNum}
+            totalItems={ventasTotal}
+            pageSize={PAGE_SIZE}
+            onPageChange={(p, e) => loadVentasPage(p, e)}
+            extra={{
+              desde: desde || undefined,
+              hasta: hasta || undefined,
+              estado: estadoFilter === 'pagada' ? true : estadoFilter === 'pendiente' ? false : undefined,
+              baja: estadoFilter === 'baja' ? true : false
+            }}
+          />
+          <Card>
+            <TablaVentas ventas={ventas} handleSetVentaSeleccionada={handleSetVentaSeleccionada} handleToggleVentaFlag={handleToggleVentaFlag} />
+          </Card>
+          <Pagination
+            currentPage={ventasPageNum}
+            totalItems={ventasTotal}
+            pageSize={PAGE_SIZE}
+            onPageChange={(p, e) => loadVentasPage(p, e)}
+            extra={{
+              desde: desde || undefined,
+              hasta: hasta || undefined,
+              estado: estadoFilter === 'pagada' ? true : estadoFilter === 'pendiente' ? false : undefined,
+              baja: estadoFilter === 'baja' ? true : false
+            }}
+          />
+          {/* Modal de Detalle */}
+          {ventaSeleccionada && (
+            <ModalVentaDetalle ventaSeleccionada={ventaSeleccionada} handleSetVentaSeleccionada={handleSetVentaSeleccionada} />
+          )}
+        </>
+      )}
+
+      {activeTab === 'planes' && (
+        <PlanesDePagoPanel />
       )}
 
       {/* Modal */}

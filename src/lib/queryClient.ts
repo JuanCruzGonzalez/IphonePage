@@ -85,4 +85,8 @@ export const queryKeys = {
   // Empleados
   empleados: ['empleados'] as const,
   empleadoDetalle: (id: number) => ['empleados', id] as const,
+
+  // Clientes
+  clientes: ['clientes'] as const,
+  clienteDetalle: (id: string) => ['clientes', id] as const,
 } as const;

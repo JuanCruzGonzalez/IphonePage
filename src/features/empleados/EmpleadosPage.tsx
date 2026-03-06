@@ -8,7 +8,8 @@ import { useState } from 'react';
 import ModalEmpleado from './components/ModalEmpleado';
 import { Empleado } from '../../core/types';
 import Page from '../../shared/components/Page';
-import H1 from '../../shared/components/H1';
+import Card from '../../shared/components/Card';
+import PageHeader from '../../shared/components/PageHeader';
 
 const EmpleadosPage: React.FC = () => {
   const { user } = useAuth();
@@ -27,28 +28,18 @@ const EmpleadosPage: React.FC = () => {
 
   return (
     <Page>
-      <div className='page-header flex '>
-        <H1 texto='Empleados' />
-        <button
-          className='nuevoEmpleadoBtn'
-          onClick={handleNuevoEmpleado}
-        >
-          Nuevo empleado
-        </button>
-      </div>
-      <div className='table-wrapper'>
+      <PageHeader funcion={handleNuevoEmpleado} textButton='Nuevo Empleado' title='Empleados' subtitle='Gestion de empleados de la empresa' />
+      <Card>
         {isLoading && <p>Cargando empleados...</p>}
-        {!isLoading && empleadosOrdenados.length > 0 ? (
+        {!isLoading &&  (
           <TablaEmpleados
             empleadosOrdenados={empleadosOrdenados}
             handleEstadoModalView={handleEstadoModalView}
             handleEditarEmpleado={handleEditarEmpleado}
             handleToggleEmpleadoEstado={handleToggleEmpleadoEstado}
           />
-        ) : (
-          <p>No hay empleados registrados.</p>
         )}
-      </div>
+      </Card>
       {modalEmpleado.isOpen && (
         <div className="modal-overlay" onClick={modalEmpleado.close}>
           <div className="modal-content" onClick={e => e.stopPropagation()}>

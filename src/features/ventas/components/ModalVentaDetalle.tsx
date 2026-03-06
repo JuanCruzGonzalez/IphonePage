@@ -1,7 +1,7 @@
-import { VentaConDetalles } from "../../../core/types";
+import { Venta } from "../../../core/types";
 import { calculateVentaTotalesPorMoneda, formatDate } from "../../../shared/utils";
 
-export default function ModalVentaDetalle({ ventaSeleccionada, handleSetVentaSeleccionada }: { ventaSeleccionada: VentaConDetalles; handleSetVentaSeleccionada: (venta: VentaConDetalles | null) => void }) {
+export default function ModalVentaDetalle({ ventaSeleccionada, handleSetVentaSeleccionada }: { ventaSeleccionada: Venta; handleSetVentaSeleccionada: (venta: Venta | null) => void }) {
     return (
         <div className="modal-overlay" onClick={() => handleSetVentaSeleccionada(null)}>
             <div className="modal-minimal" onClick={(e) => e.stopPropagation()}>

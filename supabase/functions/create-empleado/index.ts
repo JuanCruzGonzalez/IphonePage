@@ -66,7 +66,15 @@ Deno.serve(async (req) => {
     })
 
     if (error) {
-      return new Response(JSON.stringify({ error: error.message }), {
+      let mensaje = error.message
+      if (error.message === 'User already registered') {
+        mensaje = 'El email ya está registrado en el sistema'
+      } else if (error.message === 'Unable to validate email address: invalid format') {
+        mensaje = 'El formato del email no es válido'
+      } else if (error.message === 'Password should be at least 6 characters') {
+        mensaje = 'La contraseña debe tener al menos 6 caracteres'
+      }
+      return new Response(JSON.stringify({ error: mensaje }), {
         status: 400,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       })

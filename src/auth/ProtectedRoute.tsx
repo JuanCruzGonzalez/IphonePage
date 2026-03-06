@@ -22,5 +22,11 @@ export function ProtectedRoute({ children }: { children: React.ReactNode }) {
         return <Navigate to="/login" replace />;
     }
 
+    // Bloquear clientes de la tienda: no tienen acceso al panel de administración
+    const role = (user.app_metadata as Record<string, string>)?.role;
+    if (role === 'cliente') {
+        return <Navigate to="/" replace />;
+    }
+
     return <>{children}</>;
 }

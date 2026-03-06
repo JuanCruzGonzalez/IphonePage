@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { Producto, Promocion } from '../../../core/types';
 import { updateProducto } from '../../productos/services/productoService';
 import { useVentas } from '../context/VentasContext';
+import { PlanDePagoForm, PlanDePagoFormConfig } from './PlanDePagoForm';
 import ProductosDropDown from '../../stock/componentes/ProductosDropDown';
 import { PromoRow } from './PromoRow';
 import { ProductRow } from './ProductRow';
@@ -26,7 +27,8 @@ export const ModalNuevaVenta = React.memo<ModalNuevaVentaProps>(({
     const [busquedaProducto, setBusquedaProducto] = useState('');
     const [showProductosDropdown, setShowProductosDropdown] = useState(false);
     const [cantidad, setCantidad] = useState('');
-    const [pagada, setPagada] = useState(true);
+    const [metodoPago, setMetodoPago] = useState<'efectivo' | 'transferencia' | 'mercadopago' | 'plan_de_pago'>('efectivo');
+    const [planConfig, setPlanConfig] = useState<PlanDePagoFormConfig | null>(null);
     const [promoSeleccionada, setPromoSeleccionada] = useState('');
     const [busquedaPromo, setBusquedaPromo] = useState('');
     const [showPromosDropdown, setShowPromosDropdown] = useState(false);
@@ -143,10 +145,31 @@ export const ModalNuevaVenta = React.memo<ModalNuevaVentaProps>(({
             return;
         }
 
+        if (metodoPago === 'plan_de_pago') {
+            if (!planConfig?.cliente_nombre?.trim() || !planConfig?.cliente_telefono?.trim()) {
+                showWarning?.('Complete nombre y teléfono del cliente para el plan de pago');
+                return;
+            }
+            if ((planConfig?.numero_cuotas ?? 0) < 2) {
+                showWarning?.('El plan debe tener al menos 2 cuotas');
+                return;
+            }
+            if (calcularTotales.totalPesos <= 0) {
+                showWarning?.('El plan de pago solo aplica a productos en pesos (ARS)');
+                return;
+            }
+        }
+
         const productosDetalles = items.map(i => ({ id_producto: i.id_producto, cantidad: i.cantidad, precioUnitario: i.precioventa }));
         const promocionesDetalles = promosAdded.map(p => ({ id_promocion: p.id_promocion, cantidad: p.cantidad, precioUnitario: p.precio ?? undefined }));
 
-        handleNuevaVenta([...productosDetalles, ...promocionesDetalles], pagada);
+        const pagada = metodoPago !== 'plan_de_pago';
+        const planFinal = metodoPago === 'plan_de_pago' && planConfig
+            ? { ...planConfig, monto_total: calcularTotales.totalPesos }
+            : undefined;
+
+        handleNuevaVenta([...productosDetalles, ...promocionesDetalles], pagada, planFinal);
+        // Reset
         setItems([]);
         setProductoSeleccionado('');
         setBusquedaProducto('');
@@ -154,6 +177,8 @@ export const ModalNuevaVenta = React.memo<ModalNuevaVentaProps>(({
         setPromosAdded([]);
         setPromoSeleccionada('');
         setBusquedaPromo('');
+        setMetodoPago('efectivo');
+        setPlanConfig(null);
     };
 
     const agregarPromocion = () => {
@@ -237,12 +262,29 @@ export const ModalNuevaVenta = React.memo<ModalNuevaVentaProps>(({
                             + Agregar
                         </button>
                     </div>
-                    <div className="form-group" style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                        <label style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                            <input type="checkbox" checked={pagada} onChange={(e) => setPagada(e.target.checked)} />
-                            <span>Pagada</span>
-                        </label>
+
+                    {/* Método de pago */}
+                    <div className="form-group">
+                        <label>Método de pago</label>
+                        <select
+                            value={metodoPago}
+                            onChange={e => setMetodoPago(e.target.value as typeof metodoPago)}
+                            style={{ width: '100%', padding: '8px 10px', borderRadius: 4, border: '1px solid #ddd', backgroundColor: '#fff' }}
+                        >
+                            <option value="efectivo">Efectivo (pagada)</option>
+                            <option value="transferencia">Transferencia (pagada)</option>
+                            <option value="mercadopago">Mercado Pago (pagada)</option>
+                            <option value="plan_de_pago">Plan de pago (cuotas)</option>
+                        </select>
                     </div>
+
+                    {/* Configuración del plan de pago */}
+                    {metodoPago === 'plan_de_pago' && (
+                        <PlanDePagoForm
+                            totalMonto={calcularTotales.totalPesos}
+                            onChange={setPlanConfig}
+                        />
+                    )}
 
                     <div style={{ height: 8 }} />
                     <div className="form-group" style={{ position: 'relative' }} ref={promoSearchRef}>

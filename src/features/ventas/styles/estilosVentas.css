@@ -1,0 +1,88 @@
+.td-padding {
+    padding: 10px 12px;
+}
+
+.font-gray {
+    color: #888;
+}
+
+.font-500 {
+    font-weight: 500;
+}
+
+.font-600 {
+    font-weight: 600;
+}
+
+.font-size-12 {
+    font-size: 12px;
+}
+
+.min-width-120 {
+    min-width: 120px;
+}
+
+.acciones-container {
+    display: flex;
+    gap: 6px;
+    flex-wrap: wrap;
+}
+
+.accion {
+    font-size: 12px;
+    padding: 10px;
+    display: flex;
+}
+
+.danger{
+    color: #dc2626;
+}
+
+.no-planes {
+    padding: 24px;
+    text-align: center;
+    color: #888;
+    background: #f9fafb;
+    border-radius: 8px;
+}
+
+.modal-plan-title {
+    margin-bottom: 16px;
+}
+
+.modal-plan-info-block {
+    margin-bottom: 16px;
+}
+
+.modal-plan-divider {
+    margin: 16px 0;
+}
+
+.modal-plan-subtitle {
+    margin: 0 0 8px;
+}
+
+.modal-plan-details-title {
+    margin: 0 0 8px;
+}
+
+.modal-plan-table {
+    width: 100%;
+    margin-bottom: 16px;
+}
+
+.modal-plan-close-btn {
+    padding: 8px 24px;
+    border-radius: 4px;
+    background: #ffffff;
+    color: #3b3b3b;
+    border: 1px solid #ddd;
+    font-weight: 600;
+    cursor: pointer;
+}
+
+.close{
+    width: 100%;
+    display: grid;
+    place-content: end;
+}

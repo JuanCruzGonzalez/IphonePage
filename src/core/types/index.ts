@@ -79,15 +79,17 @@ export interface Venta {
   fecha: string;
   estado: boolean;
   baja: boolean;
-  cotizacion_dolar?: number | null; // Valor del dólar al momento de la venta
+  cotizacion_dolar?: number | null;
+  metodo_pago?: string;
+  detalle_venta: DetalleVenta[];
+  total?: number;
 }
 
 export interface DetalleVenta {
   id_detalle_venta: number;
-  id_producto: number;
   id_venta: number;
   cantidad: number;
-  precio_unitario: number; // ✅ NUEVO
+  precio_unitario: number;
   producto?: Producto;
   promocion?: Promocion;
 }
@@ -102,15 +104,10 @@ export interface DetalleVentaProductoInput {
 export interface DetalleVentaPromocionInput {
   id_promocion: number;
   cantidad: number;
-  // precioUnitario should be number or undefined to match createVenta param expectations
   precioUnitario?: number | undefined;
 }
 
 export type DetalleVentaInput = DetalleVentaProductoInput | DetalleVentaPromocionInput;
-
-export interface VentaConDetalles extends Venta {
-  detalle_venta: (DetalleVenta & { producto?: Producto; promocion?: Promocion })[];
-}
 
 export interface Gasto {
   id_gasto: number;
@@ -162,24 +159,26 @@ export interface CategoriaProducto {
 // =============================================
 
 export type EstadoPedido = 'RECIBIDO' | 'ACEPTADO' | 'ENTREGADO' | 'CANCELADO';
-export type MetodoPagoPedido = 'efectivo' | 'transferencia' | 'mercadopago';
+export type MetodoPagoPedido = 'efectivo' | 'transferencia' | 'mercadopago' | 'plan_de_pago';
 
 export interface Pedido {
   id_pedido: number;
   fecha_pedido: string;
   estado: EstadoPedido;
   id_venta: number | null;
-  
+  id_cliente: string | null; // UUID del cliente registrado (si aplica)
+
   // Datos del cliente
   cliente_nombre: string;
   cliente_telefono: string;
   cliente_direccion: string | null;
-  
+
   // Detalles del pedido
   total: number;
   metodo_pago: MetodoPagoPedido | null;
   notas: string | null;
-  
+  plan_cuotas: number | null; // Número de cuotas si metodo_pago = 'plan_de_pago'
+
   // Auditoría
   created_at: string;
   updated_at: string;
@@ -211,6 +210,8 @@ export interface CrearPedidoInput {
   cliente_direccion: string | null;
   metodo_pago: MetodoPagoPedido | null;
   notas: string | null;
+  plan_cuotas?: number; // Solo cuando metodo_pago = 'plan_de_pago'
+  id_cliente?: string;  // UUID del cliente registrado (tienda)
   items: {
     tipo: 'producto' | 'promocion';
     id: number;
@@ -228,4 +229,60 @@ export interface Empleado {
   dni: string;
   estado: string;
   created_at: string;
+}
+
+// =============================================
+// CLIENTES
+// =============================================
+
+export interface Cliente {
+  id_cliente: string; // UUID de auth.users
+  email: string;
+  nombre: string | null;
+  apellido: string | null;
+  telefono: string | null;
+  direccion: string | null;
+  estado: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface ClienteInput {
+  nombre?: string;
+  apellido?: string;
+  telefono?: string;
+  direccion?: string;
+}
+
+// =============================================
+// PLANES DE PAGO
+// =============================================
+
+export type EstadoPlanDePago = 'activo' | 'completado' | 'cancelado';
+
+export interface PlanDePago {
+  id_plan: number;
+  venta: Venta;
+  cliente: Cliente;
+  numero_cuotas: number;
+  cuotas_pagadas: number;
+  monto_total: number;
+  monto_cuota: number;
+  fecha_inicio: string;
+  estado: EstadoPlanDePago;
+  notas: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface PlanDePagoInput {
+  id_venta: number;
+  id_cliente?: string;
+  cliente_nombre: string;
+  cliente_telefono: string;
+  numero_cuotas: number;
+  monto_total: number;
+  monto_cuota: number;
+  fecha_inicio?: string;
+  notas?: string;
 }

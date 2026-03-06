@@ -1,12 +1,19 @@
 import React, { createContext, useContext, useState, useCallback, useEffect, ReactNode } from 'react';
-import { VentaConDetalles, DetalleVentaInput } from '../../../core/types';
+import { Venta, DetalleVentaInput, PlanDePago } from '../../../core/types';
 import {
   getVentasPage,
   createVenta,
   updateVentaEstado,
   updateVentaBaja,
   reactivarVenta,
+  updateVentaMetodoPago,
 } from '../services/ventaService';
+import {
+  getPlanesDePago,
+  registrarPagoCuota,
+  cancelarPlan,
+  createPlanDePago,
+} from '../services/planDePagoService';
 import { getTodayISO } from '../../../shared/utils';
 import { useAsync } from '../../../shared/hooks/useAsync';
 import { useModal } from '../../../shared/hooks/useModal';
@@ -14,6 +21,15 @@ import { useModal } from '../../../shared/hooks/useModal';
 /** ======================
  * TIPOS E INTERFACES
  * ====================== */
+
+// Configuración de plan de pago pasada desde el modal de nueva venta
+export interface PlanDePagoConfig {
+  id_cliente?: string;
+  cliente_nombre: string;
+  cliente_telefono: string;
+  numero_cuotas: number;
+  monto_total: number;
+}
 
 interface VentasSearchOptions {
   desde?: string;
@@ -24,7 +40,7 @@ interface VentasSearchOptions {
 
 interface VentasContextValue {
   // Estado
-  ventas: VentaConDetalles[];
+  ventas: Venta[];
   ventasPageNum: number;
   ventasTotal: number;
   ventasSearchQuery: VentasSearchOptions;
@@ -42,7 +58,7 @@ interface VentasContextValue {
   recargarVentasActuales: () => Promise<void>;
 
   // Operaciones CRUD
-  handleNuevaVenta: (items: DetalleVentaInput[], pagada: boolean) => Promise<void>;
+  handleNuevaVenta: (items: DetalleVentaInput[], pagada: boolean, planConfig?: PlanDePagoConfig) => Promise<void>;
   handleBuscarVentas: (opts?: VentasSearchOptions) => Promise<void>;
   handleToggleVentaFlag: (
     id_venta: number,
@@ -50,6 +66,13 @@ interface VentasContextValue {
     currentValue: boolean,
     label?: string
   ) => void;
+
+  // Planes de pago
+  planes: PlanDePago[];
+  planesLoading: boolean;
+  recargarPlanes: () => Promise<void>;
+  handleRegistrarPago: (id_plan: number) => void;
+  handleCancelarPlanDePago: (id_plan: number) => void;
 
   // Estados de loading (useAsync)
   crearVentaAsync: ReturnType<typeof useAsync<any>>;
@@ -81,7 +104,7 @@ export const VentasProvider: React.FC<VentasProviderProps> = ({
 }) => {
   // ============= ESTADO =============
   const PAGE_SIZE = 8;
-  const [ventas, setVentas] = useState<VentaConDetalles[]>([]);
+  const [ventas, setVentas] = useState<Venta[]>([]);
   const [ventasPageNum, setVentasPageNum] = useState(1);
   const [ventasTotal, setVentasTotal] = useState(0);
   const [ventasSearchQuery, setVentasSearchQuery] = useState<VentasSearchOptions>({ baja: false });
@@ -91,6 +114,10 @@ export const VentasProvider: React.FC<VentasProviderProps> = ({
 
   // useAsync hooks
   const crearVentaAsync = useAsync<any>();
+
+  // Estado de planes de pago
+  const [planes, setPlanes] = useState<PlanDePago[]>([]);
+  const [planesLoading, setPlanesLoading] = useState(false);
 
   // ============= INICIALIZACIÓN =============
   
@@ -172,19 +199,89 @@ export const VentasProvider: React.FC<VentasProviderProps> = ({
   /**
    * Crear una nueva venta
    */
+  const recargarPlanes = useCallback(async () => {
+    setPlanesLoading(true);
+    try {
+      const data = await getPlanesDePago();
+      setPlanes(data);
+    } catch {
+      showError('Error cargando planes de pago');
+    } finally {
+      setPlanesLoading(false);
+    }
+  }, [showError]);
+
+  useEffect(() => { recargarPlanes(); }, [recargarPlanes]);
+
+  const handleRegistrarPago = useCallback((id_plan: number) => {
+    const plan = planes.find(p => p.id_plan === id_plan);
+    if (!plan) return;
+    showConfirm(
+      'Registrar cuota',
+      `¿Confirmar pago de cuota ${plan.cuotas_pagadas + 1}/${plan.numero_cuotas} ($${plan.monto_cuota.toFixed(2)}) de ${plan.cliente.nombre}?`,
+      async () => {
+        try {
+          await registrarPagoCuota(id_plan);
+          showSuccess('Cuota registrada');
+          await recargarPlanes();
+        } catch {
+          showError('Error al registrar el pago');
+        }
+      },
+      'info'
+    );
+  }, [planes, showConfirm, showSuccess, showError, recargarPlanes]);
+
+  const handleCancelarPlanDePago = useCallback((id_plan: number) => {
+    const plan = planes.find(p => p.id_plan === id_plan);
+    if (!plan) return;
+    showConfirm(
+      'Cancelar plan',
+      `¿Cancelar el plan de pago de ${plan.cliente.nombre}? La venta quedará como impaga.`,
+      async () => {
+        try {
+          await cancelarPlan(id_plan);
+          showSuccess('Plan cancelado');
+          await recargarPlanes();
+        } catch {
+          showError('Error al cancelar el plan');
+        }
+      },
+      'danger'
+    );
+  }, [planes, showConfirm, showSuccess, showError, recargarPlanes]);
+
+  /**
+   * Crear una nueva venta
+   */
   const handleNuevaVenta = useCallback(
-    async (items: DetalleVentaInput[], pagada: boolean) => {
+    async (items: DetalleVentaInput[], pagada: boolean, planConfig?: PlanDePagoConfig) => {
       try {
         const fecha = getTodayISO();
-        await crearVentaAsync.execute(() => createVenta(fecha, items, pagada));
+        const idVenta = await crearVentaAsync.execute(() => createVenta(fecha, items, pagada));
+
+        if (planConfig && idVenta) {
+          await updateVentaMetodoPago(idVenta, 'plan_de_pago');
+          await createPlanDePago({
+            id_venta: idVenta,
+            id_cliente: planConfig.id_cliente,
+            cliente_nombre: planConfig.cliente_nombre,
+            cliente_telefono: planConfig.cliente_telefono,
+            numero_cuotas: planConfig.numero_cuotas,
+            monto_total: planConfig.monto_total,
+            monto_cuota: Math.round((planConfig.monto_total / planConfig.numero_cuotas) * 100) / 100,
+          });
+          await recargarPlanes();
+        }
+
         await recargarVentasActuales();
         modalNuevaVenta.close();
-        showSuccess('Venta registrada exitosamente');
+        showSuccess(planConfig ? 'Venta con plan de pago registrada' : 'Venta registrada exitosamente');
       } catch (err) {
         showError('Error al registrar la venta');
       }
     },
-    [crearVentaAsync, modalNuevaVenta, showSuccess, showError, recargarVentasActuales]
+    [crearVentaAsync, modalNuevaVenta, showSuccess, showError, recargarVentasActuales, recargarPlanes]
   );
 
   /**
@@ -277,6 +374,13 @@ export const VentasProvider: React.FC<VentasProviderProps> = ({
     handleNuevaVenta,
     handleBuscarVentas,
     handleToggleVentaFlag,
+
+    // Planes de pago
+    planes,
+    planesLoading,
+    recargarPlanes,
+    handleRegistrarPago,
+    handleCancelarPlanDePago,
 
     // Estados de loading
     crearVentaAsync,
