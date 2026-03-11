@@ -121,22 +121,27 @@ export const ModalNuevoProducto = React.memo<ModalNuevoProductoProps>(({
 
     const productoData = {
       nombre: nombre.trim(),
-      descripcion: descripcion.trim(),
+      descripcion: descripcion.trim() || null,
       stock: parseInt(stock),
       costo: parseInt(costo),
       precioventa: parseInt(precioventa),
       estado: estadoProducto === '1',
-      promocionActiva: promocionActiva,
-      precioPromocion: precioPromocionFinal,
+      promocion_activa: promocionActiva,
+      precio_promocion: precioPromocionFinal,
       condicion: condicion,
       destacado: destacado,
-      ordenDestacado: ordenDestacadoFinal,
+      orden_destacado: ordenDestacadoFinal,
       imagenes: imagenes,
       categorias: categoriasObjetos,
     };
 
     if (initialProduct) {
-      const productoEditar = { ...productoData, id_producto: initialProduct.id_producto };
+      const productoEditar = {
+        ...productoData,
+        id_producto: initialProduct.id_producto,
+        accesorio: initialProduct.accesorio ?? false,
+        dolares: initialProduct.dolares ?? true,
+      };
       await handleEditarProducto(productoEditar);
     } else {
       await handleNuevoProducto(productoData);

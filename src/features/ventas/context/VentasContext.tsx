@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useCallback, useEffect, ReactNode } from 'react';
+import React, { createContext, useContext, useState, useCallback, useEffect, useRef, ReactNode } from 'react';
 import { Venta, DetalleVentaInput, PlanDePago } from '../../../core/types';
 import {
   getVentasPage,
@@ -64,7 +64,7 @@ interface VentasContextValue {
     id_venta: number,
     field: 'estado' | 'baja',
     currentValue: boolean,
-    label?: string
+    label?: string,
   ) => void;
 
   // Planes de pago
@@ -102,6 +102,18 @@ export const VentasProvider: React.FC<VentasProviderProps> = ({
   showError,
   showConfirm,
 }) => {
+  // Usar refs para funciones de toast/confirm para evitar recreaciones de useCallback
+  const showSuccessRef = useRef(showSuccess);
+  const showErrorRef = useRef(showError);
+  const showConfirmRef = useRef(showConfirm);
+
+  // Actualizar refs cuando cambien las funciones
+  useEffect(() => {
+    showSuccessRef.current = showSuccess;
+    showErrorRef.current = showError;
+    showConfirmRef.current = showConfirm;
+  }, [showSuccess, showError, showConfirm]);
+
   // ============= ESTADO =============
   const PAGE_SIZE = 8;
   const [ventas, setVentas] = useState<Venta[]>([]);
@@ -120,9 +132,10 @@ export const VentasProvider: React.FC<VentasProviderProps> = ({
   const [planesLoading, setPlanesLoading] = useState(false);
 
   // ============= INICIALIZACIÓN =============
-  
+
   /**
    * Carga la primera página de ventas al montar el componente
+   * Solo se ejecuta UNA VEZ al montar
    */
   useEffect(() => {
     const initVentas = async () => {
@@ -133,12 +146,13 @@ export const VentasProvider: React.FC<VentasProviderProps> = ({
         setVentasPageNum(1);
         setVentasSearchQuery({ baja: false });
       } catch (err) {
-        showError('Error cargando ventas iniciales');
+        showErrorRef.current('Error cargando ventas iniciales');
       }
     };
 
     initVentas();
-  }, [PAGE_SIZE, showError]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []); // Solo ejecutar al montar el componente
 
   // ============= OPERACIONES DE CARGA =============
 
@@ -155,22 +169,26 @@ export const VentasProvider: React.FC<VentasProviderProps> = ({
         setVentasPageNum(page);
         setVentasSearchQuery(safeOpts);
       } catch (err) {
-        showError('Error cargando ventas');
+        showErrorRef.current('Error cargando ventas');
       }
     },
-    [PAGE_SIZE, showError]
+    [PAGE_SIZE]
   );
 
   /**
    * Recarga la página actual de ventas manteniendo paginación y filtros
    */
-  const recargarVentasActuales = useCallback(async () => {
+  const recargarVentasActuales = useCallback(async (
+    opts?: VentasSearchOptions
+  ) => {
     try {
-      await loadVentasPage(ventasPageNum, ventasSearchQuery);
+      // Si no se pasan opts, usar ventasSearchQuery del estado para mantener filtros
+      const optsToUse = opts !== undefined ? opts : ventasSearchQuery;
+      await loadVentasPage(ventasPageNum, optsToUse);
     } catch (err) {
-      showError('Error recargando ventas');
+      showErrorRef.current('Error recargando ventas');
     }
-  }, [ventasPageNum, ventasSearchQuery, loadVentasPage, showError]);
+  }, [ventasPageNum, ventasSearchQuery, loadVentasPage]);
 
   // ============= OPERACIONES CRUD =============
 
@@ -190,10 +208,10 @@ export const VentasProvider: React.FC<VentasProviderProps> = ({
       } catch (err) {
         const e: any = err;
         const message = e?.message || e?.error || (typeof e === 'string' ? e : JSON.stringify(e));
-        showError(message || 'Error buscando ventas');
+        showErrorRef.current(message || 'Error buscando ventas');
       }
     },
-    [PAGE_SIZE, showError]
+    [PAGE_SIZE]
   );
 
   /**
@@ -205,51 +223,51 @@ export const VentasProvider: React.FC<VentasProviderProps> = ({
       const data = await getPlanesDePago();
       setPlanes(data);
     } catch {
-      showError('Error cargando planes de pago');
+      showErrorRef.current('Error cargando planes de pago');
     } finally {
       setPlanesLoading(false);
     }
-  }, [showError]);
+  }, []);
 
   useEffect(() => { recargarPlanes(); }, [recargarPlanes]);
 
   const handleRegistrarPago = useCallback((id_plan: number) => {
     const plan = planes.find(p => p.id_plan === id_plan);
     if (!plan) return;
-    showConfirm(
+    showConfirmRef.current(
       'Registrar cuota',
       `¿Confirmar pago de cuota ${plan.cuotas_pagadas + 1}/${plan.numero_cuotas} ($${plan.monto_cuota.toFixed(2)}) de ${plan.cliente.nombre}?`,
       async () => {
         try {
           await registrarPagoCuota(id_plan);
-          showSuccess('Cuota registrada');
+          showSuccessRef.current('Cuota registrada');
           await recargarPlanes();
         } catch {
-          showError('Error al registrar el pago');
+          showErrorRef.current('Error al registrar el pago');
         }
       },
       'info'
     );
-  }, [planes, showConfirm, showSuccess, showError, recargarPlanes]);
+  }, [planes, recargarPlanes]);
 
   const handleCancelarPlanDePago = useCallback((id_plan: number) => {
     const plan = planes.find(p => p.id_plan === id_plan);
     if (!plan) return;
-    showConfirm(
+    showConfirmRef.current(
       'Cancelar plan',
       `¿Cancelar el plan de pago de ${plan.cliente.nombre}? La venta quedará como impaga.`,
       async () => {
         try {
           await cancelarPlan(id_plan);
-          showSuccess('Plan cancelado');
+          showSuccessRef.current('Plan cancelado');
           await recargarPlanes();
         } catch {
-          showError('Error al cancelar el plan');
+          showErrorRef.current('Error al cancelar el plan');
         }
       },
       'danger'
     );
-  }, [planes, showConfirm, showSuccess, showError, recargarPlanes]);
+  }, [planes, recargarPlanes]);
 
   /**
    * Crear una nueva venta
@@ -276,12 +294,12 @@ export const VentasProvider: React.FC<VentasProviderProps> = ({
 
         await recargarVentasActuales();
         modalNuevaVenta.close();
-        showSuccess(planConfig ? 'Venta con plan de pago registrada' : 'Venta registrada exitosamente');
+        showSuccessRef.current(planConfig ? 'Venta con plan de pago registrada' : 'Venta registrada exitosamente');
       } catch (err) {
-        showError('Error al registrar la venta');
+        showErrorRef.current('Error al registrar la venta');
       }
     },
-    [crearVentaAsync, modalNuevaVenta, showSuccess, showError, recargarVentasActuales, recargarPlanes]
+    [crearVentaAsync, modalNuevaVenta, recargarVentasActuales, recargarPlanes]
   );
 
   /**
@@ -292,7 +310,7 @@ export const VentasProvider: React.FC<VentasProviderProps> = ({
       id_venta: number,
       field: 'estado' | 'baja',
       currentValue: boolean,
-      label?: string
+      label?: string,
     ) => {
       const title =
         field === 'estado'
@@ -312,17 +330,17 @@ export const VentasProvider: React.FC<VentasProviderProps> = ({
             ? 'dar de alta'
             : 'dar de baja';
 
-      showConfirm(
+      showConfirmRef.current(
         title,
         `¿Seguro que quieres ${actionText} ${label ?? '#' + id_venta}?`,
         async () => {
           try {
             let updated;
-            
+
             if (field === 'estado') {
               updated = await updateVentaEstado(id_venta, !currentValue);
             }
-            
+
             if (field === 'baja' && currentValue === true) {
               updated = await reactivarVenta(id_venta);
             }
@@ -332,25 +350,25 @@ export const VentasProvider: React.FC<VentasProviderProps> = ({
             }
 
             if (!updated) {
-              showError(`No se encontró la venta #${id_venta}`);
+              showErrorRef.current(`No se encontró la venta #${id_venta}`);
               return;
             }
 
+            showSuccessRef.current(`Venta ${updated.id_venta} actualizada correctamente`);
             await recargarVentasActuales();
-            showSuccess(`Venta ${updated.id_venta} actualizada correctamente`);
           } catch (err) {
             const e: any = err;
             const message =
               e?.message ||
               e?.error ||
               (typeof e === 'string' ? e : JSON.stringify(e));
-            showError(message || `No se pudo actualizar el campo ${field} de la venta`);
+            showErrorRef.current(message || `No se pudo actualizar el campo ${field} de la venta`);
           }
         },
         'warning'
       );
     },
-    [showConfirm, showError, showSuccess, recargarVentasActuales]
+    [recargarVentasActuales]
   );
 
   // ============= VALOR DEL CONTEXTO =============

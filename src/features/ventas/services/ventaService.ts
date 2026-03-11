@@ -107,6 +107,7 @@ export async function getVentasPage(
         promocion (*)
       )
     `, { count: 'exact' })
+      .eq('baja', options?.baja)
     .order('id_venta', { ascending: false });
 
   if (desde) query = query.gte('fecha', desde);
@@ -124,7 +125,6 @@ export async function getVentasPage(
   if (typeof baja === 'boolean') query = query.eq('baja', baja);
 
   const { data, error, count } = await query.range(from, to) as any;
-
   if (error) {
     console.error('❌ Error al obtener página de ventas:', error);
     await handleAuthError(error);

@@ -51,6 +51,14 @@ export const VentasPage: React.FC = () => {
   const [hasta, setHasta] = useState<string>('');
   const [estadoFilter, setEstadoFilter] = useState<'all' | 'pagada' | 'pendiente' | 'baja'>('all');
 
+  const opts: { desde?: string; hasta?: string; estado?: boolean; baja?: boolean } = {};
+  if (desde) opts.desde = desde;
+  if (hasta) opts.hasta = hasta;
+  if (estadoFilter === 'pagada') opts.estado = true;
+  if (estadoFilter === 'pendiente') opts.estado = false;
+  if (estadoFilter === 'baja') opts.baja = true;
+  else opts.baja = false;
+
   const handleSetDesde = (value: string) => {
     setDesde(value);
   }

@@ -13,7 +13,7 @@ export function useDashboardData() {
   const hoy = useMemo(() => getTodayYMD(), []);
 
   const { data: ventasMesData, isLoading: loadingMes } = useQuery({
-    queryKey: ['dashboard', 'ventas-mes', monthRange.start, monthRange.end],
+    queryKey: ['dashboard', 'ventas-mes', monthRange.start, monthRange.end, true, false],
     queryFn: () => getVentasPage(1, 1000, { desde: monthRange.start, hasta: monthRange.end, baja: false }),
     staleTime: 1000 * 60 * 3,
   });
