@@ -27,7 +27,7 @@ export const PromocionesPage: React.FC = () => {
         <Page>
             <div className="page-header">
                 <div>
-                    <H1 texto="Teléfonos" />
+                    <H1 texto="Promociones" />
                     <p className="page-subtitle">Crea y administra promociones</p>
                 </div>
                 <button className="btn-primary" onClick={modalCrearPromocion.open}>+ Nueva Promoción</button>
